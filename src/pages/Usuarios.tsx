@@ -3,6 +3,7 @@ import { useDatabase } from '../contexts/DatabaseContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useModal } from '../hooks/useModal'
 import { format } from 'date-fns'
+import StandardCheckbox from '../components/StandardCheckbox'
 import { 
   Plus, 
   Search, 
@@ -600,19 +601,12 @@ const Usuarios: React.FC = () => {
                 )}
 
                 {/* Status Ativo */}
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={userForm.isActive}
-                    onChange={(e) => setUserForm({ ...userForm, isActive: e.target.checked })}
-                    className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isActive" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <UserCheck className="h-5 w-5 mr-2 text-green-500" />
-                    Usuário ativo
-                  </label>
-                </div>
+                <StandardCheckbox
+                  label="Usuário ativo"
+                  checked={userForm.isActive}
+                  onChange={(checked) => setUserForm({ ...userForm, isActive: checked })}
+                  description="Marque para ativar o usuário no sistema"
+                />
 
                 {/* Botões */}
                 <div className="flex space-x-3 pt-6">

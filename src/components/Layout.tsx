@@ -38,7 +38,6 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Parceiros', href: '/parceiros', icon: Users, permission: 'parceiros' },
-    { name: 'Usuários', href: '/usuarios', icon: UserCog, permission: 'usuarios' },
   ]
 
   const hasPermission = (permission: string) => {

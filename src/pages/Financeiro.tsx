@@ -4,6 +4,7 @@ import { useModal } from '../hooks/useModal'
 import { format, isWithinInterval } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency, parseCurrency } from '../utils/formatters'
+import { undoService } from '../services/undoService'
 import { 
   Plus, 
   Search, 
@@ -31,6 +32,9 @@ const Financeiro: React.FC = () => {
   const [editingMovimentacao, setEditingMovimentacao] = useState<any>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{id: string, descricao: string} | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentTarget, setPaymentTarget] = useState<{id: string, descricao: string} | null>(null)
+  const [paymentDate, setPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   
   const { modalRef } = useModal({
     isOpen: showForm,
@@ -68,8 +72,8 @@ const Financeiro: React.FC = () => {
   })
 
   const categorias = {
-    receita: ['Frete', 'Serviços', 'Comissões', 'Outros'],
-    despesa: ['Combustível', 'Manutenção', 'Pedágios', 'Salários', 'Impostos', 'Seguros', 'Outros']
+    receita: ['Cliente', 'Frete', 'Seguros', 'Negociações', 'Outros'],
+    despesa: ['Frete', 'Aluguel', 'Salários', 'Seguros', 'Impostos', 'Manutenção', 'Outros']
   }
 
   const statusConfig = {
@@ -181,15 +185,55 @@ const Financeiro: React.FC = () => {
 
   const confirmDelete = () => {
     if (deleteTarget) {
-      deleteMovimentacao(deleteTarget.id)
-      setShowDeleteConfirm(false)
-      setDeleteTarget(null)
+      // Salvar dados para desfazer
+      const deletedMovimentacao = movimentacoes.find(m => m.id === deleteTarget.id);
+      
+      if (deletedMovimentacao) {
+        // Executar exclusão
+        deleteMovimentacao(deleteTarget.id);
+
+        // Adicionar ação de desfazer
+        undoService.addUndoAction({
+          type: 'delete_financial',
+          description: `Movimentação "${deleteTarget.descricao}" excluída`,
+          data: deletedMovimentacao,
+          undoFunction: async () => {
+            createMovimentacao(deletedMovimentacao);
+          }
+        });
+      }
+
+      setShowDeleteConfirm(false);
+      setDeleteTarget(null);
     }
   }
 
   const handleChangeStatus = (id: string, newStatus: 'pendente' | 'pago' | 'cancelado') => {
-    updateMovimentacao(id, { status: newStatus });
+    if (newStatus === 'pago') {
+      const movimentacao = movimentacoes.find(m => m.id === id);
+      if (movimentacao) {
+        setPaymentTarget({
+          id: id,
+          descricao: movimentacao.descricao
+        });
+        setPaymentDate(format(new Date(), 'yyyy-MM-dd'));
+        setShowPaymentModal(true);
+      }
+    } else {
+      updateMovimentacao(id, { status: newStatus });
+    }
     setShowStatusDropdown(null);
+  };
+
+  const confirmPayment = () => {
+    if (paymentTarget) {
+      updateMovimentacao(paymentTarget.id, { 
+        status: 'pago',
+        dataPagamento: new Date(paymentDate)
+      });
+      setShowPaymentModal(false);
+      setPaymentTarget(null);
+    }
   };
 
   return (
@@ -317,13 +361,14 @@ const Financeiro: React.FC = () => {
                 <th className="table-cell text-left">Tipo</th>
                 <th className="table-cell text-left">Valor</th>
                 <th className="table-cell text-left">Status</th>
+                <th className="table-cell text-left">Pagamento</th>
                 <th className="table-cell text-left">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
               {filteredMovimentacoes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="table-cell text-center text-slate-500 dark:text-slate-400 py-8">
+                  <td colSpan={8} className="table-cell text-center text-slate-500 dark:text-slate-400 py-8">
                     Nenhuma transação encontrada
                   </td>
                 </tr>
@@ -351,6 +396,15 @@ const Financeiro: React.FC = () => {
                       <span className={`badge ${statusConfig[movimentacao.status as keyof typeof statusConfig].color}`}>
                         {statusConfig[movimentacao.status as keyof typeof statusConfig].label}
                       </span>
+                    </td>
+                    <td className="table-cell text-sm">
+                      {movimentacao.dataPagamento ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {format(new Date(movimentacao.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">-</span>
+                      )}
                     </td>
                     <td className="table-cell">
                       <div className="flex items-center gap-2">
@@ -583,6 +637,53 @@ const Financeiro: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de pagamento */}
+      {showPaymentModal && paymentTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <CheckCircle className="h-6 w-6 text-emerald-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Confirmar Pagamento
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              Confirmar pagamento da movimentação{' '}
+              <span className="font-semibold">{paymentTarget.descricao}</span>?
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Pagamento:
+              </label>
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white"
+                required
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPaymentTarget(null);
+                }}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmPayment}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Confirmar
               </button>
             </div>
           </div>

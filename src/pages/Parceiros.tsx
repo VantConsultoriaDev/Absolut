@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-
 import { XCircle, CheckCircle, AlertTriangle, Unlink } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca
 } from '../utils/formatters';
+import StandardCheckbox from '../components/StandardCheckbox';
+import { CNPJService } from '../services/cnpjService';
+import { VehicleService } from '../services/vehicleService';
+import { undoService } from '../services/undoService';
 
 export default function Parceiros() {
   const { 
@@ -50,6 +53,14 @@ export default function Parceiros() {
   // Estados para modais de confirmação de exclusão
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{type: 'veiculo' | 'motorista' | 'parceiro', id: string, name: string} | null>(null);
+
+  // Estados para consulta de CNPJ
+  const [consultandoCNPJ, setConsultandoCNPJ] = useState(false);
+  const [cnpjConsultado, setCnpjConsultado] = useState(false);
+  
+  // Estados para consulta de placa
+  const [consultandoPlaca, setConsultandoPlaca] = useState(false);
+  const [placaConsultada, setPlacaConsultada] = useState('');
 
   // Forms
   const [parceiroForm, setParceiroForm] = useState({
@@ -285,6 +296,88 @@ export default function Parceiros() {
     });
     setEditingParceiro(null);
     setShowParceiroForm(false);
+    setCnpjConsultado(false);
+  };
+
+  // Função para consultar CNPJ automaticamente
+  const handleCNPJConsultation = async (cnpj: string) => {
+    // Só consulta se for PJ e CNPJ válido
+    if (parceiroForm.tipo !== 'PJ' || !CNPJService.validarCNPJ(cnpj)) {
+      return;
+    }
+
+    // Evita consultas repetidas
+    if (cnpjConsultado) {
+      return;
+    }
+
+    setConsultandoCNPJ(true);
+    
+    try {
+      const dadosCNPJ = await CNPJService.consultarCNPJ(cnpj);
+      
+      if (dadosCNPJ) {
+        console.log('Dados do CNPJ recebidos:', dadosCNPJ);
+        
+        // Preenche automaticamente os campos com os dados da consulta
+        const novosDados = {
+          ...parceiroForm,
+          nome: dadosCNPJ.razaoSocial || parceiroForm.nome,
+          telefone: dadosCNPJ.telefone || parceiroForm.telefone,
+          endereco: `${dadosCNPJ.endereco || ''} ${dadosCNPJ.numero || ''} ${dadosCNPJ.complemento || ''}`.trim() || parceiroForm.endereco,
+          cidade: dadosCNPJ.cidade || parceiroForm.cidade,
+          estado: dadosCNPJ.uf || parceiroForm.estado,
+          cep: dadosCNPJ.cep || parceiroForm.cep
+        };
+        
+        console.log('Dados que serão preenchidos:', novosDados);
+        setParceiroForm(novosDados);
+        
+        setCnpjConsultado(true);
+      }
+    } catch (error) {
+      console.error('Erro ao consultar CNPJ:', error);
+      alert('Erro ao consultar CNPJ. Verifique o número e tente novamente.');
+    } finally {
+      setConsultandoCNPJ(false);
+    }
+  };
+
+  // Função para consultar placa automaticamente
+  const handlePlacaConsultation = async (placa: string) => {
+    // Só consulta se a placa for válida
+    if (!VehicleService.validarPlaca(placa)) {
+      return;
+    }
+
+    // Evita consultas repetidas
+    if (placaConsultada === placa) {
+      return;
+    }
+
+    setConsultandoPlaca(true);
+    
+    try {
+      const dadosPlaca = await VehicleService.consultarPlaca(placa);
+      
+      if (dadosPlaca) {
+        // Preenche automaticamente os campos com os dados da consulta
+        setVeiculoForm(prev => ({
+          ...prev,
+          fabricante: dadosPlaca.marca || prev.fabricante,
+          modelo: dadosPlaca.modelo || prev.modelo,
+          ano: dadosPlaca.ano || prev.ano
+        }));
+        
+        setPlacaConsultada(placa);
+      }
+    } catch (error) {
+      console.error('Erro ao consultar placa:', error);
+      // Não mostra erro para o usuário, pois a API pode não ter dados
+      console.log('Placa não encontrada na base de dados.');
+    } finally {
+      setConsultandoPlaca(false);
+    }
   };
 
   const handleEditParceiro = (parceiro: any) => {
@@ -437,6 +530,7 @@ export default function Parceiros() {
     });
     setEditingVeiculo(null);
     setShowVeiculoForm(false);
+    setPlacaConsultada('');
   };
 
   const handleEditVeiculo = (veiculo: any) => {
@@ -477,16 +571,55 @@ export default function Parceiros() {
   // Handler para confirmar exclusão
   const confirmDelete = () => {
     if (deleteTarget) {
+      // Salvar dados para desfazer
+      let deletedData: any = null;
+      let relatedData: any = {};
+
       if (deleteTarget.type === 'veiculo') {
+        deletedData = veiculos.find(v => v.id === deleteTarget.id);
         deleteVeiculo(deleteTarget.id);
       } else if (deleteTarget.type === 'motorista') {
+        deletedData = motoristas.find(m => m.id === deleteTarget.id);
         deleteMotorista(deleteTarget.id);
       } else if (deleteTarget.type === 'parceiro') {
+        deletedData = parceiros.find(p => p.id === deleteTarget.id);
+        // Salvar motoristas e veículos relacionados
+        relatedData.motoristas = motoristas.filter(m => m.parceiroId === deleteTarget.id);
+        relatedData.veiculos = veiculos.filter(v => v.parceiroId === deleteTarget.id);
+        
         deleteParceiro(deleteTarget.id);
         if (selectedParceiro?.id === deleteTarget.id) {
           setSelectedParceiro(null);
         }
       }
+
+      // Adicionar ação de desfazer
+      if (deletedData) {
+        undoService.addUndoAction({
+          type: deleteTarget.type === 'veiculo' ? 'delete_cargo' : 
+                deleteTarget.type === 'motorista' ? 'delete_financial' : 'delete_partner',
+          description: `${deleteTarget.type === 'veiculo' ? 'Veículo' : 
+                       deleteTarget.type === 'motorista' ? 'Motorista' : 'Parceiro'} "${deleteTarget.name}" excluído`,
+          data: { deletedData, relatedData, type: deleteTarget.type },
+          undoFunction: async () => {
+            if (deleteTarget.type === 'veiculo') {
+              createVeiculo(deletedData);
+            } else if (deleteTarget.type === 'motorista') {
+              createMotorista(deletedData);
+            } else if (deleteTarget.type === 'parceiro') {
+              createParceiro(deletedData);
+              // Recriar motoristas e veículos relacionados
+              relatedData.motoristas?.forEach((motorista: any) => {
+                createMotorista(motorista);
+              });
+              relatedData.veiculos?.forEach((veiculo: any) => {
+                createVeiculo(veiculo);
+              });
+            }
+          }
+        });
+      }
+
       setShowDeleteConfirm(false);
       setDeleteTarget(null);
     }
@@ -690,7 +823,7 @@ export default function Parceiros() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pessoa Física</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Pessoa Física</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.parceirosPF}</p>
               </div>
             </div>
@@ -704,7 +837,7 @@ export default function Parceiros() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pessoa Jurídica</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Pessoa Jurídica</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.parceirosPJ}</p>
               </div>
             </div>
@@ -718,7 +851,7 @@ export default function Parceiros() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Motoristas</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Motoristas</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalMotoristas}</p>
               </div>
             </div>
@@ -732,7 +865,7 @@ export default function Parceiros() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Veículos</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Veículos</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalVeiculos}</p>
               </div>
             </div>
@@ -959,28 +1092,12 @@ export default function Parceiros() {
 
                   {/* Switch "É Motorista" apenas para Pessoa Física - logo após o campo Tipo */}
                   {parceiroForm.tipo === 'PF' && (
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          É Motorista
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setParceiroForm({ ...parceiroForm, isMotorista: !parceiroForm.isMotorista })}
-                          className={`ml-3 relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
-                            parceiroForm.isMotorista
-                              ? 'bg-green-500'
-                              : 'bg-gray-300 dark:bg-gray-600'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              parceiroForm.isMotorista ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
+                    <StandardCheckbox
+                      label="É Motorista"
+                      checked={parceiroForm.isMotorista}
+                      onChange={(checked) => setParceiroForm({ ...parceiroForm, isMotorista: checked })}
+                      description="Marque se esta pessoa física atua como motorista"
+                    />
                   )}
 
                   {/* Campos específicos por tipo */}
@@ -1002,7 +1119,12 @@ export default function Parceiros() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          CPF *
+                          {parceiroForm.tipo === 'PF' ? 'CPF *' : 'CNPJ *'}
+                          {consultandoCNPJ && (
+                            <span className="ml-2 text-blue-500 text-xs">
+                              Consultando...
+                            </span>
+                          )}
                         </label>
                         <input
                           type="text"
@@ -1010,11 +1132,27 @@ export default function Parceiros() {
                           onChange={(e) => {
                             const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
                             setParceiroForm({ ...parceiroForm, documento: formatted });
+                            
+                            // Reset flag de consulta quando o documento muda
+                            if (cnpjConsultado) {
+                              setCnpjConsultado(false);
+                            }
+                            
+                            // Consulta CNPJ automaticamente se for PJ e tiver 14 dígitos
+                            if (parceiroForm.tipo === 'PJ' && formatted.replace(/\D/g, '').length === 14) {
+                              handleCNPJConsultation(formatted);
+                            }
                           }}
-                          className="input-field"
-                          placeholder="000.000.000-00"
+                          className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
+                          placeholder={parceiroForm.tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
+                          disabled={consultandoCNPJ}
                           required
                         />
+                        {cnpjConsultado && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ Dados consultados automaticamente
+                          </p>
+                        )}
                       </div>
 
                       {/* CNH - apenas se for motorista */}
@@ -1115,6 +1253,11 @@ export default function Parceiros() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           CNPJ *
+                          {consultandoCNPJ && (
+                            <span className="ml-2 text-blue-500 text-xs">
+                              Consultando...
+                            </span>
+                          )}
                         </label>
                         <input
                           type="text"
@@ -1122,11 +1265,27 @@ export default function Parceiros() {
                           onChange={(e) => {
                             const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
                             setParceiroForm({ ...parceiroForm, documento: formatted });
+                            
+                            // Reset flag de consulta quando o documento muda
+                            if (cnpjConsultado) {
+                              setCnpjConsultado(false);
+                            }
+                            
+                            // Consulta CNPJ automaticamente se tiver 14 dígitos
+                            if (formatted.replace(/\D/g, '').length === 14) {
+                              handleCNPJConsultation(formatted);
+                            }
                           }}
-                          className="input-field"
+                          className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
                           placeholder="00.000.000/0000-00"
+                          disabled={consultandoCNPJ}
                           required
                         />
+                        {cnpjConsultado && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ Dados consultados automaticamente
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1753,6 +1912,11 @@ export default function Parceiros() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {veiculoForm.tipo === 'Truck' ? 'Placa *' : 'Placa Cavalo *'}
+                      {consultandoPlaca && (
+                        <span className="ml-2 text-blue-500 text-xs">
+                          Consultando...
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -1764,11 +1928,27 @@ export default function Parceiros() {
                         } else {
                           setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
                         }
+                        
+                        // Reset flag de consulta quando a placa muda
+                        if (placaConsultada) {
+                          setPlacaConsultada('');
+                        }
+                        
+                        // Consulta placa automaticamente se for válida
+                        if (VehicleService.validarPlaca(formatted)) {
+                          handlePlacaConsultation(formatted);
+                        }
                       }}
-                      className="input-field"
+                      className={`input-field ${consultandoPlaca ? 'opacity-50' : ''}`}
                       placeholder="ABC-1234"
+                      disabled={consultandoPlaca}
                       required
                     />
+                    {placaConsultada && (
+                      <p className="text-green-600 text-xs mt-1">
+                        ✓ Dados da placa consultados automaticamente
+                      </p>
+                    )}
                   </div>
                 </div>
 

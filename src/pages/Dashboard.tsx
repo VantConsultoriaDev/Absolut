@@ -3,7 +3,6 @@ import { useDatabase } from '../contexts/DatabaseContext'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from '../utils/formatters'
-import SupabaseTest from '../components/SupabaseTest'
 import { 
   Package, 
   Truck, 
@@ -64,9 +63,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Teste de Conexão Supabase */}
-      <SupabaseTest />
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total de Cargas */}
@@ -90,7 +86,7 @@ export default function Dashboard() {
         <div className="stat-card hover:shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
-              <p className="stat-label">Em Trânsito</p>
+              <p className="stat-label whitespace-nowrap">Em Trânsito</p>
               <p className="stat-value">{cargoStats.emTransito}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -106,7 +102,7 @@ export default function Dashboard() {
         <div className="stat-card hover:shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
-              <p className="stat-label">Entregues</p>
+              <p className="stat-label whitespace-nowrap">Entregues</p>
               <p className="stat-value">{cargoStats.entregue}</p>
             </div>
             <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
@@ -123,7 +119,7 @@ export default function Dashboard() {
         <div className="stat-card hover:shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
-              <p className="stat-label">Valor Total</p>
+              <p className="stat-label whitespace-nowrap">Valor Total</p>
               <p className="stat-value text-lg">{formatCurrency(cargoStats.valorTotal)}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">

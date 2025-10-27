@@ -7,9 +7,9 @@ import Dashboard from './pages/Dashboard'
 import Financeiro from './pages/Financeiro'
 import Cargas from './pages/Cargas'
 import Parceiros from './pages/Parceiros'
-import Usuarios from './pages/Usuarios'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import UndoButton from './components/UndoButton'
 
 function App() {
   return (
@@ -25,9 +25,9 @@ function App() {
                 <Route path="financeiro" element={<Financeiro />} />
                 <Route path="cargas" element={<Cargas />} />
                 <Route path="parceiros" element={<Parceiros />} />
-                <Route path="usuarios" element={<Usuarios />} />
               </Route>
             </Routes>
+            <UndoButton />
           </Router>
         </AuthProvider>
       </DatabaseProvider>
