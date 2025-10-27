@@ -161,7 +161,7 @@ npm run dev
 ```
 
 ### Acesso
-- URL: http://localhost:3000
+- URL: http://localhost:3000re
 - Usuário demo: admin
 - Senha demo: admin123
 

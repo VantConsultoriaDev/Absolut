@@ -301,39 +301,113 @@ export default function Parceiros() {
 
   // Função para consultar CNPJ automaticamente
   const handleCNPJConsultation = async (cnpj: string) => {
-    // Só consulta se for PJ e CNPJ válido
-    if (parceiroForm.tipo !== 'PJ' || !CNPJService.validarCNPJ(cnpj)) {
+    console.log('Iniciando consulta CNPJ:', cnpj);
+    console.log('Tipo do parceiro:', parceiroForm.tipo);
+    console.log('CNPJ já consultado:', cnpjConsultado);
+    
+    // Só consulta se for PJ
+    if (parceiroForm.tipo !== 'PJ') {
+      console.log('Não é PJ, cancelando consulta');
       return;
     }
 
-    // Evita consultas repetidas
-    if (cnpjConsultado) {
+    // Verifica se o CNPJ tem 14 dígitos (validação básica)
+    const cnpjLimpo = cnpj.replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) {
+      console.log('CNPJ não tem 14 dígitos:', cnpjLimpo.length);
+      return;
+    }
+
+    // Evita consultas repetidas apenas se estiver consultando no momento
+    if (consultandoCNPJ) {
+      console.log('Já está consultando CNPJ, cancelando');
       return;
     }
 
     setConsultandoCNPJ(true);
     
     try {
+      console.log('Chamando serviço de consulta CNPJ...');
       const dadosCNPJ = await CNPJService.consultarCNPJ(cnpj);
+      
+      console.log('Resposta do serviço:', dadosCNPJ);
       
       if (dadosCNPJ) {
         console.log('Dados do CNPJ recebidos:', dadosCNPJ);
         
         // Preenche automaticamente os campos com os dados da consulta
+        // Mapeamento conforme especificado:
+        // ✅ "nome_fantasia" → Nome Empresarial (campo: nome)
+        // ✅ Telefone → Contato (campo: telefone) 
+        // ✅ "tipo_logradouro"+"logradouro"+"numero"→ Endereço (campo: endereco)
+        // ✅ "municipio" → Cidade (campo: cidade)
+        // ✅ "uf" → Estado (campo: estado)
+        // ✅ "cep"→ CEP (campo: cep)
         const novosDados = {
           ...parceiroForm,
-          nome: dadosCNPJ.razaoSocial || parceiroForm.nome,
-          telefone: dadosCNPJ.telefone || parceiroForm.telefone,
-          endereco: `${dadosCNPJ.endereco || ''} ${dadosCNPJ.numero || ''} ${dadosCNPJ.complemento || ''}`.trim() || parceiroForm.endereco,
-          cidade: dadosCNPJ.cidade || parceiroForm.cidade,
-          estado: dadosCNPJ.uf || parceiroForm.estado,
-          cep: dadosCNPJ.cep || parceiroForm.cep
+          nome: dadosCNPJ.razaoSocial || parceiroForm.nome,        // ✅ Nome Fantasia → Nome Empresarial
+          telefone: dadosCNPJ.telefone || parceiroForm.telefone,  // ✅ Telefone → Contato
+          endereco: dadosCNPJ.endereco || parceiroForm.endereco,  // ✅ Endereço já montado no serviço
+          cidade: dadosCNPJ.cidade || parceiroForm.cidade,        // ✅ Município → Cidade
+          estado: dadosCNPJ.uf || parceiroForm.estado,            // ✅ UF → Estado
+          cep: dadosCNPJ.cep || parceiroForm.cep                  // ✅ CEP → CEP
         };
         
-        console.log('Dados que serão preenchidos:', novosDados);
-        setParceiroForm(novosDados);
+        console.log('Dados atuais do formulário:', parceiroForm);
+        console.log('Novos dados que serão aplicados:', novosDados);
+        
+        // Verificar se há diferenças nos dados
+        const diferencas = {};
+        Object.keys(novosDados).forEach(key => {
+          if (novosDados[key] !== parceiroForm[key]) {
+            diferencas[key] = { antes: parceiroForm[key], depois: novosDados[key] };
+          }
+        });
+        console.log('Diferenças detectadas:', diferencas);
+        
+        // Força a atualização do formulário
+        console.log('Atualizando formulário com novos dados...');
+        console.log('Dados CNPJ disponíveis:', {
+          razaoSocial: dadosCNPJ.razaoSocial,
+          telefone: dadosCNPJ.telefone,
+          endereco: dadosCNPJ.endereco,
+          numero: dadosCNPJ.numero,
+          cidade: dadosCNPJ.cidade,
+          uf: dadosCNPJ.uf,
+          cep: dadosCNPJ.cep
+        });
+        
+        setParceiroForm(prevForm => {
+          console.log('Estado anterior do formulário:', prevForm);
+          const formAtualizado = {
+            ...prevForm,
+            nome: dadosCNPJ.razaoSocial || prevForm.nome,
+            telefone: dadosCNPJ.telefone || prevForm.telefone,
+            endereco: dadosCNPJ.endereco || prevForm.endereco,
+            cidade: dadosCNPJ.cidade || prevForm.cidade,
+            estado: dadosCNPJ.uf || prevForm.estado,
+            cep: dadosCNPJ.cep || prevForm.cep
+          };
+          console.log('Formulário que será aplicado:', formAtualizado);
+          console.log('Comparação campo por campo:');
+          console.log('- nome:', prevForm.nome, '->', formAtualizado.nome);
+          console.log('- telefone:', prevForm.telefone, '->', formAtualizado.telefone);
+          console.log('- endereco:', prevForm.endereco, '->', formAtualizado.endereco);
+          console.log('- cidade:', prevForm.cidade, '->', formAtualizado.cidade);
+          console.log('- estado:', prevForm.estado, '->', formAtualizado.estado);
+          console.log('- cep:', prevForm.cep, '->', formAtualizado.cep);
+          return formAtualizado;
+        });
         
         setCnpjConsultado(true);
+        console.log('Consulta CNPJ marcada como concluída');
+        
+        // Verifica se os dados são simulados e informa o usuário
+        if (dadosCNPJ.simulado) {
+          alert('Não foi possível conectar com a API de CNPJ (erro de conectividade). Usando dados simulados para demonstração.');
+        }
+      } else {
+        console.log('Nenhum dado retornado pelo serviço');
       }
     } catch (error) {
       console.error('Erro ao consultar CNPJ:', error);
@@ -1264,15 +1338,17 @@ export default function Parceiros() {
                           value={parceiroForm.documento}
                           onChange={(e) => {
                             const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
+                            const cnpjLimpo = formatted.replace(/\D/g, '');
+                            
                             setParceiroForm({ ...parceiroForm, documento: formatted });
                             
-                            // Reset flag de consulta quando o documento muda
-                            if (cnpjConsultado) {
+                            // Reset flag de consulta apenas se o CNPJ mudou significativamente
+                            if (cnpjConsultado && cnpjLimpo.length < 14) {
                               setCnpjConsultado(false);
                             }
                             
                             // Consulta CNPJ automaticamente se tiver 14 dígitos
-                            if (formatted.replace(/\D/g, '').length === 14) {
+                            if (cnpjLimpo.length === 14) {
                               handleCNPJConsultation(formatted);
                             }
                           }}

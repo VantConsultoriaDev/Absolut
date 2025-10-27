@@ -66,10 +66,10 @@ const Layout: React.FC = () => {
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+            <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
               <Truck className="h-6 w-6 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900 dark:text-white">MOBTAX</span>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">ABSOLUT</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -88,7 +88,7 @@ const Layout: React.FC = () => {
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                     : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
@@ -116,11 +116,11 @@ const Layout: React.FC = () => {
           {/* Logo */}
           <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3 w-full">
-              <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Truck className="h-6 w-6 text-white" />
               </div>
               <span className={`text-lg font-bold text-slate-900 dark:text-white transition-all duration-300 whitespace-nowrap ${sidebarCollapsed && !isHovering ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                MOBTAX
+                ABSOLUT
               </span>
             </div>
           </div>
@@ -137,7 +137,7 @@ const Layout: React.FC = () => {
                   title={isCollapsed ? item.name : undefined}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                      ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                       : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >

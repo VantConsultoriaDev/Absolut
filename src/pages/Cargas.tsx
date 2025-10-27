@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
 import { format, isWithinInterval } from 'date-fns';
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const Cargas: React.FC = () => {
+  const location = useLocation();
   const { 
     cargas, 
     createCarga, 
@@ -35,6 +37,38 @@ const Cargas: React.FC = () => {
     veiculos,
     createMovimentacaoFinanceira
   } = useDatabase();
+
+  // Lista de UFs ordenada conforme especificação
+  const ufsOrdenadas = [
+    { value: 'internacional', label: 'Internacional' },
+    { value: 'RS', label: 'Rio Grande do Sul (RS)' },
+    { value: 'SP', label: 'São Paulo (SP)' },
+    { value: 'AC', label: 'Acre (AC)' },
+    { value: 'AL', label: 'Alagoas (AL)' },
+    { value: 'AP', label: 'Amapá (AP)' },
+    { value: 'AM', label: 'Amazonas (AM)' },
+    { value: 'BA', label: 'Bahia (BA)' },
+    { value: 'CE', label: 'Ceará (CE)' },
+    { value: 'DF', label: 'Distrito Federal (DF)' },
+    { value: 'ES', label: 'Espírito Santo (ES)' },
+    { value: 'GO', label: 'Goiás (GO)' },
+    { value: 'MA', label: 'Maranhão (MA)' },
+    { value: 'MT', label: 'Mato Grosso (MT)' },
+    { value: 'MS', label: 'Mato Grosso do Sul (MS)' },
+    { value: 'MG', label: 'Minas Gerais (MG)' },
+    { value: 'PA', label: 'Pará (PA)' },
+    { value: 'PB', label: 'Paraíba (PB)' },
+    { value: 'PR', label: 'Paraná (PR)' },
+    { value: 'PE', label: 'Pernambuco (PE)' },
+    { value: 'PI', label: 'Piauí (PI)' },
+    { value: 'RJ', label: 'Rio de Janeiro (RJ)' },
+    { value: 'RN', label: 'Rio Grande do Norte (RN)' },
+    { value: 'RO', label: 'Rondônia (RO)' },
+    { value: 'RR', label: 'Roraima (RR)' },
+    { value: 'SC', label: 'Santa Catarina (SC)' },
+    { value: 'SE', label: 'Sergipe (SE)' },
+    { value: 'TO', label: 'Tocantins (TO)' }
+  ];
 
   const [showForm, setShowForm] = useState(false);
   const [editingCarga, setEditingCarga] = useState<any>(null);
@@ -81,10 +115,21 @@ const Cargas: React.FC = () => {
     somaOpcao: 'adiantamento' as 'adiantamento' | 'saldo'
   });
 
+  // useEffect para aplicar filtro de status vindo da navegação
+  useEffect(() => {
+    if (location.state?.filterStatus) {
+      setFilterStatus(location.state.filterStatus);
+    }
+  }, [location.state]);
+
   const [formData, setFormData] = useState<{
     crt: string;
     origem: string;
     destino: string;
+    ufOrigemSelecionada: string;
+    cidadeOrigem: string;
+    ufDestinoSelecionada: string;
+    cidadeDestino: string;
     dataColeta: string;
     dataEntrega: string;
     valor: string;
@@ -95,6 +140,10 @@ const Cargas: React.FC = () => {
     crt: '',
     origem: '',
     destino: '',
+    ufOrigemSelecionada: '',
+    cidadeOrigem: '',
+    ufDestinoSelecionada: '',
+    cidadeDestino: '',
     dataColeta: format(new Date(), 'yyyy-MM-dd'),
     dataEntrega: format(new Date(), 'yyyy-MM-dd'),
     valor: '',
@@ -212,11 +261,37 @@ const Cargas: React.FC = () => {
       alert('CRT deve ter no máximo 10 caracteres');
       return;
     }
+
+    // Validar se UF de origem foi selecionada
+    if (!formData.ufOrigemSelecionada) {
+      alert('Selecione a UF de origem');
+      return;
+    }
+
+    // Validar se UF de destino foi selecionada
+    if (!formData.ufDestinoSelecionada) {
+      alert('Selecione a UF de destino');
+      return;
+    }
+
+    // Construir origem baseada na UF e cidade
+    const origemCompleta = formData.ufOrigemSelecionada === 'internacional' 
+      ? 'Internacional'
+      : formData.cidadeOrigem 
+        ? `${formData.cidadeOrigem} - ${formData.ufOrigemSelecionada}`
+        : formData.ufOrigemSelecionada;
+
+    // Construir destino baseado na UF e cidade
+    const destinoCompleto = formData.ufDestinoSelecionada === 'internacional' 
+      ? 'Internacional'
+      : formData.cidadeDestino 
+        ? `${formData.cidadeDestino} - ${formData.ufDestinoSelecionada}`
+        : formData.ufDestinoSelecionada;
     
     const cargaData = {
       descricao: formData.crt || 'Carga sem descrição',
-      origem: formData.origem,
-      destino: formData.destino,
+      origem: origemCompleta,
+      destino: destinoCompleto,
       peso: parseFloat(formData.peso),
       valor: parseCurrency(formData.valor),
       dataColeta: new Date(formData.dataColeta),
@@ -261,6 +336,10 @@ const Cargas: React.FC = () => {
       crt: '',
       origem: '',
       destino: '',
+      ufOrigemSelecionada: '',
+      cidadeOrigem: '',
+      ufDestinoSelecionada: '',
+      cidadeDestino: '',
       dataColeta: format(new Date(), 'yyyy-MM-dd'),
       dataEntrega: format(new Date(), 'yyyy-MM-dd'),
       valor: '',
@@ -275,11 +354,34 @@ const Cargas: React.FC = () => {
     setShowCancelConfirm(false);
   };
 
+  // Função auxiliar para extrair UF e cidade de uma string
+  const extrairUfECidade = (localCompleto: string) => {
+    if (localCompleto === 'Internacional') {
+      return { uf: 'internacional', cidade: '' };
+    }
+    
+    // Padrão: "Cidade - UF" ou apenas "UF"
+    const partes = localCompleto.split(' - ');
+    if (partes.length === 2) {
+      return { uf: partes[1], cidade: partes[0] };
+    } else {
+      // Apenas UF
+      return { uf: localCompleto, cidade: '' };
+    }
+  };
+
   const handleEdit = (carga: any) => {
+    const origemInfo = extrairUfECidade(carga.origem);
+    const destinoInfo = extrairUfECidade(carga.destino);
+    
     const formDataToSet = {
       crt: carga.crt || carga.descricao || '',
       origem: carga.origem,
       destino: carga.destino,
+      ufOrigemSelecionada: origemInfo.uf,
+      cidadeOrigem: origemInfo.cidade,
+      ufDestinoSelecionada: destinoInfo.uf,
+      cidadeDestino: destinoInfo.cidade,
       dataColeta: format(new Date(carga.dataColeta), 'yyyy-MM-dd'),
       dataEntrega: format(new Date(carga.dataEntrega), 'yyyy-MM-dd'),
       valor: formatCurrency(carga.valor.toString()),
@@ -1040,30 +1142,90 @@ const Cargas: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Origem *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.origem}
-                      onChange={(e) => handleFormChange('origem', e.target.value)}
-                      className="input-field"
-                      required
-                    />
+                  {/* ORIGEM */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        UF Origem *
+                      </label>
+                      <select
+                        value={formData.ufOrigemSelecionada}
+                        onChange={(e) => {
+                          handleFormChange('ufOrigemSelecionada', e.target.value);
+                          // Limpar cidade quando mudar UF
+                          if (formData.cidadeOrigem) {
+                            handleFormChange('cidadeOrigem', '');
+                          }
+                        }}
+                        className="input-field"
+                        required
+                      >
+                        <option value="">Selecione a UF de origem</option>
+                        {ufsOrdenadas.map((uf) => (
+                          <option key={uf.value} value={uf.value}>
+                            {uf.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {formData.ufOrigemSelecionada && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Cidade Origem
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.cidadeOrigem}
+                          onChange={(e) => handleFormChange('cidadeOrigem', e.target.value)}
+                          placeholder={formData.ufOrigemSelecionada === 'internacional' ? "Digite a cidade/país de origem" : "Digite a cidade de origem"}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Destino *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.destino}
-                      onChange={(e) => handleFormChange('destino', e.target.value)}
-                      className="input-field"
-                      required
-                    />
+                  {/* DESTINO */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        UF Destino *
+                      </label>
+                      <select
+                        value={formData.ufDestinoSelecionada}
+                        onChange={(e) => {
+                          handleFormChange('ufDestinoSelecionada', e.target.value);
+                          // Limpar cidade quando mudar UF
+                          if (formData.cidadeDestino) {
+                            handleFormChange('cidadeDestino', '');
+                          }
+                        }}
+                        className="input-field"
+                        required
+                      >
+                        <option value="">Selecione a UF de destino</option>
+                        {ufsOrdenadas.map((uf) => (
+                          <option key={uf.value} value={uf.value}>
+                            {uf.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {formData.ufDestinoSelecionada && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Cidade Destino
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.cidadeDestino}
+                          onChange={(e) => handleFormChange('cidadeDestino', e.target.value)}
+                          placeholder={formData.ufDestinoSelecionada === 'internacional' ? "Digite a cidade/país de destino" : "Digite a cidade de destino"}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

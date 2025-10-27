@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -10,11 +11,19 @@ import {
   Clock, 
   AlertTriangle,
   DollarSign,
-  ArrowUpRight
+  ArrowUpRight,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react'
 
 export default function Dashboard() {
   const { cargas } = useDatabase()
+  const navigate = useNavigate()
+
+  const handleStatusClick = (status: string) => {
+    // Navegar para a página de cargas com filtro de status
+    navigate('/cargas', { state: { filterStatus: status } })
+  }
 
   const cargoStats = useMemo(() => {
     const aColeta = cargas.filter(carga => carga.status === 'a_coletar').length
@@ -40,9 +49,9 @@ export default function Dashboard() {
   const statusConfig = {
     a_coletar: { label: 'À Coletar', icon: Clock, color: 'bg-amber-50', iconColor: 'text-amber-600' },
     em_transito: { label: 'Em Trânsito', icon: Truck, color: 'bg-blue-50', iconColor: 'text-blue-600' },
-    armazenada: { label: 'Armazenada', icon: Package, color: 'bg-purple-50', iconColor: 'text-purple-600' },
-    entregue: { label: 'Entregue', icon: CheckCircle, color: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-    cancelada: { label: 'Cancelada', icon: AlertTriangle, color: 'bg-red-50', iconColor: 'text-red-600' }
+    armazenada: { label: 'Armazenadas', icon: Package, color: 'bg-purple-50', iconColor: 'text-purple-600' },
+    entregue: { label: 'Entregues', icon: CheckCircle, color: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+    cancelada: { label: 'Canceladas', icon: AlertTriangle, color: 'bg-red-50', iconColor: 'text-red-600' }
   }
 
   const cargasRecentes = useMemo(() => {
@@ -143,7 +152,11 @@ export default function Dashboard() {
             const Icon = config.icon
             
             return (
-              <div key={status} className={`card p-4 text-center hover:shadow-lg transition-all ${config.color}`}>
+              <div 
+                key={status} 
+                className={`card p-4 text-center hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 ${config.color}`}
+                onClick={() => handleStatusClick(status)}
+              >
                 <div className={`w-12 h-12 ${config.color} rounded-lg flex items-center justify-center mx-auto mb-3`}>
                   <Icon className={`w-6 h-6 ${config.iconColor}`} />
                 </div>
