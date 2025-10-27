@@ -58,16 +58,16 @@ const Login: React.FC = () => {
           {/* Logo & Branding */}
           <div className="text-center space-y-4">
             <div className="flex justify-center">
-              <div className="h-16 w-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="h-16 w-16 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Truck className="h-8 w-8 text-white" />
               </div>
             </div>
             <div className="space-y-1">
               <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
-                MOBTAX
+                ABSOLUT
               </h1>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Gestão de Frotas e Transportes
+                Gestão
               </p>
             </div>
           </div>
@@ -151,15 +151,8 @@ const Login: React.FC = () => {
 
           {/* Footer Info */}
           <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-            {/* Biblical Verse */}
-            <div className="text-center space-y-2">
-              <p className="text-xs italic text-slate-500 dark:text-slate-500">
-                "Entregue o seu caminho ao Senhor; confie nele, e ele agirá."
-              </p>
-              <p className="text-xs text-slate-400 dark:text-slate-600">
-                Salmos 37:5
-              </p>
-            </div>
+            {/* Biblical Verse (dynamic) */}
+            <DynamicVerse />
           </div>
         </div>
       </div>
@@ -168,3 +161,86 @@ const Login: React.FC = () => {
 }
 
 export default Login
+
+// Componente auxiliar para buscar e exibir versículo aleatório
+const DynamicVerse: React.FC = () => {
+  const [text, setText] = useState('')
+  const [reference, setReference] = useState('')
+  const [loadingVerse, setLoadingVerse] = useState(true)
+
+  useEffect(() => {
+    // Sempre exibe mensagem em PT-BR usando uma lista local confiável
+    setLoadingVerse(true)
+    try {
+      const idx = Math.floor(Math.random() * PT_BR_VERSES.length)
+      const v = PT_BR_VERSES[idx]
+      setText(v.text)
+      setReference(v.reference)
+    } finally {
+      setLoadingVerse(false)
+    }
+  }, [])
+
+  return (
+    <div className="text-center space-y-2">
+      <p className="text-xs italic text-slate-500 dark:text-slate-500">
+        {loadingVerse ? 'Carregando versículo...' : text}
+      </p>
+      <p className="text-xs text-slate-400 dark:text-slate-600">
+        {reference}
+      </p>
+    </div>
+  )
+}
+
+// Lista local de versículos em PT-BR (texto e referência)
+const PT_BR_VERSES: { text: string; reference: string }[] = [
+  {
+    text: 'Entrega o teu caminho ao Senhor; confia nele, e o mais ele fará.',
+    reference: 'Salmos 37:5'
+  },
+  {
+    text: 'O Senhor é o meu pastor; nada me faltará.',
+    reference: 'Salmos 23:1'
+  },
+  {
+    text: 'Tudo posso naquele que me fortalece.',
+    reference: 'Filipenses 4:13'
+  },
+  {
+    text: 'Confia no Senhor de todo o teu coração e não te apoies no teu próprio entendimento.',
+    reference: 'Provérbios 3:5'
+  },
+  {
+    text: 'Não andeis ansiosos por coisa alguma; antes, em tudo, sejam os vossos pedidos conhecidos diante de Deus pela oração e súplica, com ações de graças.',
+    reference: 'Filipenses 4:6'
+  },
+  {
+    text: 'O Senhor é a minha luz e a minha salvação; a quem temerei?',
+    reference: 'Salmos 27:1'
+  },
+  {
+    text: 'Esforça-te e tem bom ânimo; não temas, nem te espantes, porque o Senhor, teu Deus, é contigo por onde quer que andares.',
+    reference: 'Josué 1:9'
+  },
+  {
+    text: 'Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.',
+    reference: 'Salmos 91:1'
+  },
+  {
+    text: 'Clama a mim, e responder-te-ei; anunciar-te-ei coisas grandes e firmes, que não sabes.',
+    reference: 'Jeremias 33:3'
+  },
+  {
+    text: 'Se Deus é por nós, quem será contra nós?',
+    reference: 'Romanos 8:31'
+  },
+  {
+    text: 'Buscai, pois, em primeiro lugar, o Reino de Deus e a sua justiça, e todas estas coisas vos serão acrescentadas.',
+    reference: 'Mateus 6:33'
+  },
+  {
+    text: 'Bem-aventurados os pacificadores, porque serão chamados filhos de Deus.',
+    reference: 'Mateus 5:9'
+  }
+]
