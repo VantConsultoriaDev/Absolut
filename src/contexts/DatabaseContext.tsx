@@ -18,7 +18,7 @@ interface DatabaseProviderProps {
 
 export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) => {
   // A lista de usuários será sempre vazia, pois a gestão é feita pelo Supabase
-  const [users, setUsers] = useState<User[]>([])
+  const [users] = useState<User[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [parceiros, setParceiros] = useState<Parceiro[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
@@ -405,23 +405,23 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return newUser
   }
 
-  const updateUser = (id: string, userData: Partial<User>): User | null => {
+  const updateUser = (_id: string, _userData: Partial<User>): User | null => {
     console.warn("DatabaseContext: updateUser chamado. A gestão de usuários deve ser feita via Supabase.");
     // setUsers(prev => prev.map(user => // Não atualiza o estado local
     //   user.id === id 
     //     ? { ...user, ...userData, updatedAt: new Date() }
     //     : user
     // ))
-    return getUserById(id)
+    return getUserById(_id)
   }
 
-  const deleteUser = (id: string): boolean => {
+  const deleteUser = (_id: string): boolean => {
     console.warn("DatabaseContext: deleteUser chamado. A gestão de usuários deve ser feita via Supabase.");
     // setUsers(prev => prev.filter(user => user.id !== id)) // Não deleta do estado local
     return true
   }
 
-  const getUserById = (id: string): User | null => {
+  const getUserById = (_id: string): User | null => {
     // Retorna null, pois os usuários não estão mais no estado local
     return null
   }

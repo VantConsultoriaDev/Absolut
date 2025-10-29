@@ -1,9 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useAuth } from '../contexts/AuthContext'
-import { useModal } from '../hooks/useModal'
 import { format } from 'date-fns'
-import StandardCheckbox from '../components/StandardCheckbox'
 import { 
   Plus, 
   Search, 
@@ -14,20 +12,14 @@ import {
   Crown,
   Edit,
   Trash2,
-  X,
-  Eye,
-  EyeOff,
   Mail,
   Calendar,
   CheckCircle,
   Database
 } from 'lucide-react'
 
-// Removendo interfaces de formulário e lógica de CRUD local
-// interface UserForm { ... }
-
 const Usuarios: React.FC = () => {
-  const { users } = useDatabase() // users agora é sempre []
+  const { users: _users } = useDatabase() // users agora é sempre []
   const { user: currentUser } = useAuth()
   
   const [searchTerm, setSearchTerm] = useState('')
