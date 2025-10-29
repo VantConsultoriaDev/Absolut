@@ -23,7 +23,7 @@ const UndoButton: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let interval: number | null = null; // Alterado de NodeJS.Timeout para number
+    let interval: number | null = null;
 
     if (currentAction && timeLeft > 0) {
       interval = setInterval(() => {

@@ -4,7 +4,7 @@ import { useModal } from '../hooks/useModal'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency, parseCurrency } from '../utils/formatters'
-import { undoService } from '../services/undoService'
+import { undoService } from '../services/undoService' // Atualizado para importar do serviço
 import { 
   Plus, 
   Search, 

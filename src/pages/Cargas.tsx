@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
 import StandardCheckbox from '../components/StandardCheckbox';
 import { ImportService } from '../services/importService';
-import { undoService } from '../services/undoService';
+import { undoService } from '../services/undoService'; // Atualizado para importar do serviço
 import {
   Plus,
   Search,

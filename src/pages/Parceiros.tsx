@@ -9,7 +9,7 @@ import {
 import StandardCheckbox from '../components/StandardCheckbox';
 import { CNPJService } from '../services/cnpjService';
 import { VehicleService } from '../services/vehicleService';
-import { undoService } from '../services/undoService';
+import { undoService } from '../services/undoService'; // Atualizado para importar do serviço
 
 export default function Parceiros() {
   const { 
@@ -1220,7 +1220,7 @@ export default function Parceiros() {
                             setParceiroForm({ ...parceiroForm, documento: formatted });
                             
                             // Reset flag de consulta apenas se o CNPJ mudou significativamente
-                            if (cnpjConsultado && cnpjLimpo.length < 14) {
+                            if (cnpjConsultado) {
                               setCnpjConsultado(false);
                             }
                             
@@ -1510,8 +1510,7 @@ export default function Parceiros() {
           <div className="space-y-3">
             {veiculosParceiro.map((veiculo) => {
               const motoristaVinculado = motoristasParceiro.find(m => 
-                m.id === veiculo.motoristaVinculado || 
-                (m.id.endsWith('_as_driver') && m.parceiroId === veiculo.motoristaVinculado)
+                m.id.endsWith('_as_driver') ? v.motoristaVinculado === motorista.parceiroId : v.motoristaVinculado === motorista.id
               );
               
               return (
