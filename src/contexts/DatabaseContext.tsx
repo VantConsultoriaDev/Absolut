@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga } from '../types'
+import { parseCurrency } from '../utils/formatters'
 
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
@@ -412,16 +413,46 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
           const newDescription = buildMovimentacaoDescription(carga, prefix);
           
-          // Atualiza apenas a descrição e o updatedAt
+          let newValor = carga.valor;
+          
+          // Lógica de Recálculo de Valor (Se for Adiantamento ou Saldo)
+          if (prefix === 'Adto' || prefix === 'Saldo') {
+            // Nota: Não temos o percentual de adiantamento salvo na movimentação,
+            // então assumimos um padrão (ex: 70/30) ou mantemos o valor original
+            // se o valor da carga não mudou drasticamente.
+            // Para simplificar, vamos manter a proporção original se o valor da carga mudar.
+            
+            const originalMov = movimentacoes.find(m => m.id === mov.id);
+            const originalCargaValor = cargas.find(c => c.id === cargaId)?.valor || 0;
+            
+            if (originalMov && originalCargaValor > 0) {
+              const proporcao = originalMov.valor / originalCargaValor;
+              newValor = carga.valor * proporcao;
+            } else {
+              // Fallback: Se não for possível calcular a proporção, usa o valor total da carga
+              // (Isso pode ser impreciso se a integração original incluiu extras)
+              newValor = carga.valor;
+            }
+          } else {
+            // Se for Frete (sem split), o valor é o valor total da carga
+            newValor = carga.valor;
+          }
+
+          // Atualiza descrição, valor e updatedAt
           return {
             ...mov,
             descricao: newDescription,
+            valor: newValor, // Atualiza o valor
             updatedAt: new Date()
           };
         }
         return mov;
       });
     });
+  };
+
+  const deleteMovimentacoesByCargaId = (cargaId: string): void => {
+    setMovimentacoes(prev => prev.filter(mov => mov.cargaId !== cargaId));
   };
 
   // Cliente operations
@@ -509,7 +540,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     // Se o parceiro for um motorista (PF), precisamos sincronizar as cargas
     const updatedParceiro = getParceiroById(id);
     if (updatedParceiro?.tipo === 'PF' && updatedParceiro.isMotorista) {
-        syncMovimentacoesForCarga(id); // Sincroniza se o ID do parceiro for usado como motoristaId
+        // Sincroniza todas as cargas que usam este parceiro como motorista
+        cargas.filter(c => c.motoristaId === id).forEach(c => syncMovimentacoesForCarga(c.id));
     }
     return updatedParceiro;
   }
@@ -545,7 +577,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         : motorista
     ))
     // Sincroniza as cargas que usam este motorista
-    syncMovimentacoesForCarga(id);
+    cargas.filter(c => c.motoristaId === id).forEach(c => syncMovimentacoesForCarga(c.id));
     return motoristas.find(m => m.id === id) || null
   }
 
@@ -637,7 +669,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       return carga;
     }));
 
-    // Se a carga foi atualizada e possui movimentações financeiras, sincroniza a descrição
+    // Se a carga foi atualizada e possui movimentações financeiras, sincroniza a descrição e o valor
     if (updatedCarga) {
       syncMovimentacoesForCarga(id);
     }
@@ -646,6 +678,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }
 
   const deleteCarga = (id: string): boolean => {
+    // 1. Exclui as movimentações financeiras associadas
+    deleteMovimentacoesByCargaId(id);
+    
+    // 2. Exclui a carga
     setCargas(prev => prev.filter(carga => carga.id !== id))
     return true
   }

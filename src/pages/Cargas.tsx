@@ -213,7 +213,8 @@ const Cargas: React.FC = () => {
       cidadeDestino: destinoInfo.cidade,
       dataColeta: format(new Date(carga.dataColeta || new Date()), 'yyyy-MM-dd'),
       dataEntrega: format(new Date(carga.dataEntrega || new Date()), 'yyyy-MM-dd'),
-      valor: formatCurrency(carga.valor.toString()),
+      // CORREÇÃO: Formatar o valor numérico para string monetária
+      valor: formatCurrency(carga.valor || 0),
       peso: carga.peso.toString(),
       observacoes: carga.observacoes || '',
       status: carga.status
@@ -289,13 +290,24 @@ const Cargas: React.FC = () => {
       const deletedCarga = cargas.find(c => c.id === deleteTarget.id);
       
       if (deletedCarga) {
-        deleteCarga(deleteTarget.id);
+        // 1. Salvar movimentações associadas para o undo
+        const associatedMovs = movimentacoes.filter(m => m.cargaId === deletedCarga.id);
+        
+        // 2. Deletar a carga (que agora deleta as movimentações em cascata no context)
+        deleteCarga(deletedCarga.id);
+        
+        // 3. Adicionar ação de desfazer
         undoService.addUndoAction({
           type: 'delete_cargo',
           description: `Carga "${deleteTarget.descricao}" excluída`,
-          data: deletedCarga,
+          data: { deletedCarga, associatedMovs },
           undoFunction: async () => {
-            createCarga(deletedCarga);
+            const restoredCarga = createCarga(deletedCarga);
+            // Restaurar movimentações
+            associatedMovs.forEach(mov => {
+              // Garante que a movimentação restaurada aponte para o novo ID da carga restaurada
+              createMovimentacao({ ...mov, cargaId: restoredCarga.id });
+            });
           }
         });
       }
@@ -367,7 +379,7 @@ const Cargas: React.FC = () => {
       return;
     }
 
-    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    const valorTotal = parseCurrency(formatCurrency(integratingCarga.valor || 0));
     
     // Extras calculation
     const calcularValorBRL = () => {
@@ -969,7 +981,7 @@ const Cargas: React.FC = () => {
               </h3>
             </div>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Tem certeza que deseja excluir a carga "{deleteTarget.descricao}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir a carga "{deleteTarget.descricao}"? Esta ação também excluirá todas as movimentações financeiras associadas.
             </p>
             <div className="flex space-x-3">
               <button
