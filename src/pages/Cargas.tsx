@@ -26,7 +26,7 @@ import CargasStats from '../components/cargas/CargasStats';
 import CargaFormModal, { CargaFormData } from '../components/cargas/CargaFormModal';
 import CargaLinkModal from '../components/cargas/CargaLinkModal';
 import CargaIntegrateModal from '../components/cargas/CargaIntegrateModal';
-import CargaImportModal from '../components/cargas/CargaImportModal';
+import CargaImportModal from '../components/cargas/CargasImportModal';
 import { UFS_ORDENADAS, STATUS_CONFIG } from '../utils/cargasConstants';
 
 // Define IntegrateData structure locally for Cargas.tsx state
@@ -88,6 +88,8 @@ const Cargas: React.FC = () => {
     deleteCarga,
     veiculos,
     clientes,
+    motoristas, // Adicionado para buscar nome do motorista
+    parceiros, // Adicionado para buscar parceiro PF como motorista
     createMovimentacao,
     movimentacoes
   } = useDatabase();
@@ -357,6 +359,20 @@ const Cargas: React.FC = () => {
     setIntegrateData(initialIntegrateData);
   };
 
+  const getMotoristaName = (motoristaId: string | undefined) => {
+    if (!motoristaId) return '';
+    
+    // 1. Tenta encontrar na lista de motoristas
+    const motorista = motoristas.find(m => m.id === motoristaId);
+    if (motorista) return motorista.nome;
+
+    // 2. Tenta encontrar como parceiro PF que é motorista
+    const parceiroMotorista = parceiros.find(p => p.id === motoristaId && p.tipo === 'PF' && p.isMotorista);
+    if (parceiroMotorista) return parceiroMotorista.nome;
+
+    return '';
+  };
+
   const handleIntegrateSubmit = () => {
     if (!integratingCarga) return;
 
@@ -370,7 +386,14 @@ const Cargas: React.FC = () => {
     const destinoInfo = extrairUfECidade(integratingCarga.destino || '');
     const cidadeDestino = destinoInfo.cidade || integratingCarga.destino || '';
     const crtDisplay = integratingCarga.crt || integratingCarga.descricao || integratingCarga.id;
-    const motoristaSufixo = integratingCarga.motoristaId ? ' - Motorista vinculado' : '';
+    
+    const motoristaNome = getMotoristaName(integratingCarga.motoristaId);
+    const motoristaSufixo = motoristaNome ? ` - ${motoristaNome}` : '';
+
+    // Função para construir a descrição
+    const buildDescription = (prefix: string) => {
+      return `${prefix} - ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`;
+    };
 
     // Extras calculation (moved from modal to here for submission)
     const calcularValorBRL = () => {
@@ -389,7 +412,7 @@ const Cargas: React.FC = () => {
       createMovimentacao({
         tipo: 'despesa',
         valor: valorTotal,
-        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        descricao: buildDescription('Frete'), // Novo formato
         categoria: 'FRETE',
         data: new Date(integrateData.dataVencimentoDespesa || new Date()),
         status: 'pendente',
@@ -412,7 +435,7 @@ const Cargas: React.FC = () => {
       createMovimentacao({
         tipo: 'despesa',
         valor: valorAdiantamentoFinal,
-        descricao: `Adiantamento - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        descricao: buildDescription('Adto'), // Novo formato
         categoria: 'FRETE',
         data: dataAdiant,
         status: 'pendente',
@@ -423,7 +446,7 @@ const Cargas: React.FC = () => {
       createMovimentacao({
         tipo: 'despesa',
         valor: valorSaldoFinal,
-        descricao: `Saldo- CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        descricao: buildDescription('Saldo'), // Novo formato
         categoria: 'FRETE',
         data: dataSaldo,
         status: 'pendente',
@@ -437,7 +460,7 @@ const Cargas: React.FC = () => {
       createMovimentacao({
         tipo: 'despesa',
         valor: valorFinal,
-        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        descricao: buildDescription('Frete'), // Novo formato
         categoria: 'FRETE',
         data: new Date(integrateData.dataVencimentoDespesa || new Date()),
         status: 'pendente',
