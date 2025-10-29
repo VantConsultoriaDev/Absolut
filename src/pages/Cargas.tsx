@@ -1068,11 +1068,7 @@ const Cargas: React.FC = () => {
             Importar CSV/Excel
           </button>
           <button
-            onClick={(e) => {
-              // const rect = e.currentTarget.getBoundingClientRect(); // Removido para corrigir TS6133
-              // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
-              // const top = rect.bottom + window.scrollY + 8; // Removido
-              // Removed setFormAnchor as it's not used for modal positioning anymore
+            onClick={() => {
               setShowForm(true);
               setHasUnsavedChanges(false);
               setOriginalFormData(null);
@@ -1438,7 +1434,7 @@ const Cargas: React.FC = () => {
                         </button>
                         <div className="relative">
                           <button
-                            onClick={(e) => {
+                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setDropdownPosition({
                                 top: rect.bottom + window.scrollY + 5,
@@ -2254,7 +2250,7 @@ const Cargas: React.FC = () => {
                           const formatted = formatCurrency(e.target.value);
                           setIntegrateData(prev => ({ ...prev, valorDiarias: formatted }));
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                        className="input-field"
                         placeholder="R$ 0,00"
                       />
                     </div>
@@ -2271,7 +2267,7 @@ const Cargas: React.FC = () => {
                       type="date"
                       value={integrateData.dataVencimentoDespesa}
                       onChange={(e) => setIntegrateData(prev => ({ ...prev, dataVencimentoDespesa: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      className="input-field"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       Sem adições: será integrada como despesa no valor total da carga.
