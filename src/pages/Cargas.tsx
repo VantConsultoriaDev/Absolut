@@ -26,7 +26,7 @@ import CargasStats from '../components/cargas/CargasStats';
 import CargaFormModal, { CargaFormData } from '../components/cargas/CargaFormModal';
 import CargaLinkModal from '../components/cargas/CargaLinkModal';
 import CargaIntegrateModal from '../components/cargas/CargaIntegrateModal';
-import CargaImportModal from '../components/cargas/CargasImportModal';
+import CargaImportModal from '../components/cargas/CargaImportModal';
 import { UFS_ORDENADAS, STATUS_CONFIG } from '../utils/cargasConstants';
 
 // Define IntegrateData structure locally for Cargas.tsx state
@@ -392,6 +392,7 @@ const Cargas: React.FC = () => {
 
     // Função para construir a descrição
     const buildDescription = (prefix: string) => {
+      // Novo formato: "{Tipo} - {CRT} - {Cidade Destino}{Motorista Sufixo}"
       return `${prefix} - ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`;
     };
 
