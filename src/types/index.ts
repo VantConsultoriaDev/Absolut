@@ -1,7 +1,7 @@
 export interface User {
   id: string
   username: string
-  password: string
+  password?: string // Tornar a senha opcional, pois não é retornada pelo Supabase
   email?: string
   name?: string
   role: 'admin' | 'master' | 'comum'

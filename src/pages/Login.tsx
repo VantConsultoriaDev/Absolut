@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('') // Alterado para email
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -16,7 +16,7 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (error) setError('')
-  }, [username, password])
+  }, [email, password]) // Alterado para email
 
   if (isAuthenticated) {
     return <Navigate to="/inicio" replace />
@@ -28,9 +28,9 @@ const Login: React.FC = () => {
     setLoading(true)
 
     try {
-      const success = await login(username, password)
+      const success = await login(email, password) // Usar email
       if (!success) {
-        setError('Usuário ou senha inválidos')
+        setError('Email ou senha inválidos') // Mensagem de erro atualizada
       }
     } catch (err) {
       setError('Erro ao fazer login. Tente novamente.')
@@ -74,21 +74,21 @@ const Login: React.FC = () => {
 
           {/* Login Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Username Field */}
+            {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="username" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Usuário
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Email
               </label>
               <input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email" // Alterado para tipo email
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="input-field"
-                placeholder="Digite seu usuário"
-                autoComplete="username"
+                placeholder="Digite seu email"
+                autoComplete="email" // Alterado para email
               />
             </div>
 
