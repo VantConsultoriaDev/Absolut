@@ -84,6 +84,17 @@ const Contratos: React.FC = () => {
       return;
     }
 
+    // Verifica se o ID é um ID de demonstração local (não UUID)
+    // IDs locais são curtos e não contêm hífens (ex: '4nnafwdsx', 'carga-1')
+    const isLocalDemoId = selectedCargaId.length < 15 && !selectedCargaId.includes('-');
+    
+    if (isLocalDemoId) {
+        setLoading(false);
+        setLoadedData(null);
+        alert('Atenção: Esta funcionalidade de Contrato de Frete só funciona com cargas salvas no Supabase (UUIDs). A carga selecionada é um dado de demonstração local.');
+        return;
+    }
+
     setLoading(true);
     setPdfUrl(null);
     
