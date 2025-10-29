@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, formatDocument } from '../utils/formatters';
 import { FileText, RefreshCw, Search, AlertTriangle, Download, Send, Mail } from 'lucide-react';
-import { Parceiro, Motorista, Carga } from '../types';
+// Removendo importações não utilizadas: Parceiro, Motorista, Carga
 import { PDFService, ContratoData } from '../services/pdfService';
 
 // Tipagem para os valores editáveis do frete
@@ -38,7 +38,8 @@ interface LoadedData {
 }
 
 const Contratos: React.FC = () => {
-  const { cargas: localCargas, parceiros: localParceiros, veiculos: localVeiculos } = useDatabase();
+  // Removendo localParceiros, pois não é usado
+  const { cargas: localCargas, veiculos: localVeiculos } = useDatabase();
   
   const [selectedCargaId, setSelectedCargaId] = useState('');
   const [freteValores, setFreteValores] = useState<FreteValores>(initialFreteValores);
@@ -48,6 +49,7 @@ const Contratos: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // 1. Carga Selecionada (usando dados locais para o Select)
+  // Mantendo esta variável para uso interno no componente (e.g., para o useMemo de filteredCargas)
   const selectedCarga = useMemo(() => {
     return localCargas.find(c => c.id === selectedCargaId);
   }, [localCargas, selectedCargaId]);
@@ -83,11 +85,11 @@ const Contratos: React.FC = () => {
     setPdfUrl(null);
     
     try {
-      // 3.1. Carregar Carga + Cliente + Parceiro
+      // 3.1. Carregar Carga + Cliente + Parceiro (INCLUINDO VALOR)
       const { data: carga, error: cargaError } = await supabase
         .from('cargas')
         .select(`
-          id, crt, origem, destino, peso, descricao, data_coleta, data_entrega,
+          id, crt, origem, destino, peso, valor, descricao, data_coleta, data_entrega,
           cliente:clientes (nome),
           parceiro:parceiros (nome),
           motorista_id,

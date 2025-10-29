@@ -1,4 +1,3 @@
-import { Carga } from '../types';
 import { formatCurrency } from '../utils/formatters';
 
 // Interface para os dados necessários para o PDF
