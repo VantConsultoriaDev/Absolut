@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, formatDocument } from '../utils/formatters';
 import { FileText, RefreshCw, Search, AlertTriangle } from 'lucide-react';
+import { Parceiro, Motorista } from '../types'; // Importando tipos para melhor tipagem
 
 // Tipagem para os valores editáveis do frete
 interface FreteValores {
@@ -30,7 +31,10 @@ const Contratos: React.FC = () => {
     movimentacoes, 
     parceiros, 
     veiculos,
-    motoristas
+    motoristas,
+    getParceiroById,
+    getMotoristasByParceiro,
+    getVeiculosByParceiro
   } = useDatabase();
   
   const [selectedCargaId, setSelectedCargaId] = useState('');
@@ -65,7 +69,7 @@ const Contratos: React.FC = () => {
       .join(', ') || '-';
 
     return {
-      motorista: motoristaData,
+      motorista: motoristaData as (Motorista | Parceiro) | undefined,
       veiculo: veiculoData,
       proprietario: proprietarioData,
       placasCarretas
@@ -86,8 +90,8 @@ const Contratos: React.FC = () => {
     const d1 = parseCurrency(valores.diarias);
     const ou = parseCurrency(valores.outrosDescontos);
     
-    // Saldo = (Valor Frete - Adiantamento - Outros Descontos) + (Pedágio + Outras Despesas + Diárias)
-    const saldo = (vf - ad - ou) + pd + oe1 + d1;
+    // Saldo = VF - AD + PD + OE1 + D1 - OU
+    const saldo = vf - ad + pd + oe1 + d1 - ou;
     return saldo;
   }, []);
 
@@ -104,41 +108,38 @@ const Contratos: React.FC = () => {
 
     setLoading(true);
     
-    // 3.1. Carregar valores das movimentações
+    // 3.1. Classificação dos Valores baseada nas categorias das movimentações
     const movs = movimentacoesCarga;
     
-    let valorFreteTotal = 0;
-    let adiantamentoTotal = 0;
-    let pedagioTotal = 0;
-    let outrasDespesasTotal = 0;
-    let diariasTotal = 0;
-    let outrosDescontosTotal = 0;
+    let VF = 0, AD = 0, PD = 0, OE1 = 0, D1 = 0, OU = 0;
 
-    // Para simplificar, vamos assumir que o Valor Frete (VF) é o valor total da carga
-    valorFreteTotal = selectedCarga.valor || 0;
-    
-    movs.forEach(mov => {
-      const valor = mov.valor || 0;
-      const desc = mov.descricao.toLowerCase();
+    movs.forEach(m => {
+      // Garante que o valor seja positivo para a soma, pois a classificação já define o tipo
+      const valor = Math.abs(m.valor || 0); 
       
-      if (desc.includes('adto')) {
-        adiantamentoTotal += valor;
-      } else if (desc.includes('pedagio')) {
-        pedagioTotal += valor;
-      } else if (desc.includes('diarias')) {
-        diariasTotal += valor;
-      } else if (desc.includes('despesa') && !desc.includes('adto') && !desc.includes('saldo')) {
-        outrasDespesasTotal += valor;
+      switch (m.categoria) {
+        case 'FRETE': VF += valor; break;
+        case 'ADIANTAMENTO': AD += valor; break;
+        case 'PEDAGIO': PD += valor; break;
+        case 'ALUGUEL':
+        case 'OUTRAS DESPESAS': OE1 += valor; break;
+        case 'DIARIA': D1 += valor; break;
+        case 'DESCONTO': OU += valor; break;
       }
     });
 
+    // Se não houver movimentação de FRETE, usa o valor da carga como VF
+    if (VF === 0) {
+      VF = selectedCarga.valor || 0;
+    }
+
     setFreteValores({
-      valorFrete: formatCurrency(valorFreteTotal),
-      adiantamento: formatCurrency(adiantamentoTotal),
-      pedagio: formatCurrency(pedagioTotal),
-      outrasDespesas: formatCurrency(outrasDespesasTotal),
-      diarias: formatCurrency(diariasTotal),
-      outrosDescontos: formatCurrency(outrosDescontosTotal) // Mantido 0 por padrão
+      valorFrete: formatCurrency(VF),
+      adiantamento: formatCurrency(AD),
+      pedagio: formatCurrency(PD),
+      outrasDespesas: formatCurrency(OE1),
+      diarias: formatCurrency(D1),
+      outrosDescontos: formatCurrency(OU)
     });
 
     setLoading(false);
@@ -188,7 +189,7 @@ const Contratos: React.FC = () => {
   };
 
   // Função para obter CPF/CNH de forma segura, seja Motorista ou Parceiro
-  const getMotoristaDocumentos = (motorista: any) => {
+  const getMotoristaDocumentos = (motorista: Parceiro | Motorista | undefined) => {
     if (!motorista) return { cpf: '-', cnh: '-' };
     
     // Se for Motorista (tipo Motorista)
@@ -345,7 +346,7 @@ const Contratos: React.FC = () => {
           </div>
 
           {/* Botão de Ação Principal */}
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-4 space-x-3">
             <button
               onClick={() => alert('Funcionalidade de Gerar PDF será implementada na próxima etapa.')}
               className="btn-primary text-lg px-8 py-3 flex items-center"
