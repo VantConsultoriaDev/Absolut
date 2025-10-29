@@ -141,7 +141,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsAuthenticated(true);
         } else {
           // Se falhar ao buscar/criar o perfil, desloga por segurança
-          await supabase.auth.signOut();
+          if (supabase) {
+            await supabase.auth.signOut();
+          }
           setUser(null);
           setIsAuthenticated(false);
         }
