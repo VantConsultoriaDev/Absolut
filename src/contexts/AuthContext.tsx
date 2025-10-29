@@ -47,6 +47,81 @@ const getPermissionsByRole = (role: 'admin' | 'master' | 'comum'): User['permiss
   }
 };
 
+// Função para buscar ou criar o perfil do usuário
+const fetchOrCreateProfile = async (sessionUser: any): Promise<User | null> => {
+  if (!supabase) return null;
+
+  // 1. Tenta buscar o perfil existente
+  let { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, role, permissions')
+    .eq('id', sessionUser.id)
+    .single();
+
+  // 2. Se o perfil não existir (e não for um erro de RLS ou outro erro grave), cria um perfil padrão
+  if (profileError && profileError.code === 'PGRST116') { // PGRST116: Linha não encontrada (perfil não existe)
+    console.warn('Perfil não encontrado. Criando perfil padrão...');
+    
+    const defaultRole = (sessionUser.app_metadata?.role as 'admin' | 'master' | 'comum') || 'comum';
+    const defaultPermissions = getPermissionsByRole(defaultRole);
+
+    const newProfileData = {
+      id: sessionUser.id,
+      first_name: sessionUser.email?.split('@')[0] || 'Usuário',
+      last_name: '',
+      role: defaultRole,
+      permissions: defaultPermissions,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert([newProfileData])
+      .select('first_name, last_name, role, permissions')
+      .single();
+
+    if (insertError) {
+      console.error('Erro ao criar perfil padrão:', insertError);
+      // Se falhar ao inserir, retorna o perfil padrão sem tentar buscar novamente
+      profile = newProfileData;
+    } else {
+      profile = newProfile;
+    }
+  } else if (profileError) {
+    console.error('Erro ao buscar perfil do usuário:', profileError);
+    // Se for outro erro (ex: RLS), usa o fallback de dados do auth.users
+    const defaultRole = (sessionUser.app_metadata?.role as 'admin' | 'master' | 'comum') || 'comum';
+    profile = {
+      first_name: sessionUser.email?.split('@')[0] || 'Usuário',
+      last_name: '',
+      role: defaultRole,
+      permissions: getPermissionsByRole(defaultRole)
+    };
+  }
+
+  // 3. Monta o objeto User para o contexto
+  if (profile) {
+    const userRole = (profile.role as 'admin' | 'master' | 'comum') || 'comum';
+    return {
+      id: sessionUser.id,
+      username: profile.first_name || sessionUser.email || 'unknown',
+      email: sessionUser.email || undefined,
+      name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || sessionUser.email || 'Unknown User',
+      role: userRole,
+      isActive: true,
+      // Type assertion para garantir que 'permissions' está no formato correto
+      permissions: (profile.permissions as User['permissions']) || getPermissionsByRole(userRole),
+      createdAt: new Date(sessionUser.created_at!),
+      updatedAt: new Date(sessionUser.updated_at!),
+      password: ''
+    };
+  }
+
+  return null;
+};
+
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -57,48 +132,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => { // _event para ignorar o parâmetro não utilizado
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        // Buscar dados do perfil da tabela public.profiles
-        const { data: profile, error: profileError } = await supabase! // Adicionado '!' para afirmar que supabase não é nulo
-          .from('profiles')
-          .select('first_name, last_name, role, permissions')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Erro ao buscar perfil do usuário:', profileError);
-          // Fallback se o perfil não for encontrado ou houver erro
-          const defaultRole = (session.user.app_metadata?.role as 'admin' | 'master' | 'comum') || 'comum';
-          setUser({
-            id: session.user.id,
-            username: session.user.email || 'unknown',
-            email: session.user.email || undefined,
-            name: session.user.email || 'Unknown User',
-            role: defaultRole,
-            isActive: true,
-            permissions: getPermissionsByRole(defaultRole),
-            createdAt: new Date(session.user.created_at!), // Adicionado '!' para afirmar que created_at não é nulo
-            updatedAt: new Date(session.user.updated_at!), // Adicionado '!' para afirmar que updated_at não é nulo
-            password: ''
-          });
+        const authenticatedUser = await fetchOrCreateProfile(session.user);
+        
+        if (authenticatedUser) {
+          setUser(authenticatedUser);
+          setIsAuthenticated(true);
         } else {
-          const userRole = (profile.role as 'admin' | 'master' | 'comum') || 'comum';
-          setUser({
-            id: session.user.id,
-            username: profile.first_name || session.user.email || 'unknown',
-            email: session.user.email || undefined,
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || session.user.email || 'Unknown User',
-            role: userRole,
-            isActive: true,
-            // Type assertion para garantir que 'permissions' está no formato correto
-            permissions: (profile.permissions as User['permissions']) || getPermissionsByRole(userRole),
-            createdAt: new Date(session.user.created_at!), // Adicionado '!' para afirmar que created_at não é nulo
-            updatedAt: new Date(session.user.updated_at!), // Adicionado '!' para afirmar que updated_at não é nulo
-            password: ''
-          });
+          // Se falhar ao buscar/criar o perfil, desloga por segurança
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
         }
-        setIsAuthenticated(true);
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -108,7 +154,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Verificação da sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // Isso será tratado pelo onAuthStateChange 'INITIAL_SESSION' ou 'SIGNED_IN'
+        // onAuthStateChange já lidou com isso, mas garantimos o estado inicial
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -133,7 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (data.user) {
-      // onAuthStateChange irá lidar com a definição do estado do usuário
+      // onAuthStateChange irá lidar com a definição do estado do usuário e criação do perfil, se necessário
       return true;
     }
     return false;
