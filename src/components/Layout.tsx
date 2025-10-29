@@ -11,7 +11,8 @@ import {
   Moon,
   LogOut,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  FileText // Novo ícone para Contratos
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -37,6 +38,7 @@ const Layout: React.FC = () => {
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
+    { name: 'Contratos de Frete', href: '/contratos', icon: FileText, permission: 'cargas' }, // Novo item
     { name: 'Parceiros', href: '/parceiros', icon: UserCheck, permission: 'parceiros' },
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ]
