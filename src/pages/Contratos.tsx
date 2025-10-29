@@ -49,7 +49,6 @@ const Contratos: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // 1. Carga Selecionada (usando dados locais para o Select)
-  // Mantendo esta variável para uso interno no componente (e.g., para o useMemo de filteredCargas)
   const selectedCarga = useMemo(() => {
     return localCargas.find(c => c.id === selectedCargaId);
   }, [localCargas, selectedCargaId]);
@@ -141,7 +140,7 @@ const Contratos: React.FC = () => {
       let VF = 0, AD = 0, PD = 0, OE1 = 0, D1 = 0, OU = 0;
 
       movimentos.forEach(m => {
-        // Usamos o valor absoluto, pois a classificação é feita pela categoria
+        // Usamos o valor absoluto, pois a classificação já define o tipo
         const valor = Math.abs(m.valor || 0); 
         
         switch (m.categoria) {
@@ -386,7 +385,7 @@ const Contratos: React.FC = () => {
           <RefreshCw className="h-8 w-8 text-blue-600 mx-auto mb-4 animate-spin" />
           <p className="text-gray-500 dark:text-gray-400">Carregando dados do Supabase...</p>
         </div>
-      ) : loadedData ? (
+      ) : selectedCarga && loadedData ? (
         <div className="space-y-6">
           {/* SEÇÃO: Dados da Carga */}
           <div className="card p-6 space-y-4">
