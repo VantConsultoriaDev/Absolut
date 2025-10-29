@@ -17,7 +17,7 @@ interface AuthProviderProps {
 }
 
 // Helper para obter permissões com base no role
-const getPermissionsByRole = (role: 'admin' | 'master' | 'comum') => {
+const getPermissionsByRole = (role: 'admin' | 'master' | 'comum'): User['permissions'] => {
   switch (role) {
     case 'admin':
       return {
@@ -52,7 +52,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (!supabase) {
+      console.warn('Supabase client is not initialized. Authentication will not work.');
+      return;
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => { // _event para ignorar o parâmetro não utilizado
       if (session) {
         // Buscar dados do perfil da tabela public.profiles
         const { data: profile, error: profileError } = await supabase
@@ -86,7 +91,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || session.user.email || 'Unknown User',
             role: userRole,
             isActive: true,
-            permissions: profile.permissions || getPermissionsByRole(userRole),
+            // Type assertion para garantir que 'permissions' está no formato correto
+            permissions: (profile.permissions as User['permissions']) || getPermissionsByRole(userRole),
             createdAt: new Date(session.user.created_at),
             updatedAt: new Date(session.user.updated_at),
             password: ''
@@ -115,6 +121,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    if (!supabase) {
+      console.error('Supabase client is not initialized. Cannot log in.');
+      return false;
+    }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -130,6 +140,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    if (!supabase) {
+      console.error('Supabase client is not initialized. Cannot log out.');
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Erro de logout no Supabase:', error.message);
