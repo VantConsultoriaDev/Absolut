@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom'
 import { Eye, EyeOff, Sun, Moon, Truck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import SupabaseTest from '../components/SupabaseTest' // Importando o componente de teste
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('') // Alterado para email
@@ -72,9 +71,6 @@ const Login: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Supabase Connection Status */}
-          <SupabaseTest />
 
           {/* Login Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
