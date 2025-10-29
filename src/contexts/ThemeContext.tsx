@@ -20,7 +20,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Check saved theme preference
-    const savedTheme = localStorage.getItem('mobtax_theme')
+    const savedTheme = localStorage.getItem('absolut_theme')
     if (savedTheme === 'dark') {
       setIsDark(true)
       document.documentElement.classList.add('dark')
@@ -36,10 +36,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     
     if (newTheme) {
       document.documentElement.classList.add('dark')
-      localStorage.setItem('mobtax_theme', 'dark')
+      localStorage.setItem('absolut_theme', 'dark')
     } else {
       document.documentElement.classList.remove('dark')
-      localStorage.setItem('mobtax_theme', 'light')
+      localStorage.setItem('absolut_theme', 'light')
     }
   }
 

@@ -1,4 +1,4 @@
-# MOBTAX - Sistema de Gestão de Transportes
+# ABSOLUT - Sistema de Gestão de Transportes
 
 Sistema completo de gestão para empresas de transporte, desenvolvido com React, TypeScript e Tailwind CSS.
 
@@ -151,7 +151,7 @@ src/
 git clone [url-do-repositorio]
 
 # Entre no diretório
-cd mobtax
+cd absolut
 
 # Instale as dependências
 npm install
@@ -234,4 +234,4 @@ Para suporte e dúvidas, entre em contato através dos issues do GitHub.
 
 ---
 
-**MOBTAX** - Transformando a gestão de transportes com tecnologia moderna e interface intuitiva.
+**ABSOLUT** - Transformando a gestão de transportes com tecnologia moderna e interface intuitiva.

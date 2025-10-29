@@ -33,7 +33,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         id: 'admin-global',
         username: 'admin',
         password: 'admin123',
-        email: 'admin@mobtax.com',
+        email: 'admin@absolut.com',
         name: 'Administrador Global',
         role: 'admin',
         isActive: true,
@@ -44,7 +44,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         id: 'master-demo',
         username: 'master',
         password: 'master123',
-        email: 'master@empresa.com',
+        email: 'master@absolut.com',
         name: 'João Silva',
         role: 'master',
         isActive: true,
@@ -55,7 +55,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         id: 'user-demo',
         username: 'usuario',
         password: 'user123',
-        email: 'usuario@empresa.com',
+        email: 'usuario@absolut.com',
         name: 'Maria Santos',
         role: 'comum',
         isActive: true,
@@ -287,13 +287,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // Load data from localStorage on mount
   useEffect(() => {
     const loadData = () => {
-      const savedUsers = localStorage.getItem('mobtax_users')
-      const savedClientes = localStorage.getItem('mobtax_clientes')
-      const savedParceiros = localStorage.getItem('mobtax_parceiros')
-      const savedMotoristas = localStorage.getItem('mobtax_motoristas')
-      const savedVeiculos = localStorage.getItem('mobtax_veiculos')
-      const savedMovimentacoes = localStorage.getItem('mobtax_movimentacoes')
-      const savedCargas = localStorage.getItem('mobtax_cargas')
+      const savedUsers = localStorage.getItem('absolut_users')
+      const savedClientes = localStorage.getItem('absolut_clientes')
+      const savedParceiros = localStorage.getItem('absolut_parceiros')
+      const savedMotoristas = localStorage.getItem('absolut_motoristas')
+      const savedVeiculos = localStorage.getItem('absolut_veiculos')
+      const savedMovimentacoes = localStorage.getItem('absolut_movimentacoes')
+      const savedCargas = localStorage.getItem('absolut_cargas')
 
       // If no data exists, initialize with demo data
       if (!savedUsers || !savedParceiros || !savedClientes) {
@@ -368,31 +368,31 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
   // Save data to localStorage whenever state changes
   useEffect(() => {
-    localStorage.setItem('mobtax_users', JSON.stringify(users))
+    localStorage.setItem('absolut_users', JSON.stringify(users))
   }, [users])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_clientes', JSON.stringify(clientes))
+    localStorage.setItem('absolut_clientes', JSON.stringify(clientes))
   }, [clientes])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_parceiros', JSON.stringify(parceiros))
+    localStorage.setItem('absolut_parceiros', JSON.stringify(parceiros))
   }, [parceiros])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_motoristas', JSON.stringify(motoristas))
+    localStorage.setItem('absolut_motoristas', JSON.stringify(motoristas))
   }, [motoristas])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_veiculos', JSON.stringify(veiculos))
+    localStorage.setItem('absolut_veiculos', JSON.stringify(veiculos))
   }, [veiculos])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_movimentacoes', JSON.stringify(movimentacoes))
+    localStorage.setItem('absolut_movimentacoes', JSON.stringify(movimentacoes))
   }, [movimentacoes])
 
   useEffect(() => {
-    localStorage.setItem('mobtax_cargas', JSON.stringify(cargas))
+    localStorage.setItem('absolut_cargas', JSON.stringify(cargas))
   }, [cargas])
 
   // Utility function to generate IDs
