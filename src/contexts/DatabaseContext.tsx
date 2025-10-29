@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga } from '../types'
-import { parseCurrency } from '../utils/formatters'
 
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
@@ -399,72 +398,67 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     const carga = currentCargas.find(c => c.id === cargaId);
     if (!carga) return;
 
-    const updatedMovimentacoes = currentMovimentacoes.map(mov => {
-      if (mov.cargaId === cargaId) {
-        let prefix: 'Adto' | 'Saldo' | 'Frete';
-        
-        if (mov.descricao.startsWith('Adto')) {
-          prefix = 'Adto';
-        } else if (mov.descricao.startsWith('Saldo')) {
-          prefix = 'Saldo';
-        } else {
-          prefix = 'Frete';
-        }
+    setMovimentacoes(prevMovimentacoes => {
+      return prevMovimentacoes.map(mov => {
+        if (mov.cargaId === cargaId) {
+          let prefix: 'Adto' | 'Saldo' | 'Frete';
+          
+          if (mov.descricao.startsWith('Adto')) {
+            prefix = 'Adto';
+          } else if (mov.descricao.startsWith('Saldo')) {
+            prefix = 'Saldo';
+          } else {
+            prefix = 'Frete';
+          }
 
-        const newDescription = buildMovimentacaoDescription(carga, prefix);
-        let newValor = carga.valor;
-        
-        // Lógica de Recálculo de Valor (Se for Adiantamento ou Saldo)
-        if (prefix === 'Adto' || prefix === 'Saldo') {
-          // Encontra a movimentação original para calcular a proporção
-          const originalMov = currentMovimentacoes.find(m => m.id === mov.id);
+          const newDescription = buildMovimentacaoDescription(carga, prefix);
+          let newValor = carga.valor;
           
-          // Tenta encontrar o valor original da carga ANTES da atualização (se disponível)
-          // Como não temos histórico, usamos o valor da movimentação atual para calcular a proporção
-          // em relação ao valor da carga atual. Isso é um risco, mas é o melhor que podemos fazer
-          // sem um histórico de transações.
-          
-          // Para simplificar e garantir que o valor seja atualizado, vamos usar uma abordagem mais simples:
-          // Se a descrição for Adto ou Saldo, assumimos que o valor da movimentação é uma proporção
-          // do valor total da carga. Se o valor total da carga mudar, a proporção deve ser mantida.
-          
-          // Se a movimentação original foi criada com base em um valor X, e o valor da carga mudou para Y,
-          // precisamos saber qual era a proporção original.
-          
-          // Como não temos a proporção original salva, vamos assumir que se houver mais de uma mov.
-          // para a mesma carga, elas representam o split (Adto/Saldo).
-          
-          const relatedMovs = currentMovimentacoes.filter(m => m.cargaId === cargaId);
-          const totalRelatedValue = relatedMovs.reduce((sum, m) => sum + m.valor, 0);
-          
-          if (relatedMovs.length > 1 && totalRelatedValue > 0) {
-            // Se houver split, recalcula a proporção
-            const proporcao = mov.valor / totalRelatedValue;
+          // Lógica de Recálculo de Valor (Se for Adiantamento ou Saldo)
+          if (prefix === 'Adto' || prefix === 'Saldo') {
+            // Encontra a movimentação original para calcular a proporção
+            // const originalMov = currentMovimentacoes.find(m => m.id === mov.id); // Removido: Variável não utilizada
             
-            // O novo valor da movimentação é a proporção aplicada ao novo valor da carga
-            // (Assumindo que o valor da carga é o valor base para o split)
-            newValor = carga.valor * proporcao;
+            // Tenta encontrar o valor original da carga ANTES da atualização (se disponível)
+            // Como não temos histórico, usamos o valor da movimentação atual para calcular a proporção
+            // em relação ao valor da carga atual. Isso é um risco, mas é o melhor que podemos fazer
+            // sem um histórico de transações.
+            
+            // Para simplificar e garantir que o valor seja atualizado, vamos usar uma abordagem mais simples:
+            // Se a descrição for Adto ou Saldo, assumimos que o valor da movimentação é uma proporção
+            // do valor total da carga. Se o valor total da carga mudar, a proporção deve ser mantida.
+            
+            const relatedMovs = currentMovimentacoes.filter(m => m.cargaId === cargaId);
+            const totalRelatedValue = relatedMovs.reduce((sum, m) => sum + m.valor, 0);
+            
+            if (relatedMovs.length > 1 && totalRelatedValue > 0) {
+              // Se houver split, recalcula a proporção
+              const proporcao = mov.valor / totalRelatedValue;
+              
+              // O novo valor da movimentação é a proporção aplicada ao novo valor da carga
+              // (Assumindo que o valor da carga é o valor base para o split)
+              newValor = carga.valor * proporcao;
+            } else {
+              // Fallback: Se não for possível calcular a proporção, usa o valor total da carga
+              // (Isso pode ser impreciso se a integração original incluiu extras)
+              newValor = carga.valor;
+            }
           } else {
             // Se for Frete (sem split), o valor é o valor total da carga
             newValor = carga.valor;
           }
-        } else {
-            // Se for Frete (sem split), o valor é o valor total da carga
-            newValor = carga.valor;
-        }
 
-        // Atualiza descrição, valor e updatedAt
-        return {
-          ...mov,
-          descricao: newDescription,
-          valor: newValor, // Atualiza o valor
-          updatedAt: new Date()
-        };
-      }
-      return mov;
+          // Atualiza descrição, valor e updatedAt
+          return {
+            ...mov,
+            descricao: newDescription,
+            valor: newValor, // Atualiza o valor
+            updatedAt: new Date()
+          };
+        }
+        return mov;
+      });
     });
-    
-    setMovimentacoes(updatedMovimentacoes);
   }, [buildMovimentacaoDescription]); // Dependências: buildMovimentacaoDescription
 
   const deleteMovimentacoesByCargaId = (cargaId: string): void => {
@@ -553,7 +547,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         ? { ...parceiro, ...parceiroData, updatedAt: new Date() }
         : parceiro
     ))
-    // Sincroniza as cargas que usam este parceiro como motorista
+    // Se o parceiro for um motorista (PF), precisamos sincronizar as cargas
     // Nota: A sincronização de cargas/movimentações será feita no useEffect abaixo
     return getParceiroById(id)
   }
@@ -680,10 +674,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       return carga;
     }));
 
-    // A sincronização será feita no useEffect abaixo, que observa mudanças em 'cargas'
-    // e 'motoristas' (via motoristaId)
+    // Se a carga foi atualizada e possui movimentações financeiras, sincroniza a descrição e o valor
+    if (updatedCarga) {
+      // Chamamos a sincronização no useEffect, mas se quisermos garantir a atualização imediata
+      // para o próximo render, podemos chamar aqui, mas o useEffect já cobre isso.
+      // syncMovimentacoesForCarga(id, cargas, movimentacoes); // Removido para evitar estado obsoleto
+    }
     
-    // Retorna a carga atualizada (pode ser null se o ID não for encontrado)
     return updatedCarga;
   }
 
@@ -696,32 +693,19 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return true
   }
 
-  // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas mudarem
-  // Isso garante que a descrição e o valor sejam atualizados automaticamente.
+  // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas/Parceiros mudarem
   useEffect(() => {
-    let needsSync = false;
     const cargaIdsToSync = new Set<string>();
 
-    // 1. Verifica se alguma carga foi alterada (valor, crt, origem/destino)
-    // Como não temos o estado anterior, vamos sincronizar todas as cargas que possuem movimentações
-    // sempre que o estado de 'cargas' mudar.
-    
+    // Identifica todas as cargas que possuem movimentações
     movimentacoes.forEach(mov => {
       if (mov.cargaId) {
         cargaIdsToSync.add(mov.cargaId);
       }
     });
-
-    // 2. Verifica se algum motorista/parceiro motorista foi alterado (nome)
-    // Isso afeta a descrição das movimentações.
-    
-    // Para evitar loops infinitos, esta lógica deve ser otimizada, mas por enquanto,
-    // vamos apenas garantir que a sincronização seja chamada para todas as cargas
-    // que possuem movimentações.
     
     if (cargaIdsToSync.size > 0) {
-      // Cria uma cópia do estado atual para passar para a função de sincronização
-      // para evitar problemas de closure.
+      // Passa o estado atual para a função de sincronização
       const currentCargas = [...cargas];
       const currentMovimentacoes = [...movimentacoes];
       
