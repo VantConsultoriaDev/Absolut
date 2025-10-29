@@ -135,6 +135,7 @@ export interface Carga {
   veiculoId?: string
   carretasSelecionadas?: string[]
   crt?: string
+  observacoes?: string // Adicionado
   createdAt: Date
   updatedAt: Date
 }

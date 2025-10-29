@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Truck, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { Package, DollarSign } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { STATUS_CONFIG } from '../../utils/cargasConstants';
 

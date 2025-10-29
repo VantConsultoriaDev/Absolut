@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { ImportService } from '../../services/importService';
 import { undoService } from '../../services/undoService';
 import { Carga } from '../../types';

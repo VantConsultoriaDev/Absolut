@@ -15,7 +15,7 @@ interface CargaLinkModalProps {
   selectedVeiculo: string;
   setSelectedVeiculo: (id: string) => void;
   selectedCarretas: string[];
-  setSelectedCarretas: (ids: string[]) => void;
+  setSelectedCarretas: React.Dispatch<React.SetStateAction<string[]>>; // Corrigido: Tipagem para setter de estado
 }
 
 const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
