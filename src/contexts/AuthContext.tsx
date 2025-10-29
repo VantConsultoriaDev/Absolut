@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Define loading como true durante a tentativa de login
     setIsLoading(true);
     
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: _data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       console.error('Erro de login no Supabase:', error.message);
