@@ -3,7 +3,7 @@ import { useDatabase } from '../contexts/DatabaseContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, formatDocument } from '../utils/formatters';
-import { FileText, RefreshCw, Download, Send, Mail, Search, AlertTriangle } from 'lucide-react';
+import { FileText, RefreshCw, Search, AlertTriangle } from 'lucide-react';
 
 // Tipagem para os valores editáveis do frete
 interface FreteValores {
@@ -28,7 +28,6 @@ const Contratos: React.FC = () => {
   const { 
     cargas, 
     movimentacoes, 
-    getMotoristaName, 
     parceiros, 
     veiculos,
     motoristas
@@ -87,15 +86,7 @@ const Contratos: React.FC = () => {
     const d1 = parseCurrency(valores.diarias);
     const ou = parseCurrency(valores.outrosDescontos);
     
-    // Saldo a Receber (SL) = VF – AD + PD + OE1 + D1 – OU
-    // Nota: A fórmula Saldo a Receber (SL) = VF – AD + PD + OE1 + D1 – OU parece incorreta para um contrato de frete.
-    // Geralmente, o saldo é o valor total do frete menos o adiantamento e descontos.
-    // Vamos usar a fórmula mais comum para o Saldo do Frete: VF - AD - OU + PD + OE1 + D1
-    // Assumindo que Pedágio, Outras Despesas e Diárias são REEMBOLSOS/ADICIONAIS ao motorista.
-    
-    // Se o motorista está recebendo o frete, o saldo é:
     // Saldo = (Valor Frete - Adiantamento - Outros Descontos) + (Pedágio + Outras Despesas + Diárias)
-    
     const saldo = (vf - ad - ou) + pd + oe1 + d1;
     return saldo;
   }, []);
@@ -116,11 +107,6 @@ const Contratos: React.FC = () => {
     // 3.1. Carregar valores das movimentações
     const movs = movimentacoesCarga;
     
-    // Mapeamento simplificado:
-    // Valor Frete (VF): Soma de todas as movimentações (Receita ou Despesa)
-    // Adiantamento (AD): Movimentações com prefixo 'Adto'
-    // Saldo (SL): Movimentações com prefixo 'Saldo'
-    
     let valorFreteTotal = 0;
     let adiantamentoTotal = 0;
     let pedagioTotal = 0;
@@ -129,8 +115,6 @@ const Contratos: React.FC = () => {
     let outrosDescontosTotal = 0;
 
     // Para simplificar, vamos assumir que o Valor Frete (VF) é o valor total da carga
-    // e que as movimentações representam o Adiantamento e Saldo.
-    
     valorFreteTotal = selectedCarga.valor || 0;
     
     movs.forEach(mov => {
@@ -139,9 +123,6 @@ const Contratos: React.FC = () => {
       
       if (desc.includes('adto')) {
         adiantamentoTotal += valor;
-      } else if (desc.includes('saldo')) {
-        // O saldo não é um valor de entrada editável, mas é o restante do frete.
-        // Não o somamos aqui.
       } else if (desc.includes('pedagio')) {
         pedagioTotal += valor;
       } else if (desc.includes('diarias')) {
@@ -149,8 +130,6 @@ const Contratos: React.FC = () => {
       } else if (desc.includes('despesa') && !desc.includes('adto') && !desc.includes('saldo')) {
         outrasDespesasTotal += valor;
       }
-      // Nota: Outros Descontos (OU) não são facilmente mapeáveis de Movimentacoes,
-      // então deixamos como 0 por padrão.
     });
 
     setFreteValores({
@@ -206,6 +185,23 @@ const Contratos: React.FC = () => {
         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayValue}</p>
       </div>
     );
+  };
+
+  // Função para obter CPF/CNH de forma segura, seja Motorista ou Parceiro
+  const getMotoristaDocumentos = (motorista: any) => {
+    if (!motorista) return { cpf: '-', cnh: '-' };
+    
+    // Se for Motorista (tipo Motorista)
+    if ('cpf' in motorista) {
+      return { cpf: motorista.cpf, cnh: motorista.cnh };
+    }
+    
+    // Se for Parceiro (tipo Parceiro)
+    if ('documento' in motorista && motorista.tipo === 'PF') {
+      return { cpf: motorista.documento, cnh: motorista.cnh || '-' };
+    }
+    
+    return { cpf: '-', cnh: '-' };
   };
 
   return (
@@ -286,8 +282,8 @@ const Contratos: React.FC = () => {
             {dadosRelacionados?.motorista ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <DataField label="Nome" value={dadosRelacionados.motorista.nome} />
-                <DataField label="CPF" value={formatDocument(dadosRelacionados.motorista.cpf, 'PF')} />
-                <DataField label="CNH" value={dadosRelacionados.motorista.cnh} />
+                <DataField label="CPF" value={formatDocument(getMotoristaDocumentos(dadosRelacionados.motorista).cpf, 'PF')} />
+                <DataField label="CNH" value={getMotoristaDocumentos(dadosRelacionados.motorista).cnh} />
                 <DataField label="Telefone" value={dadosRelacionados.motorista.telefone} />
               </div>
             ) : (
