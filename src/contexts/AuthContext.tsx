@@ -125,10 +125,12 @@ const fetchOrCreateProfile = async (sessionUser: any): Promise<User | null> => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Novo estado de loading
 
   useEffect(() => {
     if (!supabase) {
       console.warn('Supabase client is not initialized. Authentication will not work.');
+      setIsLoading(false); // Se não houver Supabase, termina o loading
       return;
     }
 
@@ -151,16 +153,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
       }
+      setIsLoading(false); // Termina o loading após a mudança de estado
     });
 
-    // Verificação da sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Verificação da sessão inicial (para garantir que o estado inicial seja definido)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        // onAuthStateChange já lidou com isso, mas garantimos o estado inicial
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
+        const authenticatedUser = await fetchOrCreateProfile(session.user);
+        if (authenticatedUser) {
+          setUser(authenticatedUser);
+          setIsAuthenticated(true);
+        }
       }
+      // O onAuthStateChange já deve ter definido isLoading=false, mas garantimos aqui também
+      setIsLoading(false);
     });
 
     return () => {
@@ -173,18 +179,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Supabase client is not initialized. Cannot log in.');
       return false;
     }
+    
+    // Define loading como true durante a tentativa de login
+    setIsLoading(true);
+    
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       console.error('Erro de login no Supabase:', error.message);
+      setIsLoading(false); // Se houver erro, termina o loading
       return false;
     }
 
-    if (data.user) {
-      // onAuthStateChange irá lidar com a definição do estado do usuário e criação do perfil, se necessário
-      return true;
-    }
-    return false;
+    // onAuthStateChange irá lidar com a definição do estado do usuário e a limpeza do loading
+    return true;
   };
 
   const logout = async () => {
@@ -192,18 +200,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Supabase client is not initialized. Cannot log out.');
       return;
     }
+    // Define loading como true durante o logout
+    setIsLoading(true);
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Erro de logout no Supabase:', error.message);
     }
-    // onAuthStateChange irá lidar com a limpeza do estado do usuário
+    // onAuthStateChange irá lidar com a limpeza do estado do usuário e a limpeza do loading
   };
 
   const value: AuthContextType = {
     user,
     login,
     logout,
-    isAuthenticated
+    isAuthenticated,
+    isLoading // Exporta o estado de loading
   };
 
   return (
