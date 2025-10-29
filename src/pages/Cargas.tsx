@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { format, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
 import StandardCheckbox from '../components/StandardCheckbox';
@@ -97,7 +97,6 @@ const Cargas: React.FC = () => {
   const [tempEntregaEnd, setTempEntregaEnd] = useState<Date | null>(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
-  const [formAnchor, setFormAnchor] = useState<{ top: number, left: number } | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<any>(null);
@@ -128,7 +127,7 @@ const Cargas: React.FC = () => {
     valorARS: '',
     taxaConversao: '',
     valorBRL: '',
-    valorBRLExtra: '',
+    valorBRLExtra: '', // Added missing field
     
     // C. Diárias
     diariasEnabled: false,
@@ -165,10 +164,10 @@ const Cargas: React.FC = () => {
     origem: '',
     destino: '',
     clienteId: '',
-    ufOrigemSelecionada: '',
-    cidadeOrigem: '',
-    ufDestinoSelecionada: '',
-    cidadeDestino: '',
+    ufOrigemSelecionada: '', // Added missing field
+    cidadeOrigem: '',        // Added missing field
+    ufDestinoSelecionada: '',// Added missing field
+    cidadeDestino: '',       // Added missing field
     dataColeta: format(new Date(), 'yyyy-MM-dd'),
     dataEntrega: format(new Date(), 'yyyy-MM-dd'),
     valor: '',
@@ -183,12 +182,16 @@ const Cargas: React.FC = () => {
     onClose: () => {
       setShowForm(false);
       setEditingCarga(null);
-      setFormAnchor(null);
+      // Removed setFormAnchor(null) as it's not used for modal positioning anymore
       setFormData({
         crt: '',
         origem: '',
         destino: '',
         clienteId: '',
+        ufOrigemSelecionada: '',
+        cidadeOrigem: '',
+        ufDestinoSelecionada: '',
+        cidadeDestino: '',
         dataColeta: format(new Date(), 'yyyy-MM-dd'),
         dataEntrega: format(new Date(), 'yyyy-MM-dd'),
         valor: '',
@@ -435,7 +438,7 @@ const Cargas: React.FC = () => {
       createCarga(cargaData);
     }
 
-    resetForm();
+    performReset(); // Call performReset directly
   };
 
   const resetForm = () => {
@@ -482,7 +485,6 @@ const Cargas: React.FC = () => {
     setHasUnsavedChanges(false);
     setOriginalFormData(null);
     setShowCancelConfirm(false);
-    setFormAnchor(null);
   };
 
   // Função auxiliar para extrair UF e cidade de uma string
@@ -529,9 +531,9 @@ const Cargas: React.FC = () => {
       const rect = e.currentTarget.getBoundingClientRect();
       const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
       const top = rect.bottom + window.scrollY + 8;
-      setFormAnchor({ top, left });
+      // Removed setFormAnchor as it's not used for modal positioning anymore
     } else {
-      setFormAnchor(null);
+      // Removed setFormAnchor as it's not used for modal positioning anymore
     }
     setShowForm(true);
     setHasUnsavedChanges(false);
@@ -1009,7 +1011,7 @@ const Cargas: React.FC = () => {
         telefone: parceiro.telefone || '',
         isActive: parceiro.isActive,
         createdAt: parceiro.createdAt,
-        updatedAt: parceiro.updatedAt
+        updatedAt: new Date()
       };
       return [...motoristasDoParceiro, parceiroComoMotorista];
     }
@@ -1070,7 +1072,7 @@ const Cargas: React.FC = () => {
               const rect = e.currentTarget.getBoundingClientRect();
               const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
               const top = rect.bottom + window.scrollY + 8;
-              setFormAnchor({ top, left });
+              // Removed setFormAnchor as it's not used for modal positioning anymore
               setShowForm(true);
               setHasUnsavedChanges(false);
               setOriginalFormData(null);
@@ -2352,6 +2354,7 @@ const Cargas: React.FC = () => {
                       valorARS: '',
                       taxaConversao: '',
                       valorBRL: '',
+                      valorBRLExtra: '',
                       diariasEnabled: false,
                       valorDiarias: '',
                       somaOpcao: 'adiantamento'

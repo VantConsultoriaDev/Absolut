@@ -110,7 +110,7 @@ export interface MovimentacaoFinanceira {
   categoria?: string
   data: Date
   status?: 'pendente' | 'pago' | 'cancelado'
-  dataPagamento?: Date
+  dataPagamento?: Date | null // Changed to allow null
   parceiroId?: string
   cargaId?: string
   isPago?: boolean

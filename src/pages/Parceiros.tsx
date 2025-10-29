@@ -355,10 +355,10 @@ export default function Parceiros() {
         console.log('Novos dados que serão aplicados:', novosDados);
         
         // Verificar se há diferenças nos dados
-        const diferencas = {};
+        const diferencas: { [key: string]: { antes: any; depois: any } } = {};
         Object.keys(novosDados).forEach(key => {
-          if (novosDados[key] !== parceiroForm[key]) {
-            diferencas[key] = { antes: parceiroForm[key], depois: novosDados[key] };
+          if ((novosDados as any)[key] !== (parceiroForm as any)[key]) {
+            diferencas[key] = { antes: (parceiroForm as any)[key], depois: (novosDados as any)[key] };
           }
         });
         console.log('Diferenças detectadas:', diferencas);
@@ -1907,161 +1907,161 @@ export default function Parceiros() {
                       <p className="text-green-600 text-xs mt-1">
                         ✓ Dados da placa consultados automaticamente
                       </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Fabricante
-                    </label>
-                    <input
-                      type="text"
-                      value={veiculoForm.fabricante}
-                      onChange={(e) => setVeiculoForm({ ...veiculoForm, fabricante: e.target.value })}
-                      className="input-field"
-                    />
-                  </div>
-
-                  {veiculoForm.tipo !== 'Carreta' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Modelo
-                      </label>
-                      <input
-                        type="text"
-                        value={veiculoForm.modelo}
-                        onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
-                        className="input-field"
-                      />
+                        )}
+                      </div>
                     </div>
+
+                    {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Fabricante
+                        </label>
+                        <input
+                          type="text"
+                          value={veiculoForm.fabricante}
+                          onChange={(e) => setVeiculoForm({ ...veiculoForm, fabricante: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+
+                      {veiculoForm.tipo !== 'Carreta' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Modelo
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.modelo}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Ano
+                        </label>
+                        <input
+                          type="text"
+                          value={veiculoForm.ano}
+                          onChange={(e) => setVeiculoForm({ ...veiculoForm, ano: e.target.value })}
+                          className="input-field"
+                          placeholder="2023"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Chassi
+                        </label>
+                        <input
+                          type="text"
+                          value={veiculoForm.chassis}
+                          onChange={(e) => setVeiculoForm({ ...veiculoForm, chassis: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+                    </div>
+
+                    {veiculoForm.tipo === 'Truck' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Carroceria
+                        </label>
+                        <input
+                          type="text"
+                          value={veiculoForm.carroceria}
+                          onChange={(e) => setVeiculoForm({ ...veiculoForm, carroceria: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
+
+                    {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
+                        Para Carreta, usamos apenas a placa principal acima. */}
+
+                    <div className="flex space-x-4 pt-4">
+                      <button
+                        type="button"
+                        onClick={resetVeiculoForm}
+                        className="btn-secondary flex-1"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn-primary flex-1"
+                      >
+                        {editingVeiculo ? 'Atualizar' : 'Criar'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Removido: Modal de Vinculação motorista↔veículo */}
+
+          {/* Modal de confirmação de exclusão */}
+          {showDeleteConfirm && deleteTarget && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="flex items-center mb-4">
+                  <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Confirmar Exclusão
+                  </h3>
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Tem certeza que deseja excluir {
+                    deleteTarget.type === 'veiculo' ? 'o veículo' : 
+                    deleteTarget.type === 'motorista' ? 'o motorista' : 
+                    'o parceiro'
+                  }{' '}
+                  <span className="font-semibold">{deleteTarget?.name}</span>?
+                  {deleteTarget.type === 'veiculo' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação também removerá qualquer vinculação com motoristas.
+                    </span>
                   )}
-                 </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                       Ano
-                     </label>
-                     <input
-                       type="text"
-                       value={veiculoForm.ano}
-                       onChange={(e) => setVeiculoForm({ ...veiculoForm, ano: e.target.value })}
-                       className="input-field"
-                       placeholder="2023"
-                     />
-                   </div>
-
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                       Chassi
-                     </label>
-                     <input
-                       type="text"
-                       value={veiculoForm.chassis}
-                      onChange={(e) => setVeiculoForm({ ...veiculoForm, chassis: e.target.value })}
-                       className="input-field"
-                     />
-                   </div>
-                 </div>
-
-                 {veiculoForm.tipo === 'Truck' && (
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                       Carroceria
-                     </label>
-                     <input
-                       type="text"
-                       value={veiculoForm.carroceria}
-                       onChange={(e) => setVeiculoForm({ ...veiculoForm, carroceria: e.target.value })}
-                       className="input-field"
-                     />
-                   </div>
-                 )}
-
-                 {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
-                     Para Carreta, usamos apenas a placa principal acima. */}
-
-                 <div className="flex space-x-4 pt-4">
-                   <button
-                     type="button"
-                     onClick={resetVeiculoForm}
-                     className="btn-secondary flex-1"
-                   >
-                     Cancelar
-                   </button>
-                   <button
-                     type="submit"
-                     className="btn-primary flex-1"
-                   >
-                     {editingVeiculo ? 'Atualizar' : 'Criar'}
-                   </button>
-                 </div>
-               </form>
-             </div>
-           </div>
-         </div>
-       )}
-
-       {/* Removido: Modal de Vinculação motorista↔veículo */}
-
-      {/* Modal de confirmação de exclusão */}
-      {showDeleteConfirm && deleteTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Confirmar Exclusão
-              </h3>
+                  {deleteTarget.type === 'motorista' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação também removerá qualquer vinculação com veículos.
+                    </span>
+                  )}
+                  {deleteTarget.type === 'parceiro' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação removerá o parceiro e todos os seus motoristas e veículos associados.
+                    </span>
+                  )}
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteTarget(null);
+                    }}
+                    className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Tem certeza que deseja excluir {
-                deleteTarget.type === 'veiculo' ? 'o veículo' : 
-                deleteTarget.type === 'motorista' ? 'o motorista' : 
-                'o parceiro'
-              }{' '}
-              <span className="font-semibold">{deleteTarget?.name}</span>?
-              {deleteTarget.type === 'veiculo' && (
-                <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                  Esta ação também removerá qualquer vinculação com motoristas.
-                </span>
-              )}
-              {deleteTarget.type === 'motorista' && (
-                <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                  Esta ação também removerá qualquer vinculação com veículos.
-                </span>
-              )}
-              {deleteTarget.type === 'parceiro' && (
-                <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                  Esta ação removerá o parceiro e todos os seus motoristas e veículos associados.
-                </span>
-              )}
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteTarget(null);
-                }}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
+          )}
+
         </div>
-      )}
-
-     </div>
-   );
- }
+      );
+    }

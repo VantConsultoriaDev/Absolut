@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
-import { format, isWithinInterval } from 'date-fns'
+import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency, parseCurrency } from '../utils/formatters'
 import { undoService } from '../services/undoService'
@@ -725,8 +725,8 @@ const Financeiro: React.FC = () => {
         <div 
           className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-2 min-w-[160px]"
           style={{
-            top: `${dropdownPosition.top}px`,
-            left: `${dropdownPosition.left}px`
+            top: `${dropdownPosition?.top}px`,
+            left: `${dropdownPosition?.left}px`
           }}
         >
           {Object.entries(statusConfig).map(([key, config]) => (

@@ -5,7 +5,6 @@ import {
   DollarSign, 
   Truck, 
   Users, 
-  UserCog, 
   Menu, 
   X, 
   Sun, 

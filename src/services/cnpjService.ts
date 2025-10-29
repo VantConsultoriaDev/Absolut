@@ -58,7 +58,7 @@ interface CNPJData {
 export class CNPJService {
   private static readonly API_URL = 'https://gateway.apibrasil.io/api/v2/dados/cnpj/credits';
   // Token da API ativo
-  private static readonly BEARER_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ';
+  private static readonly BEARER_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NjY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ';
   private static readonly USE_SIMULATED_DATA = false; // Flag para usar API real
 
   static async consultarCNPJ(cnpj: string): Promise<CNPJData | null> {
@@ -83,7 +83,7 @@ export class CNPJService {
     
     // Configuração do AbortController com timeout de 120 segundos
     const controller = new AbortController();
-    let timeoutId = setTimeout(() => controller.abort("Timeout excedido"), 120000);
+    let timeoutId: number | undefined = setTimeout(() => controller.abort("Timeout excedido"), 120000) as unknown as number; // Explicitly cast to number
     
     try {
       console.log('CNPJService: Fazendo requisição para API...');
@@ -178,7 +178,7 @@ export class CNPJService {
       console.log('CNPJService: Dados processados:', resultado);
       return resultado;
       
-    } catch (error) {
+    } catch (error: unknown) { // Catch error as unknown
       // Limpa o timeout em caso de erro
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -188,7 +188,7 @@ export class CNPJService {
       let tipoErro = 'Erro desconhecido';
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         tipoErro = 'Erro de conectividade ou CORS';
-      } else if (error.name === 'AbortError') {
+      } else if (error instanceof Error && error.name === 'AbortError') { // Check if error is an instance of Error
         tipoErro = 'Timeout da requisição';
       }
       
@@ -287,18 +287,18 @@ export class CNPJService {
     const enderecoSimulado = 'Rua Exemplo, 123';
     
     return {
-      razaoSocial: nomeFantasiaSimulado,
+      razaoSocial: nomeFantasiaSimulado,                        // ✅ "nome_fantasia" → Nome Empresarial
       nomeFantasia: nomeFantasiaSimulado,
       cnpj: cnpjFormatado,
       situacao: 'Ativa',
-      endereco: enderecoSimulado,
+      endereco: enderecoSimulado,                               // ✅ Endereço já montado
       numero: '123',
       complemento: '',
       bairro: 'Centro',
-      cidade: 'São Paulo',
-      uf: 'SP',
-      cep: '01000-000',
-      telefone: '(11) 99999-9999',
+      cidade: 'São Paulo',                                      // ✅ "municipio" → Cidade
+      uf: 'SP',                                                 // ✅ "uf" → Estado
+      cep: '01000-000',                                         // ✅ "cep"→ CEP
+      telefone: '(11) 99999-9999',                              // ✅ Telefone → Contato
       email: 'contato@empresa.com.br',
       atividade: 'Atividades de consultoria em gestão empresarial',
       simulado: true

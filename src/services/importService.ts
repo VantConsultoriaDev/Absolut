@@ -67,7 +67,7 @@ export class ImportService {
         const rowNumber = i + 2; // +2 porque começamos da linha 2 (após cabeçalho)
 
         try {
-          const cargaData = this.parseRow(row, columnMap, rowNumber);
+          const cargaData = this.parseRow(row, columnMap);
           const validation = this.validateRow(cargaData, rowNumber);
 
           if (validation.isValid) {
@@ -159,7 +159,7 @@ export class ImportService {
     return map;
   }
 
-  private static parseRow(row: any[], columnMap: Record<string, number>, rowNumber: number): any {
+  private static parseRow(row: any[], columnMap: Record<string, number>): any {
     const getValue = (field: string): string => {
       const index = columnMap[field];
       return index !== undefined ? String(row[index] || '').trim() : '';
