@@ -17,6 +17,7 @@ interface DatabaseProviderProps {
 }
 
 export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) => {
+  // A lista de usuários será sempre vazia, pois a gestão é feita pelo Supabase
   const [users, setUsers] = useState<User[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [parceiros, setParceiros] = useState<Parceiro[]>([])
@@ -25,45 +26,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoFinanceira[]>([])
   const [cargas, setCargas] = useState<Carga[]>([])
 
-  // Initialize demo data
+  // Initialize demo data (excluding users)
   const initializeDemoData = () => {
-    // Demo users
-    const demoUsers: User[] = [
-      {
-        id: 'admin-global',
-        username: 'admin',
-        password: 'admin123',
-        email: 'admin@absolut.com',
-        name: 'Administrador Global',
-        role: 'admin',
-        isActive: true,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01')
-      },
-      {
-        id: 'master-demo',
-        username: 'master',
-        password: 'master123',
-        email: 'master@absolut.com',
-        name: 'João Silva',
-        role: 'master',
-        isActive: true,
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2024-01-15')
-      },
-      {
-        id: 'user-demo',
-        username: 'usuario',
-        password: 'user123',
-        email: 'usuario@absolut.com',
-        name: 'Maria Santos',
-        role: 'comum',
-        isActive: true,
-        createdAt: new Date('2024-02-01'),
-        updatedAt: new Date('2024-02-01')
-      }
-    ]
-
     // Demo clientes
     const demoClientes: Cliente[] = [
       {
@@ -274,7 +238,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     ]
 
     return {
-      users: demoUsers,
       clientes: demoClientes,
       parceiros: demoParceiros,
       motoristas: demoMotoristas,
@@ -287,7 +250,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // Load data from localStorage on mount
   useEffect(() => {
     const loadData = () => {
-      const savedUsers = localStorage.getItem('absolut_users')
+      // const savedUsers = localStorage.getItem('absolut_users') // REMOVIDO
       const savedClientes = localStorage.getItem('absolut_clientes')
       const savedParceiros = localStorage.getItem('absolut_parceiros')
       const savedMotoristas = localStorage.getItem('absolut_motoristas')
@@ -296,9 +259,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       const savedCargas = localStorage.getItem('absolut_cargas')
 
       // If no data exists, initialize with demo data
-      if (!savedUsers || !savedParceiros || !savedClientes) {
+      if (!savedParceiros || !savedClientes) {
         const demoData = initializeDemoData()
-        setUsers(demoData.users)
+        // setUsers([]) // Usuários sempre vazios
         setClientes(demoData.clientes)
         setParceiros(demoData.parceiros)
         setMotoristas(demoData.motoristas)
@@ -307,11 +270,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         setCargas(demoData.cargas)
       } else {
         // Load existing data and convert date strings back to Date objects
-        const parsedUsers = JSON.parse(savedUsers || '[]').map((user: any) => ({
-          ...user,
-          createdAt: new Date(user.createdAt),
-          updatedAt: new Date(user.updatedAt)
-        }))
+        
+        // const parsedUsers = JSON.parse(savedUsers || '[]').map((user: any) => ({ // REMOVIDO
+        //   ...user,
+        //   createdAt: new Date(user.createdAt),
+        //   updatedAt: new Date(user.updatedAt)
+        // }))
 
         const parsedClientes = JSON.parse(savedClientes || '[]').map((cliente: any) => ({
           ...cliente,
@@ -353,7 +317,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           updatedAt: new Date(carga.updatedAt)
         }))
         
-        setUsers(parsedUsers)
+        // setUsers(parsedUsers) // REMOVIDO
         setClientes(parsedClientes)
         setParceiros(parsedParceiros)
         setMotoristas(parsedMotoristas)
@@ -367,9 +331,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [])
 
   // Save data to localStorage whenever state changes
-  useEffect(() => {
-    localStorage.setItem('absolut_users', JSON.stringify(users))
-  }, [users])
+  // useEffect(() => { // REMOVIDO
+  //   localStorage.setItem('absolut_users', JSON.stringify(users))
+  // }, [users])
 
   useEffect(() => {
     localStorage.setItem('absolut_clientes', JSON.stringify(clientes))
@@ -428,34 +392,38 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return clientes.find(cliente => cliente.id === id) || null
   }
 
-  // User operations
+  // User operations (Mantidas, mas operam em um array vazio)
   const createUser = (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User => {
+    console.warn("DatabaseContext: createUser chamado. A gestão de usuários deve ser feita via Supabase.");
     const newUser: User = {
       ...userData,
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
     }
-    setUsers(prev => [...prev, newUser])
+    // setUsers(prev => [...prev, newUser]) // Não adiciona ao estado local
     return newUser
   }
 
   const updateUser = (id: string, userData: Partial<User>): User | null => {
-    setUsers(prev => prev.map(user => 
-      user.id === id 
-        ? { ...user, ...userData, updatedAt: new Date() }
-        : user
-    ))
+    console.warn("DatabaseContext: updateUser chamado. A gestão de usuários deve ser feita via Supabase.");
+    // setUsers(prev => prev.map(user => // Não atualiza o estado local
+    //   user.id === id 
+    //     ? { ...user, ...userData, updatedAt: new Date() }
+    //     : user
+    // ))
     return getUserById(id)
   }
 
   const deleteUser = (id: string): boolean => {
-    setUsers(prev => prev.filter(user => user.id !== id))
+    console.warn("DatabaseContext: deleteUser chamado. A gestão de usuários deve ser feita via Supabase.");
+    // setUsers(prev => prev.filter(user => user.id !== id)) // Não deleta do estado local
     return true
   }
 
   const getUserById = (id: string): User | null => {
-    return users.find(user => user.id === id) || null
+    // Retorna null, pois os usuários não estão mais no estado local
+    return null
   }
 
   // Parceiro operations
