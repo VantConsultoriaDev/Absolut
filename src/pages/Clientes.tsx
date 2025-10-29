@@ -1,0 +1,423 @@
+import React, { useMemo, useState } from 'react'
+import { useDatabase } from '../contexts/DatabaseContext'
+import { formatDocument } from '../utils/formatters'
+import { Plus, Edit, Trash2, Search, Building2, User, Globe, Mail, Phone } from 'lucide-react'
+import { CNPJService } from '../services/cnpjService'
+
+const Clientes: React.FC = () => {
+  const { clientes, createCliente, updateCliente, deleteCliente } = useDatabase()
+
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+
+  const [form, setForm] = useState({
+    tipo: 'PJ' as 'PF' | 'PJ' | 'INTERNACIONAL',
+    nome: '',
+    documento: '',
+    email: '',
+    telefone: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    observacoes: '',
+    isActive: true as boolean
+  })
+
+  // Estados para consulta de CNPJ (apenas para PJ)
+  const [consultandoCNPJ, setConsultandoCNPJ] = useState(false)
+  const [cnpjConsultado, setCnpjConsultado] = useState(false)
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return clientes
+    return clientes.filter(c =>
+      (c.nome || '').toLowerCase().includes(q) ||
+      (c.documento || '').toLowerCase().includes(q)
+    )
+  }, [clientes, query])
+
+  const resetForm = () => {
+    setForm({
+      tipo: 'PJ',
+      nome: '',
+      documento: '',
+      email: '',
+      telefone: '',
+      endereco: '',
+      cidade: '',
+      estado: '',
+      cep: '',
+      observacoes: '',
+      isActive: true
+    })
+    setEditingId(null)
+    setConsultandoCNPJ(false)
+    setCnpjConsultado(false)
+  }
+
+  const startEdit = (id: string) => {
+    const c = clientes.find(x => x.id === id)
+    if (!c) return
+    setForm({
+      tipo: c.tipo,
+      nome: c.nome || '',
+      documento: c.documento || '',
+      email: c.email || '',
+      telefone: c.telefone || '',
+      endereco: c.endereco || '',
+      cidade: c.cidade || '',
+      estado: c.estado || '',
+      cep: c.cep || '',
+      observacoes: c.observacoes || '',
+      isActive: c.isActive ?? true
+    })
+    setEditingId(c.id)
+    setShowForm(true)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.nome.trim()) {
+      alert('Informe o nome/razão social do cliente')
+      return
+    }
+    const payload = {
+      ...form,
+      documento: form.documento,
+    }
+    if (editingId) {
+      updateCliente(editingId, payload)
+    } else {
+      createCliente(payload)
+    }
+    setShowForm(false)
+    resetForm()
+  }
+
+  // Consulta automática de CNPJ (PJ)
+  const handleCNPJConsultation = async (cnpj: string) => {
+    if (form.tipo !== 'PJ') return
+    const cnpjLimpo = cnpj.replace(/\D/g, '')
+    if (cnpjLimpo.length !== 14) return
+    if (consultandoCNPJ) return
+
+    setConsultandoCNPJ(true)
+    try {
+      const dados = await CNPJService.consultarCNPJ(cnpj)
+      if (dados) {
+        setForm(prev => ({
+          ...prev,
+          nome: dados.razaoSocial || prev.nome,
+          telefone: dados.telefone || prev.telefone,
+          endereco: dados.endereco || prev.endereco,
+          cidade: dados.cidade || prev.cidade,
+          estado: dados.uf || prev.estado,
+          cep: dados.cep || prev.cep
+        }))
+        setCnpjConsultado(true)
+        if ((dados as any).simulado) {
+          alert('Não foi possível conectar com a API de CNPJ. Usando dados simulados para demonstração.')
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao consultar CNPJ:', err)
+      alert('Erro ao consultar CNPJ. Verifique o número e tente novamente.')
+    } finally {
+      setConsultandoCNPJ(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
+          <p className="text-gray-600 dark:text-gray-400">Cadastro e gestão de clientes</p>
+        </div>
+        <button
+          onClick={() => { resetForm(); setShowForm(true) }}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Novo Cliente
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div className="flex gap-3 items-center">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por nome ou documento"
+              className="input-field pl-9"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Clientes em Formato de Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filtered.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">Nenhum cliente encontrado.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Tente ajustar sua busca ou adicione um novo cliente.</p>
+          </div>
+        ) : (
+          filtered.map(c => (
+            <div key={c.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out transform hover:-translate-y-1 flex flex-col">
+              <div className="p-5 flex-grow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      c.tipo === 'PJ' ? 'bg-blue-100 dark:bg-blue-900/50' : 
+                      c.tipo === 'PF' ? 'bg-green-100 dark:bg-green-900/50' : 
+                      'bg-purple-100 dark:bg-purple-900/50'
+                    }`}>
+                      {c.tipo === 'PJ' ? <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" /> :
+                       c.tipo === 'PF' ? <User className="h-5 w-5 text-green-600 dark:text-green-400" /> :
+                       <Globe className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{c.nome}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">{
+                        c.tipo === 'PJ' ? 'Pessoa Jurídica' :
+                        c.tipo === 'PF' ? 'Pessoa Física' :
+                        'Internacional'
+                      }</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm">
+                  <p className="text-gray-600 dark:text-gray-300 font-mono tracking-tight bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{c.documento || 'Não informado'}</p>
+                  
+                  {c.email && (
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                      <Mail className="h-4 w-4" />
+                      <a href={`mailto:${c.email}`} className="hover:text-blue-500 truncate">{c.email}</a>
+                    </div>
+                  )}
+                  
+                  {c.telefone && (
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                      <Phone className="h-4 w-4" />
+                      <span className="truncate">{c.telefone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-800/50 px-5 py-3 flex justify-end items-center gap-2 rounded-b-2xl">
+                <button 
+                  onClick={() => startEdit(c.id)} 
+                  className="p-2 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                  aria-label="Editar"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={() => deleteCliente(c.id)} 
+                  className="p-2 rounded-full text-gray-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                  aria-label="Excluir"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+              <button onClick={() => { setShowForm(false); resetForm() }} className="text-gray-400 hover:text-gray-600">×</button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+                  <select
+                    value={form.tipo}
+                    onChange={(e) => {
+                      const novoTipo = e.target.value as 'PF' | 'PJ' | 'INTERNACIONAL'
+                      setForm(prev => ({ ...prev, tipo: novoTipo, documento: '' }))
+                      setCnpjConsultado(false)
+                      setConsultandoCNPJ(false)
+                    }}
+                    className="input-field"
+                  >
+                    <option value="PF">Pessoa Física</option>
+                    <option value="PJ">Pessoa Jurídica</option>
+                    <option value="INTERNACIONAL">Internacional</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome / Razão Social *</label>
+                  <input
+                    type="text"
+                    value={form.nome}
+                    onChange={(e) => setForm(prev => ({ ...prev, nome: e.target.value }))}
+                    className="input-field"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  {form.tipo === 'PJ' ? (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        CNPJ *
+                        {consultandoCNPJ && (
+                          <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={form.documento}
+                        onChange={(e) => {
+                          const formatted = formatDocument(e.target.value, 'PJ')
+                          const limpo = formatted.replace(/\D/g, '')
+                          setForm(prev => ({ ...prev, documento: formatted }))
+                          if (cnpjConsultado && limpo.length < 14) setCnpjConsultado(false)
+                          if (limpo.length === 14) {
+                            handleCNPJConsultation(formatted)
+                          }
+                        }}
+                        className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
+                        placeholder="00.000.000/0000-00"
+                        disabled={consultandoCNPJ}
+                        required
+                      />
+                      {cnpjConsultado && (
+                        <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                      )}
+                    </>
+                  ) : form.tipo === 'PF' ? (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CPF *</label>
+                      <input
+                        type="text"
+                        value={form.documento}
+                        onChange={(e) => {
+                          const formatted = formatDocument(e.target.value, 'PF')
+                          setForm(prev => ({ ...prev, documento: formatted }))
+                        }}
+                        placeholder="000.000.000-00"
+                        className="input-field"
+                        required
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Documento</label>
+                      <input
+                        type="text"
+                        value={form.documento}
+                        onChange={(e) => setForm(prev => ({ ...prev, documento: e.target.value }))}
+                        placeholder="Documento"
+                        className="input-field"
+                        required
+                      />
+                    </>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
+                  <input
+                    type="text"
+                    value={form.telefone}
+                    onChange={(e) => setForm(prev => ({ ...prev, telefone: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                  <input
+                    type="text"
+                    value={form.endereco}
+                    onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                  <input
+                    type="text"
+                    value={form.cidade}
+                    onChange={(e) => setForm(prev => ({ ...prev, cidade: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+                  <input
+                    type="text"
+                    value={form.estado}
+                    onChange={(e) => setForm(prev => ({ ...prev, estado: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                  <input
+                    type="text"
+                    value={form.cep}
+                    onChange={(e) => setForm(prev => ({ ...prev, cep: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+                {/* Checkbox 'Ativo' removido conforme solicitado */}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
+                <textarea
+                  value={form.observacoes}
+                  onChange={(e) => setForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                  className="input-field"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn-ghost" onClick={() => { setShowForm(false); resetForm() }}>Cancelar</button>
+                <button type="submit" className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                  {editingId ? 'Salvar alterações' : 'Adicionar cliente'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default Clientes

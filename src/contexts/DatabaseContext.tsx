@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { DatabaseContextType, User, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga } from '../types'
+import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga } from '../types'
 
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
@@ -18,6 +18,7 @@ interface DatabaseProviderProps {
 
 export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
   const [parceiros, setParceiros] = useState<Parceiro[]>([])
   const [motoristas, setMotoristas] = useState<Motorista[]>([])
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
@@ -60,6 +61,40 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         isActive: true,
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date('2024-02-01')
+      }
+    ]
+
+    // Demo clientes
+    const demoClientes: Cliente[] = [
+      {
+        id: 'cliente-1',
+        tipo: 'PJ',
+        nome: 'Loja do Centro Ltda',
+        documento: '45.678.123/0001-55',
+        email: 'contato@lojacentro.com.br',
+        telefone: '(11) 3344-5566',
+        endereco: 'Rua Central, 100',
+        cidade: 'São Paulo',
+        estado: 'SP',
+        cep: '01010-010',
+        isActive: true,
+        createdAt: new Date('2024-01-08'),
+        updatedAt: new Date('2024-01-08')
+      },
+      {
+        id: 'cliente-2',
+        tipo: 'PF',
+        nome: 'Ana Pereira',
+        documento: '123.456.789-00',
+        email: 'ana.pereira@example.com',
+        telefone: '(11) 98888-7777',
+        endereco: 'Av. das Américas, 200',
+        cidade: 'Osasco',
+        estado: 'SP',
+        cep: '06233-903',
+        isActive: true,
+        createdAt: new Date('2024-01-18'),
+        updatedAt: new Date('2024-01-18')
       }
     ]
 
@@ -240,6 +275,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
     return {
       users: demoUsers,
+      clientes: demoClientes,
       parceiros: demoParceiros,
       motoristas: demoMotoristas,
       veiculos: demoVeiculos,
@@ -252,6 +288,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   useEffect(() => {
     const loadData = () => {
       const savedUsers = localStorage.getItem('mobtax_users')
+      const savedClientes = localStorage.getItem('mobtax_clientes')
       const savedParceiros = localStorage.getItem('mobtax_parceiros')
       const savedMotoristas = localStorage.getItem('mobtax_motoristas')
       const savedVeiculos = localStorage.getItem('mobtax_veiculos')
@@ -259,9 +296,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       const savedCargas = localStorage.getItem('mobtax_cargas')
 
       // If no data exists, initialize with demo data
-      if (!savedUsers || !savedParceiros) {
+      if (!savedUsers || !savedParceiros || !savedClientes) {
         const demoData = initializeDemoData()
         setUsers(demoData.users)
+        setClientes(demoData.clientes)
         setParceiros(demoData.parceiros)
         setMotoristas(demoData.motoristas)
         setVeiculos(demoData.veiculos)
@@ -273,6 +311,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           ...user,
           createdAt: new Date(user.createdAt),
           updatedAt: new Date(user.updatedAt)
+        }))
+
+        const parsedClientes = JSON.parse(savedClientes || '[]').map((cliente: any) => ({
+          ...cliente,
+          createdAt: new Date(cliente.createdAt),
+          updatedAt: new Date(cliente.updatedAt)
         }))
         
         const parsedParceiros = JSON.parse(savedParceiros || '[]').map((parceiro: any) => ({
@@ -310,6 +354,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         }))
         
         setUsers(parsedUsers)
+        setClientes(parsedClientes)
         setParceiros(parsedParceiros)
         setMotoristas(parsedMotoristas)
         setVeiculos(parsedVeiculos)
@@ -325,6 +370,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   useEffect(() => {
     localStorage.setItem('mobtax_users', JSON.stringify(users))
   }, [users])
+
+  useEffect(() => {
+    localStorage.setItem('mobtax_clientes', JSON.stringify(clientes))
+  }, [clientes])
 
   useEffect(() => {
     localStorage.setItem('mobtax_parceiros', JSON.stringify(parceiros))
@@ -348,6 +397,36 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
   // Utility function to generate IDs
   const generateId = () => Math.random().toString(36).substr(2, 9)
+
+  // Cliente operations
+  const createCliente = (clienteData: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>): Cliente => {
+    const newCliente: Cliente = {
+      ...clienteData,
+      id: generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    setClientes(prev => [...prev, newCliente])
+    return newCliente
+  }
+
+  const updateCliente = (id: string, clienteData: Partial<Cliente>): Cliente | null => {
+    setClientes(prev => prev.map(cliente => 
+      cliente.id === id 
+        ? { ...cliente, ...clienteData, updatedAt: new Date() }
+        : cliente
+    ))
+    return getClienteById(id)
+  }
+
+  const deleteCliente = (id: string): boolean => {
+    setClientes(prev => prev.filter(cliente => cliente.id !== id))
+    return true
+  }
+
+  const getClienteById = (id: string): Cliente | null => {
+    return clientes.find(cliente => cliente.id === id) || null
+  }
 
   // User operations
   const createUser = (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User => {
@@ -526,11 +605,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
   const value: DatabaseContextType = {
     users,
+    clientes,
     parceiros,
     motoristas,
     veiculos,
     movimentacoes,
     cargas,
+    createCliente,
+    updateCliente,
+    deleteCliente,
+    getClienteById,
     createUser,
     updateUser,
     deleteUser,

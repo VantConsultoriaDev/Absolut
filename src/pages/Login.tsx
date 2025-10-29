@@ -67,7 +67,7 @@ const Login: React.FC = () => {
                 ABSOLUT
               </h1>
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Gestão
+                TRADING IMPORTACAO E EXPORTACAO
               </p>
             </div>
           </div>

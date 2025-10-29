@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle, Unlink } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca
@@ -34,8 +34,6 @@ export default function Parceiros() {
   const [showParceiroForm, setShowParceiroForm] = useState(false);
   const [showMotoristaForm, setShowMotoristaForm] = useState(false);
   const [showVeiculoForm, setShowVeiculoForm] = useState(false);
-  const [showVinculacaoModal, setShowVinculacaoModal] = useState(false);
-  const [vinculacaoData, setVinculacaoData] = useState<{type: 'motorista' | 'veiculo', item: any}>({type: 'motorista', item: null});
 
   
   const [editingParceiro, setEditingParceiro] = useState<any>(null);
@@ -167,13 +165,7 @@ export default function Parceiros() {
     }
   });
 
-  const { modalRef: vinculacaoModalRef } = useModal({
-    isOpen: showVinculacaoModal,
-    onClose: () => {
-      setShowVinculacaoModal(false);
-      setVinculacaoData({type: 'motorista', item: null});
-    }
-  });
+  // Removido: modal de vinculação motorista↔veículo
 
 
 
@@ -218,7 +210,11 @@ export default function Parceiros() {
     if (!veiculoSearchTerm) return veiculos;
     
     return veiculos.filter(veiculo => {
-      const placaPrincipal = veiculo.tipo === 'Truck' ? veiculo.placa : veiculo.placaCavalo;
+      const placaPrincipal = veiculo.tipo === 'Truck' 
+        ? veiculo.placa 
+        : veiculo.tipo === 'Carreta' 
+          ? veiculo.placaCarreta 
+          : veiculo.placaCavalo;
       const placaCarreta = veiculo.placaCarreta || '';
       const placaCarreta1 = veiculo.placaCarreta1 || '';
       const placaCarreta2 = veiculo.placaCarreta2 || '';
@@ -252,6 +248,8 @@ export default function Parceiros() {
       parceirosPJ
     };
   }, [parceiros, motoristas, veiculos]);
+
+  // Removido: estados de vinculação Cavalo → Carretas
 
 
 
@@ -568,11 +566,29 @@ export default function Parceiros() {
   const handleVeiculoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const veiculoData = {
+    let veiculoData: any = {
       ...veiculoForm,
       parceiroId: selectedParceiro.id,
       ano: veiculoForm.ano ? parseInt(veiculoForm.ano) : undefined
     };
+
+    // Sanitizar campos conforme o tipo
+    if (veiculoForm.tipo === 'Cavalo') {
+      veiculoData = {
+        ...veiculoData,
+        quantidadeCarretas: undefined,
+        possuiDolly: false,
+        placaCarreta: '',
+        placaCarreta1: '',
+        placaCarreta2: '',
+        placaDolly: ''
+      };
+    } else if (veiculoForm.tipo === 'Carreta') {
+      veiculoData = {
+        ...veiculoData,
+        placaCavalo: ''
+      };
+    }
 
     if (editingVeiculo) {
       updateVeiculo(editingVeiculo.id, veiculoData);
@@ -609,7 +625,7 @@ export default function Parceiros() {
 
   const handleEditVeiculo = (veiculo: any) => {
     setVeiculoForm({
-      tipo: veiculo.tipo || 'Truck',
+      tipo: (veiculo.tipo === 'Conjunto' ? 'Cavalo' : (veiculo.tipo || 'Truck')),
       placa: veiculo.placa || '',
       placaCavalo: veiculo.placaCavalo || '',
       fabricante: veiculo.fabricante || '',
@@ -636,7 +652,7 @@ export default function Parceiros() {
       setDeleteTarget({
         type: 'veiculo',
         id: id,
-        name: `${veiculo.fabricante} ${veiculo.modelo} - ${veiculo.tipo === 'Truck' ? veiculo.placa : veiculo.placaCavalo}`
+        name: `${veiculo.fabricante} ${veiculo.modelo} - ${veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.tipo === 'Carreta' ? veiculo.placaCarreta : veiculo.placaCavalo)}`
       });
       setShowDeleteConfirm(true);
     }
@@ -699,146 +715,7 @@ export default function Parceiros() {
     }
   };
 
-  // Handler para vinculação
-  const handleVincular = (type: 'motorista' | 'veiculo', item: any) => {
-    setVinculacaoData({ type, item });
-    setShowVinculacaoModal(true);
-  };
-
-  const handleVinculacaoSubmit = (vinculadoId: string) => {
-    // Primeiro, desvincular qualquer vinculação anterior
-    handleDesvincular(vinculacaoData.type, vinculacaoData.item);
-    
-    // Se vinculadoId estiver vazio, apenas desvincular (não vincular novamente)
-    if (!vinculadoId) {
-      setShowVinculacaoModal(false);
-      return;
-    }
-    
-    // Desvincular o item que será vinculado (se já estiver vinculado a outro)
-    if (vinculacaoData.type === 'motorista') {
-      // Se estamos vinculando um veículo a um motorista, desvincular o veículo de qualquer outro motorista
-      const veiculo = veiculosParceiro.find(v => v.id === vinculadoId);
-      if (veiculo && veiculo.motoristaVinculado) {
-        handleDesvincular('veiculo', veiculo);
-      }
-    } else {
-      // Se estamos vinculando um motorista a um veículo, desvincular o motorista de qualquer outro veículo
-      const motorista = motoristasParceiro.find(m => m.id === vinculadoId);
-      if (motorista) {
-        const veiculoAtual = motorista.id.endsWith('_as_driver') 
-          ? veiculosParceiro.find(v => v.motoristaVinculado === motorista.parceiroId)
-          : veiculosParceiro.find(v => v.id === motorista.veiculoVinculado);
-        if (veiculoAtual) {
-          handleDesvincular('motorista', motorista);
-        }
-      }
-    }
-    
-    // Agora fazer a nova vinculação
-    if (vinculacaoData.type === 'motorista') {
-      // Verificar se é um parceiro-motorista (ID termina com '_as_driver')
-      const isParceiroMotorista = vinculacaoData.item.id.endsWith('_as_driver');
-      
-      if (isParceiroMotorista) {
-        // Para parceiros-motoristas, apenas vinculamos o veículo ao parceiro
-        const veiculo = veiculosParceiro.find(v => v.id === vinculadoId);
-        if (veiculo) {
-          updateVeiculo(vinculadoId, {
-            ...veiculo,
-            motoristaVinculado: vinculacaoData.item.parceiroId // Usar o ID do parceiro, não o ID virtual
-          });
-        }
-      } else {
-        // Para motoristas registrados, usar a lógica original
-        updateMotorista(vinculacaoData.item.id, {
-          ...vinculacaoData.item,
-          veiculoVinculado: vinculadoId
-        });
-        // Atualizar veículo também
-        const veiculo = veiculosParceiro.find(v => v.id === vinculadoId);
-        if (veiculo) {
-          updateVeiculo(vinculadoId, {
-            ...veiculo,
-            motoristaVinculado: vinculacaoData.item.id
-          });
-        }
-      }
-    } else {
-      // Vinculação de veículo
-      updateVeiculo(vinculacaoData.item.id, {
-        ...vinculacaoData.item,
-        motoristaVinculado: vinculadoId
-      });
-      // Atualizar motorista também
-      const motorista = motoristasParceiro.find(m => m.id === vinculadoId);
-      if (motorista) {
-        // Verificar se é um parceiro-motorista
-        const isParceiroMotorista = motorista.id.endsWith('_as_driver');
-        
-        if (!isParceiroMotorista) {
-          updateMotorista(vinculadoId, {
-            ...motorista,
-            veiculoVinculado: vinculacaoData.item.id
-          });
-        }
-        // Para parceiros-motoristas, a vinculação já está feita no veículo
-      }
-    }
-    setShowVinculacaoModal(false);
-  };
-
-  const handleDesvincular = (type: 'motorista' | 'veiculo', item: any) => {
-    if (type === 'motorista') {
-      // Verificar se é um parceiro-motorista (ID termina com '_as_driver')
-      const isParceiroMotorista = item.id.endsWith('_as_driver');
-      
-      if (isParceiroMotorista) {
-        // Para parceiros-motoristas, encontrar o veículo vinculado e remover a vinculação
-        const veiculoVinculado = veiculosParceiro.find(v => v.motoristaVinculado === item.parceiroId);
-        if (veiculoVinculado) {
-          updateVeiculo(veiculoVinculado.id, {
-            ...veiculoVinculado,
-            motoristaVinculado: ''
-          });
-        }
-      } else {
-        // Para motoristas registrados, remover vinculação do motorista
-        updateMotorista(item.id, {
-          ...item,
-          veiculoVinculado: ''
-        });
-        
-        // Também remover vinculação do veículo
-        const veiculoVinculado = veiculosParceiro.find(v => v.motoristaVinculado === item.id);
-        if (veiculoVinculado) {
-          updateVeiculo(veiculoVinculado.id, {
-            ...veiculoVinculado,
-            motoristaVinculado: ''
-          });
-        }
-      }
-    } else {
-      // Desvinculação de veículo
-      updateVeiculo(item.id, {
-        ...item,
-        motoristaVinculado: ''
-      });
-      
-      // Também remover vinculação do motorista se não for parceiro-motorista
-      const motoristaVinculado = motoristasParceiro.find(m => 
-        m.id === item.motoristaVinculado || 
-        (m.id.endsWith('_as_driver') && m.parceiroId === item.motoristaVinculado)
-      );
-      
-      if (motoristaVinculado && !motoristaVinculado.id.endsWith('_as_driver')) {
-        updateMotorista(motoristaVinculado.id, {
-          ...motoristaVinculado,
-          veiculoVinculado: ''
-        });
-      }
-    }
-  };
+  // Removido: handlers de vinculação e desvinculação motorista↔veículo
 
   if (!selectedParceiro) {
     return (
@@ -1474,6 +1351,60 @@ export default function Parceiros() {
             </div>
           </div>
         )}
+
+        {/* Modal de confirmação de exclusão (lista de Parceiros) */}
+        {showDeleteConfirm && deleteTarget && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Confirmar Exclusão
+                </h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Tem certeza que deseja excluir {
+                  deleteTarget.type === 'veiculo' ? 'o veículo' : 
+                  deleteTarget.type === 'motorista' ? 'o motorista' : 
+                  'o parceiro'
+                }{' '}
+                <span className="font-semibold">{deleteTarget?.name}</span>?
+                {deleteTarget.type === 'veiculo' && (
+                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                    Esta ação também removerá qualquer vinculação com motoristas.
+                  </span>
+                )}
+                {deleteTarget.type === 'motorista' && (
+                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                    Esta ação também removerá qualquer vinculação com veículos.
+                  </span>
+                )}
+                {deleteTarget.type === 'parceiro' && (
+                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                    Esta ação removerá o parceiro e todos os seus motoristas e veículos associados.
+                  </span>
+                )}
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteTarget(null);
+                  }}
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1590,12 +1521,12 @@ export default function Parceiros() {
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                       {/* Veículo */}
                       <div className="flex items-center space-x-3">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           veiculo.tipo === 'Truck' 
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                             : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                         }`}>
-                          {veiculo.tipo}
+                          {veiculo.tipo === 'Conjunto' ? 'Cavalo' : veiculo.tipo}
                         </span>
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">
@@ -1610,58 +1541,23 @@ export default function Parceiros() {
                       {/* Placas */}
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {veiculo.tipo === 'Truck' ? veiculo.placa : veiculo.placaCavalo}
+                          {veiculo.tipo === 'Truck' 
+                            ? veiculo.placa 
+                            : veiculo.tipo === 'Carreta' 
+                              ? (veiculo.placaCarreta || '') 
+                              : veiculo.placaCavalo}
                         </p>
-                        {veiculo.tipo === 'Conjunto' && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {veiculo.quantidadeCarretas === 1 && veiculo.placaCarreta && (
-                              <span>Carreta: {veiculo.placaCarreta}</span>
-                            )}
-                            {veiculo.quantidadeCarretas === 2 && (
-                              <div>
-                                {veiculo.placaCarreta1 && <div>C1: {veiculo.placaCarreta1}</div>}
-                                {veiculo.placaCarreta2 && <div>C2: {veiculo.placaCarreta2}</div>}
-                                {veiculo.possuiDolly && veiculo.placaDolly && <div>Dolly: {veiculo.placaDolly}</div>}
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
 
-                      {/* Motorista */}
+                      {/* Motorista (somente leitura) */}
                       <div>
-                        {motoristaVinculado ? (
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                {motoristaVinculado.nome}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Vinculado</p>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <button
-                                onClick={() => handleVincular('veiculo', veiculo)}
-                                className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                title="Alterar vinculação"
-                              >
-                                🔄
-                              </button>
-                              <button
-                                onClick={() => handleDesvincular('veiculo', veiculo)}
-                                className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                title="Desvincular motorista"
-                              >
-                                <Unlink className="w-4 h-4" />
-                              </button>
-                            </div>
+                        {motoristaVinculado && (
+                          <div>
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                              {motoristaVinculado.nome}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Vinculado</p>
                           </div>
-                        ) : (
-                          <button
-                            onClick={() => handleVincular('veiculo', veiculo)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-sm font-medium"
-                          >
-                            🔗 Vincular Motorista
-                          </button>
                         )}
                       </div>
 
@@ -1751,9 +1647,12 @@ export default function Parceiros() {
           {/* Lista de motoristas */}
           <div className="space-y-3">
             {motoristasParceiro.map((motorista) => {
-              const veiculoVinculado = motorista.id.endsWith('_as_driver') 
-                ? veiculosParceiro.find(v => v.motoristaVinculado === motorista.parceiroId)
-                : veiculosParceiro.find(v => v.id === motorista.veiculoVinculado);
+              const veiculosDoMotorista = veiculosParceiro.filter(v => 
+                motorista.id.endsWith('_as_driver') ? v.motoristaVinculado === motorista.parceiroId : v.motoristaVinculado === motorista.id
+              );
+              const placas = veiculosDoMotorista
+                .map(v => v.tipo === 'Truck' ? (v.placa || '') : v.tipo === 'Carreta' ? (v.placaCarreta || '') : (v.placaCavalo || ''))
+                .filter(Boolean);
               
               return (
                 <div key={motorista.id} className="card p-4 hover:shadow-md transition-shadow">
@@ -1780,53 +1679,26 @@ export default function Parceiros() {
                         </p>
                       </div>
 
-                      {/* Veículo */}
+                      {/* Veículos vinculados (somente leitura) */}
                       <div>
-                        {veiculoVinculado ? (
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                {veiculoVinculado.fabricante} {veiculoVinculado.modelo}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {veiculoVinculado.tipo === 'Truck' ? veiculoVinculado.placa : veiculoVinculado.placaCavalo}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <button
-                                onClick={() => handleVincular('motorista', motorista)}
-                                className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                title="Alterar vinculação"
-                              >
-                                🔄
-                              </button>
-                              <button
-                                onClick={() => handleDesvincular('motorista', motorista)}
-                                className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                title="Desvincular veículo"
-                              >
-                                <Unlink className="w-4 h-4" />
-                              </button>
-                            </div>
+                        {placas.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                              {placas.join(', ')}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Vinculado</p>
                           </div>
-                        ) : (
-                          <button
-                            onClick={() => handleVincular('motorista', motorista)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-sm font-medium"
-                          >
-                            🔗 Vincular Veículo
-                          </button>
                         )}
                       </div>
 
                       {/* Status */}
                       <div className="hidden lg:block">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          veiculoVinculado 
+                          placas.length > 0 
                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                         }`}>
-                          {veiculoVinculado ? 'Vinculado' : 'Disponível'}
+                          {placas.length > 0 ? 'Vinculado' : 'Disponível'}
                         </span>
                       </div>
                     </div>
@@ -1981,13 +1853,18 @@ export default function Parceiros() {
                       className="input-field"
                     >
                       <option value="Truck">Truck</option>
-                      <option value="Conjunto">Conjunto</option>
+                      <option value="Cavalo">Cavalo</option>
+                      <option value="Carreta">Carreta</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {veiculoForm.tipo === 'Truck' ? 'Placa *' : 'Placa Cavalo *'}
+                      {veiculoForm.tipo === 'Truck' 
+                        ? 'Placa *' 
+                        : veiculoForm.tipo === 'Carreta' 
+                          ? 'Placa da Carreta *' 
+                          : 'Placa *'}
                       {consultandoPlaca && (
                         <span className="ml-2 text-blue-500 text-xs">
                           Consultando...
@@ -1996,11 +1873,17 @@ export default function Parceiros() {
                     </label>
                     <input
                       type="text"
-                      value={veiculoForm.tipo === 'Truck' ? veiculoForm.placa : veiculoForm.placaCavalo}
+                      value={veiculoForm.tipo === 'Truck' 
+                        ? veiculoForm.placa 
+                        : veiculoForm.tipo === 'Carreta' 
+                          ? veiculoForm.placaCarreta 
+                          : veiculoForm.placaCavalo}
                       onChange={(e) => {
                         const formatted = formatPlaca(e.target.value);
                         if (veiculoForm.tipo === 'Truck') {
                           setVeiculoForm({ ...veiculoForm, placa: formatted });
+                        } else if (veiculoForm.tipo === 'Carreta') {
+                          setVeiculoForm({ ...veiculoForm, placaCarreta: formatted });
                         } else {
                           setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
                         }
@@ -2028,21 +1911,7 @@ export default function Parceiros() {
                   </div>
                 </div>
 
-                {veiculoForm.tipo === 'Conjunto' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Quantidade de Carretas
-                    </label>
-                    <select
-                      value={veiculoForm.quantidadeCarretas}
-                      onChange={(e) => setVeiculoForm({ ...veiculoForm, quantidadeCarretas: parseInt(e.target.value) })}
-                      className="input-field"
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                    </select>
-                  </div>
-                )}
+                {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -2057,17 +1926,19 @@ export default function Parceiros() {
                     />
                   </div>
 
-                  <div>
-                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                       Modelo
-                     </label>
-                     <input
-                       type="text"
-                       value={veiculoForm.modelo}
-                       onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
-                       className="input-field"
-                     />
-                   </div>
+                  {veiculoForm.tipo !== 'Carreta' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Modelo
+                      </label>
+                      <input
+                        type="text"
+                        value={veiculoForm.modelo}
+                        onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                  )}
                  </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2111,115 +1982,8 @@ export default function Parceiros() {
                    </div>
                  )}
 
-                 {veiculoForm.tipo === 'Conjunto' && (
-                   <>
-                     {veiculoForm.quantidadeCarretas === 1 && (
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                           Placa Carreta *
-                         </label>
-                         <input
-                           type="text"
-                           value={veiculoForm.placaCarreta}
-                           onChange={(e) => {
-                             const formatted = formatPlaca(e.target.value);
-                             setVeiculoForm({ ...veiculoForm, placaCarreta: formatted });
-                           }}
-                           className="input-field"
-                           placeholder="ABC-1234"
-                           required
-                         />
-                       </div>
-                     )}
-
-                     {veiculoForm.quantidadeCarretas === 2 && (
-                       <>
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                             Possui Dolly?
-                           </label>
-                           <div className="flex space-x-4">
-                             <label className="flex items-center">
-                               <input
-                                 type="radio"
-                                 name="possuiDolly"
-                                 checked={veiculoForm.possuiDolly === true}
-                                 onChange={() => setVeiculoForm({ ...veiculoForm, possuiDolly: true })}
-                                 className="mr-2"
-                               />
-                               Sim
-                             </label>
-                             <label className="flex items-center">
-                               <input
-                                 type="radio"
-                                 name="possuiDolly"
-                                 checked={veiculoForm.possuiDolly === false}
-                                 onChange={() => setVeiculoForm({ ...veiculoForm, possuiDolly: false })}
-                                 className="mr-2"
-                               />
-                               Não
-                             </label>
-                           </div>
-                         </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                               Placa Carreta 1 *
-                             </label>
-                             <input
-                               type="text"
-                               value={veiculoForm.placaCarreta1}
-                               onChange={(e) => {
-                                 const formatted = formatPlaca(e.target.value);
-                                 setVeiculoForm({ ...veiculoForm, placaCarreta1: formatted });
-                               }}
-                               className="input-field"
-                               placeholder="ABC-1234"
-                               required
-                             />
-                           </div>
-
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                               Placa Carreta 2 *
-                             </label>
-                             <input
-                               type="text"
-                               value={veiculoForm.placaCarreta2}
-                               onChange={(e) => {
-                                 const formatted = formatPlaca(e.target.value);
-                                 setVeiculoForm({ ...veiculoForm, placaCarreta2: formatted });
-                               }}
-                               className="input-field"
-                               placeholder="ABC-1234"
-                               required
-                             />
-                           </div>
-                         </div>
-
-                         {veiculoForm.possuiDolly && (
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                               Placa Dolly *
-                             </label>
-                             <input
-                               type="text"
-                               value={veiculoForm.placaDolly}
-                               onChange={(e) => {
-                                 const formatted = formatPlaca(e.target.value);
-                                 setVeiculoForm({ ...veiculoForm, placaDolly: formatted });
-                               }}
-                               className="input-field"
-                               placeholder="ABC-1234"
-                               required
-                             />
-                           </div>
-                         )}
-                       </>
-                     )}
-                   </>
-                 )}
+                 {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
+                     Para Carreta, usamos apenas a placa principal acima. */}
 
                  <div className="flex space-x-4 pt-4">
                    <button
@@ -2242,98 +2006,7 @@ export default function Parceiros() {
          </div>
        )}
 
-       {/* Modal de Vinculação */}
-       {showVinculacaoModal && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-           <div ref={vinculacaoModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-             <div className="p-6">
-               <div className="flex items-center justify-between mb-4">
-                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                   Vincular {vinculacaoData.type === 'motorista' ? 'Veículo' : 'Motorista'}
-                 </h3>
-                 <button
-                   onClick={() => setShowVinculacaoModal(false)}
-                   className="text-gray-400 hover:text-gray-600"
-                 >
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                   </svg>
-                 </button>
-               </div>
-
-               <div className="space-y-4">
-                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                   Selecione {vinculacaoData.type === 'motorista' ? 'um veículo' : 'um motorista'} para vincular a{' '}
-                   <strong>{vinculacaoData.item?.nome}</strong>:
-                 </p>
-
-                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                   {vinculacaoData.type === 'motorista' ? (
-                     <>
-                       {veiculosParceiro
-                         .filter(v => !v.motoristaVinculado || v.motoristaVinculado === vinculacaoData.item?.id)
-                         .map((veiculo) => (
-                           <button
-                             key={veiculo.id}
-                             onClick={() => handleVinculacaoSubmit(veiculo.id)}
-                             className="w-full text-left p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                           >
-                             <div className="font-medium">{veiculo.fabricante} {veiculo.modelo}</div>
-                             <div className="text-sm text-gray-500">
-                               {veiculo.tipo === 'Truck' ? veiculo.placa : veiculo.placaCavalo} • {veiculo.tipo}
-                             </div>
-                           </button>
-                         ))}
-                       {veiculosParceiro.filter(v => !v.motoristaVinculado).length === 0 && (
-                         <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                           Nenhum veículo dispon��vel para vinculação
-                         </p>
-                       )}
-                     </>
-                   ) : (
-                     <>
-                       {motoristasParceiro
-                         .filter(m => !m.veiculoVinculado || m.veiculoVinculado === vinculacaoData.item?.id)
-                         .map((motorista) => (
-                           <button
-                             key={motorista.id}
-                             onClick={() => handleVinculacaoSubmit(motorista.id)}
-                             className="w-full text-left p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                           >
-                             <div className="font-medium">{motorista.nome}</div>
-                             <div className="text-sm text-gray-500">
-                               CPF: {formatDocument(motorista.cpf, 'PF')} • CNH: {motorista.cnh}
-                             </div>
-                           </button>
-                         ))}
-                       {motoristasParceiro.filter(m => !m.veiculoVinculado).length === 0 && (
-                         <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                           Nenhum motorista disponível para vincula��ão
-                         </p>
-                       )}
-                     </>
-                   )}
-                 </div>
-
-                 <div className="flex space-x-4 pt-4">
-                   <button
-                     onClick={() => handleVinculacaoSubmit('')}
-                     className="btn-secondary flex-1"
-                   >
-                     Desvincular
-                   </button>
-                   <button
-                     onClick={() => setShowVinculacaoModal(false)}
-                     className="btn-primary flex-1"
-                   >
-                     Cancelar
-                   </button>
-                 </div>
-               </div>
-             </div>
-           </div>
-         </div>
-       )}
+       {/* Removido: Modal de Vinculação motorista↔veículo */}
 
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirm && deleteTarget && (

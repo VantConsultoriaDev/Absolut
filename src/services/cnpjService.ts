@@ -145,6 +145,18 @@ export class CNPJService {
       const telefoneCompleto = payload.ddd_telefone_1 ? 
         `(${payload.ddd_telefone_1.substring(0,2)}) ${payload.ddd_telefone_1.substring(2)}` : '';
 
+      // Normaliza municipio em string (algumas respostas podem trazer objeto)
+      const municipioNormalizado = (() => {
+        const m = payload?.municipio;
+        if (typeof m === 'string') return m;
+        if (m && typeof m === 'object') {
+          return m.nome || m.descricao || '';
+        }
+        // Fallbacks para outras estruturas
+        if (typeof payload?.endereco?.municipio === 'string') return payload.endereco.municipio;
+        return payload?.cidade || '';
+      })();
+
       const resultado = {
         razaoSocial: payload.razao_social || payload.nome_fantasia || payload.nome || '',
         nomeFantasia: payload.nome_fantasia || payload.razao_social || '',
@@ -154,7 +166,7 @@ export class CNPJService {
         numero: payload.numero || '',
         complemento: payload.complemento || '',
         bairro: payload.bairro || '',
-        cidade: payload.municipio || payload.cidade || '',
+        cidade: municipioNormalizado,
         uf: payload.uf || payload.estado || '',
         cep: payload.cep || '',
         telefone: telefoneCompleto || payload.telefone || '',

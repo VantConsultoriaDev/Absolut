@@ -22,7 +22,10 @@ import {
   RefreshCw,
   Link,
   Upload,
-  CreditCard
+  CreditCard,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const Cargas: React.FC = () => {
@@ -35,7 +38,9 @@ const Cargas: React.FC = () => {
     parceiros,
     motoristas,
     veiculos,
-    createMovimentacaoFinanceira
+    clientes,
+    createMovimentacao,
+    movimentacoes
   } = useDatabase();
 
   // Lista de UFs ordenada conforme especificação
@@ -74,10 +79,25 @@ const Cargas: React.FC = () => {
   const [editingCarga, setEditingCarga] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterStartDate, setFilterStartDate] = useState('');
-  const [filterEndDate, setFilterEndDate] = useState('');
+  // Filtros de intervalo: Coleta e Entrega
+  const [filterColetaStartDate, setFilterColetaStartDate] = useState('');
+  const [filterColetaEndDate, setFilterColetaEndDate] = useState('');
+  const [filterEntregaStartDate, setFilterEntregaStartDate] = useState('');
+  const [filterEntregaEndDate, setFilterEntregaEndDate] = useState('');
+  // Calendários ancorados
+  const [showColetaCalendar, setShowColetaCalendar] = useState(false);
+  const [coletaCalendarPosition, setColetaCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
+  const [coletaMonth, setColetaMonth] = useState<Date>(new Date());
+  const [tempColetaStart, setTempColetaStart] = useState<Date | null>(null);
+  const [tempColetaEnd, setTempColetaEnd] = useState<Date | null>(null);
+  const [showEntregaCalendar, setShowEntregaCalendar] = useState(false);
+  const [entregaCalendarPosition, setEntregaCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
+  const [entregaMonth, setEntregaMonth] = useState<Date>(new Date());
+  const [tempEntregaStart, setTempEntregaStart] = useState<Date | null>(null);
+  const [tempEntregaEnd, setTempEntregaEnd] = useState<Date | null>(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
+  const [formAnchor, setFormAnchor] = useState<{ top: number, left: number } | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [originalFormData, setOriginalFormData] = useState<any>(null);
@@ -86,6 +106,7 @@ const Cargas: React.FC = () => {
   const [selectedParceiro, setSelectedParceiro] = useState('');
   const [selectedMotorista, setSelectedMotorista] = useState('');
   const [selectedVeiculo, setSelectedVeiculo] = useState('');
+  const [selectedCarretas, setSelectedCarretas] = useState<string[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
@@ -100,12 +121,14 @@ const Cargas: React.FC = () => {
     adiantamentoPercentual: '70',
     dataVencimentoAdiantamento: '',
     dataVencimentoSaldo: '',
+    dataVencimentoDespesa: '',
     
     // B. Despesas Adicionais
     despesasEnabled: false,
     valorARS: '',
     taxaConversao: '',
     valorBRL: '',
+    valorBRLExtra: '',
     
     // C. Diárias
     diariasEnabled: false,
@@ -126,6 +149,7 @@ const Cargas: React.FC = () => {
     crt: string;
     origem: string;
     destino: string;
+    clienteId?: string;
     ufOrigemSelecionada: string;
     cidadeOrigem: string;
     ufDestinoSelecionada: string;
@@ -140,6 +164,7 @@ const Cargas: React.FC = () => {
     crt: '',
     origem: '',
     destino: '',
+    clienteId: '',
     ufOrigemSelecionada: '',
     cidadeOrigem: '',
     ufDestinoSelecionada: '',
@@ -158,10 +183,12 @@ const Cargas: React.FC = () => {
     onClose: () => {
       setShowForm(false);
       setEditingCarga(null);
+      setFormAnchor(null);
       setFormData({
         crt: '',
         origem: '',
         destino: '',
+        clienteId: '',
         dataColeta: format(new Date(), 'yyyy-MM-dd'),
         dataEntrega: format(new Date(), 'yyyy-MM-dd'),
         valor: '',
@@ -211,6 +238,93 @@ const Cargas: React.FC = () => {
     }
   };
 
+  // Calendário de intervalo reutilizável
+  const RangeCalendar: React.FC<{ 
+    month: Date,
+    start: Date | null,
+    end: Date | null,
+    onPrev: () => void,
+    onNext: () => void,
+    onSelectDate: (d: Date) => void,
+    onApply: () => void,
+    onClear: () => void
+  }> = ({ month, start, end, onPrev, onNext, onSelectDate, onApply, onClear }) => {
+    const year = month.getFullYear();
+    const m = month.getMonth();
+    const firstWeekday = new Date(year, m, 1).getDay();
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+
+    const cells: (Date | null)[] = [];
+    for (let i = 0; i < firstWeekday; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, m, d));
+    const rows: (Date | null)[][] = [];
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+
+    const weekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const isSameDay = (a: Date, b: Date) => (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+    const inRange = (d: Date) => {
+      if (!start || !end) return false;
+      const s = start < end ? start : end;
+      const e = end > start ? end : start;
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const sd = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+      const ed = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+      return dd >= sd && dd <= ed;
+    };
+
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-80 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={onPrev}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="text-sm font-medium">
+            {format(month, 'MMMM yyyy', { locale: ptBR })}
+          </div>
+          <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={onNext}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-xs text-center mb-1">
+          {weekLabels.map(d => (
+            <div key={d} className="text-gray-500 dark:text-gray-400 py-1">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {rows.map((row, ri) => (
+            row.map((cell, ci) => (
+              cell ? (
+                <button
+                  key={`${ri}-${ci}`}
+                  onClick={() => onSelectDate(cell)}
+                  className={`py-2 rounded text-sm transition-colors ${
+                    (start && isSameDay(cell, start)) || (end && isSameDay(cell, end))
+                      ? 'bg-blue-600 text-white'
+                      : inRange(cell)
+                        ? 'bg-blue-100 dark:bg-blue-900/30'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {cell.getDate()}
+                </button>
+              ) : (
+                <div key={`${ri}-${ci}`} />
+              )
+            ))
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          <button className="btn-secondary flex-1" onClick={onClear}>Limpar</button>
+          <button className="btn-primary flex-1" onClick={onApply}>Aplicar</button>
+        </div>
+      </div>
+    );
+  };
+
   // Filtrar cargas
   const filteredCargas = useMemo(() => {
     return cargas.filter(carga => {
@@ -220,26 +334,40 @@ const Cargas: React.FC = () => {
       
       const matchStatus = !filterStatus || carga.status === filterStatus;
       
-      // Filtro por intervalo de datas (usando dataColeta como referência)
-      let matchesDateRange = true;
-      if (filterStartDate && filterEndDate) {
-        const cargaDate = new Date(carga.dataColeta || new Date());
-        const startDate = new Date(filterStartDate);
-        const endDate = new Date(filterEndDate);
-        matchesDateRange = isWithinInterval(cargaDate, { start: startDate, end: endDate });
-      } else if (filterStartDate) {
-        const cargaDate = new Date(carga.dataColeta || new Date());
-        const startDate = new Date(filterStartDate);
-        matchesDateRange = cargaDate >= startDate;
-      } else if (filterEndDate) {
-        const cargaDate = new Date(carga.dataColeta || new Date());
-        const endDate = new Date(filterEndDate);
-        matchesDateRange = cargaDate <= endDate;
+      // Filtro por Coleta (dataColeta)
+      let matchesColetaRange = true;
+      if (filterColetaStartDate) {
+        const startDate = new Date(filterColetaStartDate);
+        const d = new Date(carga.dataColeta || new Date());
+        matchesColetaRange = matchesColetaRange && d >= startDate;
+      }
+      if (filterColetaEndDate) {
+        const endDate = new Date(filterColetaEndDate);
+        const d = new Date(carga.dataColeta || new Date());
+        matchesColetaRange = matchesColetaRange && d <= endDate;
+      }
+
+      // Filtro por Entrega (dataEntrega)
+      let matchesEntregaRange = true;
+      if (filterEntregaStartDate || filterEntregaEndDate) {
+        if (!carga.dataEntrega) {
+          matchesEntregaRange = false;
+        } else {
+          const de = new Date(carga.dataEntrega);
+          if (filterEntregaStartDate) {
+            const es = new Date(filterEntregaStartDate);
+            matchesEntregaRange = matchesEntregaRange && de >= es;
+          }
+          if (filterEntregaEndDate) {
+            const ee = new Date(filterEntregaEndDate);
+            matchesEntregaRange = matchesEntregaRange && de <= ee;
+          }
+        }
       }
       
-      return matchSearch && matchStatus && matchesDateRange;
+      return matchSearch && matchStatus && matchesColetaRange && matchesEntregaRange;
     }).sort((a, b) => new Date(b.dataColeta || new Date()).getTime() - new Date(a.dataColeta || new Date()).getTime());
-  }, [cargas, searchTerm, filterStatus, filterStartDate, filterEndDate]);
+  }, [cargas, searchTerm, filterStatus, filterColetaStartDate, filterColetaEndDate, filterEntregaStartDate, filterEntregaEndDate]);
 
   // Estatísticas
   const stats = useMemo(() => {
@@ -297,7 +425,8 @@ const Cargas: React.FC = () => {
       dataColeta: new Date(formData.dataColeta),
       dataEntrega: new Date(formData.dataEntrega),
       status: formData.status,
-      crt: formData.crt
+      crt: formData.crt,
+      clienteId: (formData as any).clienteId || undefined
     };
 
     if (editingCarga) {
@@ -336,6 +465,7 @@ const Cargas: React.FC = () => {
       crt: '',
       origem: '',
       destino: '',
+      clienteId: '',
       ufOrigemSelecionada: '',
       cidadeOrigem: '',
       ufDestinoSelecionada: '',
@@ -352,6 +482,7 @@ const Cargas: React.FC = () => {
     setHasUnsavedChanges(false);
     setOriginalFormData(null);
     setShowCancelConfirm(false);
+    setFormAnchor(null);
   };
 
   // Função auxiliar para extrair UF e cidade de uma string
@@ -370,7 +501,7 @@ const Cargas: React.FC = () => {
     }
   };
 
-  const handleEdit = (carga: any) => {
+  const handleEdit = (carga: any, e?: React.MouseEvent<HTMLButtonElement>) => {
     const origemInfo = extrairUfECidade(carga.origem);
     const destinoInfo = extrairUfECidade(carga.destino);
     
@@ -378,6 +509,7 @@ const Cargas: React.FC = () => {
       crt: carga.crt || carga.descricao || '',
       origem: carga.origem,
       destino: carga.destino,
+      clienteId: carga.clienteId || '',
       ufOrigemSelecionada: origemInfo.uf,
       cidadeOrigem: origemInfo.cidade,
       ufDestinoSelecionada: destinoInfo.uf,
@@ -393,6 +525,14 @@ const Cargas: React.FC = () => {
     setFormData(formDataToSet);
     setOriginalFormData(formDataToSet);
     setEditingCarga(carga);
+    if (e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
+      const top = rect.bottom + window.scrollY + 8;
+      setFormAnchor({ top, left });
+    } else {
+      setFormAnchor(null);
+    }
     setShowForm(true);
     setHasUnsavedChanges(false);
   };
@@ -443,21 +583,26 @@ const Cargas: React.FC = () => {
     setSelectedParceiro(carga.parceiroId || '');
     setSelectedMotorista(carga.motoristaId || '');
     setSelectedVeiculo(carga.veiculoId || '');
+    setSelectedCarretas(carga.carretasSelecionadas || []);
     setShowLinkModal(true);
   };
 
   const handleSaveLink = () => {
     if (linkingCarga) {
+      const veiculoSelecionado = veiculos.find(v => v.id === selectedVeiculo);
+      const isCavalo = veiculoSelecionado?.tipo === 'Cavalo';
       updateCarga(linkingCarga.id, {
         parceiroId: selectedParceiro || undefined,
         motoristaId: selectedMotorista || undefined,
-        veiculoId: selectedVeiculo || undefined
+        veiculoId: selectedVeiculo || undefined,
+        carretasSelecionadas: isCavalo ? selectedCarretas : undefined
       });
       setShowLinkModal(false);
       setLinkingCarga(null);
       setSelectedParceiro('');
       setSelectedMotorista('');
       setSelectedVeiculo('');
+      setSelectedCarretas([]);
     }
   };
 
@@ -564,7 +709,7 @@ const Cargas: React.FC = () => {
      }
    };
 
-   const handleIntegrateFinanceiro = (carga: any) => {
+  const handleIntegrateFinanceiro = (carga: any) => {
     setIntegratingCarga(carga);
     setIntegrateData({
       // A. Adiantamento
@@ -572,12 +717,14 @@ const Cargas: React.FC = () => {
       adiantamentoPercentual: '70',
       dataVencimentoAdiantamento: '',
       dataVencimentoSaldo: '',
+      dataVencimentoDespesa: format(new Date(), 'yyyy-MM-dd'),
       
       // B. Despesas Adicionais
       despesasEnabled: false,
       valorARS: '',
       taxaConversao: '',
       valorBRL: '',
+      valorBRLExtra: '',
       
       // C. Diárias
       diariasEnabled: false,
@@ -590,32 +737,43 @@ const Cargas: React.FC = () => {
   };
 
    // Funções auxiliares para cálculos automáticos
+  const formatNumberBR = (value: string): string => {
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    const amount = parseInt(numbers, 10) / 100;
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
   const calcularValorBRL = () => {
     if (!integrateData.despesasEnabled) return 0;
-    const valorARS = parseFloat(integrateData.valorARS.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-    const taxa = parseFloat(integrateData.taxaConversao.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-    return valorARS * taxa;
+    const valorARS = parseCurrency(integrateData.valorARS || '');
+    const taxa = parseCurrency(integrateData.taxaConversao || '');
+    const extraBRL = parseCurrency(integrateData.valorBRLExtra || '');
+    return (valorARS * taxa) + extraBRL;
   };
 
   const calcularAdiantamento = () => {
     if (!integrateData.adiantamentoEnabled || !integratingCarga) return 0;
-    const valorTotal = parseFloat(integratingCarga.valorTotal?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
     const percentual = parseFloat(integrateData.adiantamentoPercentual) / 100;
     return valorTotal * percentual;
   };
 
   const calcularSaldo = () => {
     if (!integrateData.adiantamentoEnabled || !integratingCarga) return 0;
-    const valorTotal = parseFloat(integratingCarga.valorTotal?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
     return valorTotal - calcularAdiantamento();
   };
 
   const calcularTotalFinal = () => {
     const valorBRL = calcularValorBRL();
     const diarias = integrateData.diariasEnabled ? 
-      parseFloat(integrateData.valorDiarias.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
+      parseCurrency(integrateData.valorDiarias || '') : 0;
     const valorTotal = integratingCarga ? 
-      parseFloat(integratingCarga.valorTotal?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
+      parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
     
     if (integrateData.adiantamentoEnabled) {
       if (integrateData.somaOpcao === 'adiantamento') {
@@ -631,91 +789,186 @@ const Cargas: React.FC = () => {
   const handleIntegrateSubmit = () => {
     if (!integratingCarga) return;
 
-    const valorTotal = parseFloat(integratingCarga.valorTotal?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-    
-    // Calcular adiantamento e saldo se habilitado
-    let valorAdiantamento = 0;
-    let valorSaldo = 0;
-    
-    if (integrateData.adiantamentoEnabled) {
-      const percentual = parseFloat(integrateData.adiantamentoPercentual) / 100;
-      valorAdiantamento = valorTotal * percentual;
-      valorSaldo = valorTotal - valorAdiantamento;
+    // Impedir múltiplas integrações por carga
+    const jaIntegrada = movimentacoes.some(m => m.cargaId === integratingCarga.id);
+    if (jaIntegrada) {
+      alert('Esta carga já possui integração financeira. Exclua a movimentação para reintegrar.');
+      return;
     }
-    
-    // Calcular despesas adicionais se habilitado
-    let despesasAdicionais = 0;
-    if (integrateData.despesasEnabled) {
-      const valorARS = parseFloat(integrateData.valorARS.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-      const taxa = parseFloat(integrateData.taxaConversao.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-      despesasAdicionais = valorARS * taxa;
-    }
-    
-    // Calcular diárias se habilitado
-    const diarias = integrateData.diariasEnabled ? 
-      parseFloat(integrateData.valorDiarias.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
-    
-    // Calcular valor final baseado na opção de soma
-    let valorFinal = 0;
-    let descricaoDetalhada = '';
-    
-    if (integrateData.adiantamentoEnabled) {
-      if (integrateData.somaOpcao === 'adiantamento') {
-        valorFinal = valorAdiantamento + despesasAdicionais + diarias;
-        descricaoDetalhada = `Adiantamento (${integrateData.adiantamentoPercentual}%): R$ ${valorAdiantamento.toFixed(2)}`;
-      } else {
-        valorFinal = valorSaldo + despesasAdicionais + diarias;
-        descricaoDetalhada = `Saldo (${100 - parseFloat(integrateData.adiantamentoPercentual)}%): R$ ${valorSaldo.toFixed(2)}`;
+
+    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+
+    // Dados para descrição
+    const destinoInfo = extrairUfECidade(integratingCarga.destino || '');
+    const cidadeDestino = destinoInfo.cidade || integratingCarga.destino || '';
+    const crtDisplay = integratingCarga.crt || integratingCarga.descricao || integratingCarga.id;
+    const motoristaSufixo = integratingCarga.motoristaId ? ' - Motorista vinculado' : '';
+
+    // Extras
+    const despesasAdicionais = integrateData.despesasEnabled ? (() => {
+      const valorARS = parseCurrency(integrateData.valorARS || '');
+      const taxa = parseCurrency(integrateData.taxaConversao || '');
+      const extraBRL = parseCurrency(integrateData.valorBRLExtra || '');
+      return (valorARS * taxa) + extraBRL;
+    })() : 0;
+    const diarias = integrateData.diariasEnabled ? parseCurrency(integrateData.valorDiarias || '') : 0;
+    const extrasTotal = despesasAdicionais + diarias;
+
+    // Sem adiantamento, sem extras/diárias: uma única despesa FRETE
+    if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
+      let dataMov = new Date();
+      if (integrateData.dataVencimentoDespesa) {
+        dataMov = new Date(integrateData.dataVencimentoDespesa);
       }
-    } else {
-      valorFinal = despesasAdicionais + diarias;
-      descricaoDetalhada = 'Valores adicionais';
-    }
-    
-    if (despesasAdicionais > 0) {
-      descricaoDetalhada += `, Despesas Adicionais: R$ ${despesasAdicionais.toFixed(2)}`;
-    }
-    if (diarias > 0) {
-      descricaoDetalhada += `, Diárias: R$ ${diarias.toFixed(2)}`;
-    }
-    
-    if (valorFinal > 0) {
-      const movimentacao = {
-        tipo: 'receita' as const,
-        valor: valorFinal,
-        descricao: `Integração financeira - Carga ${integratingCarga.crt || integratingCarga.id}`,
-        categoria: 'Frete',
-        data: new Date().toISOString(),
-        status: 'pendente' as const,
+
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorTotal,
+        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataMov,
+        status: 'pendente',
         cargaId: integratingCarga.id,
-        observacoes: descricaoDetalhada
-      };
-      
-      createMovimentacaoFinanceira(movimentacao);
+        observacoes: `Integração sem adiantamento. Valor da carga: ${formatCurrency(valorTotal)}`
+      });
+
+      setShowIntegrateModal(false);
+      setIntegratingCarga(null);
+      setIntegrateData({
+        // A. Adiantamento
+        adiantamentoEnabled: false,
+        adiantamentoPercentual: '70',
+        dataVencimentoAdiantamento: '',
+        dataVencimentoSaldo: '',
+        dataVencimentoDespesa: '',
+        
+        // B. Despesas Adicionais
+        despesasEnabled: false,
+        valorARS: '',
+        taxaConversao: '',
+        valorBRL: '',
+        valorBRLExtra: '',
+        
+        // C. Diárias
+        diariasEnabled: false,
+        valorDiarias: '',
+        
+        // D. Opção de Soma
+        somaOpcao: 'adiantamento'
+      });
+
+      return;
     }
-    
-    setShowIntegrateModal(false);
-    setIntegratingCarga(null);
-    setIntegrateData({
-      // A. Adiantamento
-      adiantamentoEnabled: false,
-      adiantamentoPercentual: '70',
-      dataVencimentoAdiantamento: '',
-      dataVencimentoSaldo: '',
-      
-      // B. Despesas Adicionais
-      despesasEnabled: false,
-      valorARS: '',
-      taxaConversao: '',
-      valorBRL: '',
-      
-      // C. Diárias
-      diariasEnabled: false,
-      valorDiarias: '',
-      
-      // D. Opção de Soma
-      somaOpcao: 'adiantamento'
-    });
+
+    // Com adiantamento: criar duas despesas FRETE (Adiantamento e Saldo)
+    if (integrateData.adiantamentoEnabled) {
+      const percentual = parseFloat(integrateData.adiantamentoPercentual || '0') / 100;
+      const valorAdiantamento = valorTotal * percentual;
+      const valorSaldo = valorTotal - valorAdiantamento;
+
+      const valorAdiantamentoFinal = integrateData.somaOpcao === 'adiantamento' ? (valorAdiantamento + extrasTotal) : valorAdiantamento;
+      const valorSaldoFinal = integrateData.somaOpcao === 'saldo' ? (valorSaldo + extrasTotal) : valorSaldo;
+
+      const dataAdiant = integrateData.dataVencimentoAdiantamento ? new Date(integrateData.dataVencimentoAdiantamento) : new Date();
+      const dataSaldo = integrateData.dataVencimentoSaldo ? new Date(integrateData.dataVencimentoSaldo) : new Date();
+
+      // Despesa de Adiantamento
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorAdiantamentoFinal,
+        descricao: `Adiantamento - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataAdiant,
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Adiantamento ${integrateData.adiantamentoPercentual}%: ${formatCurrency(valorAdiantamento)}${extrasTotal > 0 && integrateData.somaOpcao === 'adiantamento' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+
+      // Despesa de Saldo
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorSaldoFinal,
+        descricao: `Saldo- CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataSaldo,
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Saldo ${100 - parseFloat(integrateData.adiantamentoPercentual)}%: ${formatCurrency(valorSaldo)}${extrasTotal > 0 && integrateData.somaOpcao === 'saldo' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+
+      setShowIntegrateModal(false);
+      setIntegratingCarga(null);
+      setIntegrateData({
+        // A. Adiantamento
+        adiantamentoEnabled: false,
+        adiantamentoPercentual: '70',
+        dataVencimentoAdiantamento: '',
+        dataVencimentoSaldo: '',
+        dataVencimentoDespesa: '',
+        
+        // B. Despesas Adicionais
+        despesasEnabled: false,
+        valorARS: '',
+        taxaConversao: '',
+        valorBRL: '',
+        valorBRLExtra: '',
+        
+        // C. Diárias
+        diariasEnabled: false,
+        valorDiarias: '',
+        
+        // D. Opção de Soma
+        somaOpcao: 'adiantamento'
+      });
+
+      return;
+    }
+
+    // Sem adiantamento, mas com extras/diárias: uma única despesa FRETE somando tudo
+    {
+      let dataMov = new Date();
+      if (integrateData.dataVencimentoDespesa) {
+        dataMov = new Date(integrateData.dataVencimentoDespesa);
+      }
+
+      const valorFinal = valorTotal + extrasTotal;
+
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorFinal,
+        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataMov,
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Valor da carga: ${formatCurrency(valorTotal)}${extrasTotal > 0 ? `, Extras: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+
+      setShowIntegrateModal(false);
+      setIntegratingCarga(null);
+      setIntegrateData({
+        // A. Adiantamento
+        adiantamentoEnabled: false,
+        adiantamentoPercentual: '70',
+        dataVencimentoAdiantamento: '',
+        dataVencimentoSaldo: '',
+        dataVencimentoDespesa: '',
+        
+        // B. Despesas Adicionais
+        despesasEnabled: false,
+        valorARS: '',
+        taxaConversao: '',
+        valorBRL: '',
+        valorBRLExtra: '',
+        
+        // C. Diárias
+        diariasEnabled: false,
+        valorDiarias: '',
+        
+        // D. Opção de Soma
+        somaOpcao: 'adiantamento'
+      });
+    }
    };
 
   const filteredMotoristas = useMemo(() => {
@@ -765,8 +1018,9 @@ const Cargas: React.FC = () => {
   }, [selectedParceiro, motoristas, parceiros]);
 
   const filteredVeiculos = useMemo(() => {
-    if (!selectedParceiro) return veiculos;
-    return veiculos.filter(v => v.parceiroId === selectedParceiro);
+    const base = selectedParceiro ? veiculos.filter(v => v.parceiroId === selectedParceiro) : veiculos;
+    // Excluir carretas do dropdown de veículo (somente Truck e Cavalo)
+    return base.filter(v => v.tipo !== 'Carreta');
   }, [selectedParceiro, veiculos]);
 
   // Seleção automática de veículo quando motorista é selecionado
@@ -812,7 +1066,11 @@ const Cargas: React.FC = () => {
             Importar CSV/Excel
           </button>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
+              const top = rect.bottom + window.scrollY + 8;
+              setFormAnchor({ top, left });
               setShowForm(true);
               setHasUnsavedChanges(false);
               setOriginalFormData(null);
@@ -908,7 +1166,7 @@ const Cargas: React.FC = () => {
 
       {/* Filtros */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           {/* Busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -917,7 +1175,7 @@ const Cargas: React.FC = () => {
               placeholder="Buscar por CRT, origem ou destino..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="input-field pl-10 h-11 text-sm"
             />
           </div>
 
@@ -925,33 +1183,165 @@ const Cargas: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="input-field h-11 text-sm"
           >
-            <option value="">Todos os status</option>
+            <option value="">Status</option>
             {Object.entries(statusConfig).map(([status, config]) => (
               <option key={status} value={status}>{config.label}</option>
             ))}
           </select>
 
-          {/* Data Início */}
-          <input
-            type="date"
-            value={filterStartDate}
-            onChange={(e) => setFilterStartDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            placeholder="Data início"
-          />
+          {/* Filtro Coleta (intervalo) */}
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Coleta</label>
+            <button
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                setColetaCalendarPosition({
+                  top: rect.bottom + window.scrollY + 5,
+                  left: rect.left + window.scrollX
+                });
+                const s = filterColetaStartDate ? new Date(filterColetaStartDate) : null;
+                const ed = filterColetaEndDate ? new Date(filterColetaEndDate) : null;
+                setTempColetaStart(s);
+                setTempColetaEnd(ed);
+                setColetaMonth(s || new Date());
+                setShowColetaCalendar(true);
+              }}
+              className="input-field flex items-center justify-between h-11 text-sm"
+            >
+              <span className="text-sm">
+                {filterColetaStartDate && filterColetaEndDate
+                  ? `${format(new Date(filterColetaStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(new Date(filterColetaEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                  : filterColetaStartDate
+                    ? `De ${format(new Date(filterColetaStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                    : 'Selecionar período'}
+              </span>
+              <Calendar className="h-5 w-5 text-gray-400" />
+            </button>
+          </div>
 
-          {/* Data Fim */}
-          <input
-            type="date"
-            value={filterEndDate}
-            onChange={(e) => setFilterEndDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            placeholder="Data fim"
-          />
+          {/* Filtro Entrega (intervalo) */}
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Entrega</label>
+            <button
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                setEntregaCalendarPosition({
+                  top: rect.bottom + window.scrollY + 5,
+                  left: rect.left + window.scrollX
+                });
+                const s = filterEntregaStartDate ? new Date(filterEntregaStartDate) : null;
+                const ed = filterEntregaEndDate ? new Date(filterEntregaEndDate) : null;
+                setTempEntregaStart(s);
+                setTempEntregaEnd(ed);
+                setEntregaMonth(s || new Date());
+                setShowEntregaCalendar(true);
+              }}
+              className="input-field flex items-center justify-between h-11 text-sm"
+            >
+              <span className="text-sm">
+                {filterEntregaStartDate && filterEntregaEndDate
+                  ? `${format(new Date(filterEntregaStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(new Date(filterEntregaEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                  : filterEntregaStartDate
+                    ? `De ${format(new Date(filterEntregaStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                    : 'Selecionar período'}
+              </span>
+              <Calendar className="h-5 w-5 text-gray-400" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Calendário de Coleta (overlay ancorado) */}
+      {showColetaCalendar && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowColetaCalendar(false)} />
+          <div
+            className="fixed z-50"
+            style={{ top: `${coletaCalendarPosition.top}px`, left: `${coletaCalendarPosition.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RangeCalendar
+              month={coletaMonth}
+              start={tempColetaStart}
+              end={tempColetaEnd}
+              onPrev={() => setColetaMonth(new Date(coletaMonth.getFullYear(), coletaMonth.getMonth() - 1, 1))}
+              onNext={() => setColetaMonth(new Date(coletaMonth.getFullYear(), coletaMonth.getMonth() + 1, 1))}
+              onSelectDate={(d) => {
+                if (!tempColetaStart || (tempColetaStart && tempColetaEnd)) {
+                  setTempColetaStart(d);
+                  setTempColetaEnd(null);
+                } else {
+                  if (d < tempColetaStart) {
+                    setTempColetaEnd(tempColetaStart);
+                    setTempColetaStart(d);
+                  } else {
+                    setTempColetaEnd(d);
+                  }
+                }
+              }}
+              onClear={() => {
+                setTempColetaStart(null);
+                setTempColetaEnd(null);
+                setFilterColetaStartDate('');
+                setFilterColetaEndDate('');
+                setShowColetaCalendar(false);
+              }}
+              onApply={() => {
+                setFilterColetaStartDate(tempColetaStart ? format(tempColetaStart, 'yyyy-MM-dd') : '');
+                setFilterColetaEndDate(tempColetaEnd ? format(tempColetaEnd, 'yyyy-MM-dd') : '');
+                setShowColetaCalendar(false);
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Calendário de Entrega (overlay ancorado) */}
+      {showEntregaCalendar && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowEntregaCalendar(false)} />
+          <div
+            className="fixed z-50"
+            style={{ top: `${entregaCalendarPosition.top}px`, left: `${entregaCalendarPosition.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RangeCalendar
+              month={entregaMonth}
+              start={tempEntregaStart}
+              end={tempEntregaEnd}
+              onPrev={() => setEntregaMonth(new Date(entregaMonth.getFullYear(), entregaMonth.getMonth() - 1, 1))}
+              onNext={() => setEntregaMonth(new Date(entregaMonth.getFullYear(), entregaMonth.getMonth() + 1, 1))}
+              onSelectDate={(d) => {
+                if (!tempEntregaStart || (tempEntregaStart && tempEntregaEnd)) {
+                  setTempEntregaStart(d);
+                  setTempEntregaEnd(null);
+                } else {
+                  if (d < tempEntregaStart) {
+                    setTempEntregaEnd(tempEntregaStart);
+                    setTempEntregaStart(d);
+                  } else {
+                    setTempEntregaEnd(d);
+                  }
+                }
+              }}
+              onClear={() => {
+                setTempEntregaStart(null);
+                setTempEntregaEnd(null);
+                setFilterEntregaStartDate('');
+                setFilterEntregaEndDate('');
+                setShowEntregaCalendar(false);
+              }}
+              onApply={() => {
+                setFilterEntregaStartDate(tempEntregaStart ? format(tempEntregaStart, 'yyyy-MM-dd') : '');
+                setFilterEntregaEndDate(tempEntregaEnd ? format(tempEntregaEnd, 'yyyy-MM-dd') : '');
+                setShowEntregaCalendar(false);
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Tabela de Cargas */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -1020,7 +1410,12 @@ const Cargas: React.FC = () => {
                       {carga.veiculoId ? 
                         (() => {
                           const veiculo = veiculos.find(v => v.id === carga.veiculoId);
-                          return veiculo ? veiculo.placa : 'Veículo não encontrado';
+                          if (!veiculo) return 'Veículo não encontrado';
+                          return veiculo.tipo === 'Truck' 
+                            ? veiculo.placa 
+                            : (veiculo.tipo === 'Carreta' 
+                                ? (veiculo.placaCarreta || '-') 
+                                : (veiculo.placaCavalo || veiculo.placa));
                         })() 
                         : '-'
                       }
@@ -1033,7 +1428,7 @@ const Cargas: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 items-center">
                         <button
-                          onClick={() => handleEdit(carga)}
+                          onClick={(e) => handleEdit(carga, e)}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           title="Editar"
                         >
@@ -1088,58 +1483,81 @@ const Cargas: React.FC = () => {
 
       {/* Modal do Formulário */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div ref={modalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {editingCarga ? 'Editar Carga' : 'Nova Carga'}
-                </h3>
-                <button
-                  onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      CRT
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.crt}
-                      onChange={(e) => handleFormChange('crt', e.target.value.slice(0, 10))}
-                      placeholder="Ex: BR722"
-                      className="input-field"
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada' })}
-                      className="input-field"
-                      required
-                    >
-                      <option value="a_coletar">À coletar</option>
-                      <option value="em_transito">Em trânsito</option>
-                      <option value="armazenada">Armazenada</option>
-                      <option value="entregue">Entregue</option>
-                      <option value="cancelada">Cancelada</option>
-                    </select>
-                  </div>
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              ref={modalRef}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingCarga ? 'Editar Carga' : 'Nova Carga'}
+                  </h3>
+                  <button
+                    onClick={resetForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        CRT
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.crt}
+                        onChange={(e) => handleFormChange('crt', e.target.value.slice(0, 10))}
+                        placeholder="Ex: BR722"
+                        className="input-field"
+                        maxLength={10}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Status
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada' })}
+                        className="input-field"
+                        required
+                      >
+                        <option value="a_coletar">À coletar</option>
+                        <option value="em_transito">Em trânsito</option>
+                        <option value="armazenada">Armazenada</option>
+                        <option value="entregue">Entregue</option>
+                        <option value="cancelada">Cancelada</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Cliente
+                      </label>
+                      <select
+                        value={(formData as any).clienteId || ''}
+                        onChange={(e) => handleFormChange('clienteId', e.target.value)}
+                        className="input-field"
+                      >
+                        <option value="">Selecione um cliente</option>
+                        {clientes.map((c) => (
+                          <option key={c.id} value={c.id}>{c.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* ORIGEM */}
@@ -1320,9 +1738,10 @@ const Cargas: React.FC = () => {
                   </button>
                 </div>
               </form>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Dropdown de status sobreposto */}
@@ -1379,7 +1798,7 @@ const Cargas: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Vincular Parceiro/Motorista
+              Vincular Parceiro/Motorista/Veículo
             </h3>
             <div className="space-y-4">
               <div>
@@ -1392,6 +1811,7 @@ const Cargas: React.FC = () => {
                     setSelectedParceiro(e.target.value);
                     setSelectedMotorista('');
                     setSelectedVeiculo('');
+                    setSelectedCarretas([]);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 >
@@ -1436,11 +1856,45 @@ const Cargas: React.FC = () => {
                   <option value="">Selecione um veículo</option>
                   {filteredVeiculos.map(veiculo => (
                     <option key={veiculo.id} value={veiculo.id}>
-                      {veiculo.placa} - {veiculo.modelo}
+                      {veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.placaCavalo || veiculo.placa)}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* Seleção de Carretas quando o veículo for Cavalo */}
+              {selectedParceiro && selectedVeiculo && (() => {
+                const vSel = veiculos.find(v => v.id === selectedVeiculo);
+                if (vSel?.tipo !== 'Cavalo') return null;
+                const carretasDoParceiro = veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta');
+                return (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Carretas do Parceiro (selecione uma ou mais)
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2">
+                      {carretasDoParceiro.length === 0 && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Nenhuma carreta cadastrada para este parceiro</p>
+                      )}
+                      {carretasDoParceiro.map(carreta => (
+                        <label key={carreta.id} className="flex items-center justify-between p-2 rounded">
+                          <span className="text-sm">{carreta.placaCarreta || '-'}</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedCarretas.includes(carreta.id)}
+                            onChange={() => {
+                              setSelectedCarretas(prev => prev.includes(carreta.id)
+                                ? prev.filter(id => id !== carreta.id)
+                                : [...prev, carreta.id]
+                              );
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="flex space-x-3 mt-6">
@@ -1581,10 +2035,12 @@ const Cargas: React.FC = () => {
                     adiantamentoPercentual: '70',
                     dataVencimentoAdiantamento: '',
                     dataVencimentoSaldo: '',
+                    dataVencimentoDespesa: '',
                     despesasEnabled: false,
                     valorARS: '',
                     taxaConversao: '',
                     valorBRL: '',
+                    valorBRLExtra: '',
                     diariasEnabled: false,
                     valorDiarias: '',
                     somaOpcao: 'adiantamento'
@@ -1632,19 +2088,19 @@ const Cargas: React.FC = () => {
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">Valor Total da Carga:</span>
                             <span className="font-medium text-gray-900 dark:text-white">
-                              R$ {integratingCarga.valorTotal ? parseFloat(integratingCarga.valorTotal.toString().replace(/[^\d.,]/g, '').replace(',', '.')).toFixed(2).replace('.', ',') : '0,00'}
+                              {formatCurrency(typeof integratingCarga.valor === 'number' ? integratingCarga.valor : parseCurrency(integratingCarga.valor || '0'))}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">Adiantamento ({integrateData.adiantamentoPercentual}%):</span>
                             <span className="font-medium text-blue-600 dark:text-blue-400">
-                              R$ {calcularAdiantamento().toFixed(2).replace('.', ',')}
+                              {formatCurrency(calcularAdiantamento())}
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Saldo ({100 - parseFloat(integrateData.adiantamentoPercentual)}%):</span>
+                            <span className="text-gray-600 dark:text-gray-400">Saldo ({100 - (parseFloat(integrateData.adiantamentoPercentual || '0'))}%):</span>
                             <span className="font-medium text-green-600 dark:text-green-400">
-                              R$ {calcularSaldo().toFixed(2).replace('.', ',')}
+                              {formatCurrency(calcularSaldo())}
                             </span>
                           </div>
                         </div>
@@ -1695,13 +2151,31 @@ const Cargas: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Valor adicional em Reais (BRL)
+                          </label>
+                          <input
+                            type="text"
+                            value={integrateData.valorBRLExtra}
+                            onChange={(e) => {
+                              const formatted = formatCurrency(e.target.value);
+                              setIntegrateData(prev => ({ 
+                                ...prev, 
+                                valorBRLExtra: formatted
+                              }));
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                            placeholder="R$ 0,00"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Valor em Pesos Argentinos (ARS)
                           </label>
                           <input
                             type="text"
                             value={integrateData.valorARS}
                             onChange={(e) => {
-                              const formatted = formatCurrency(e.target.value);
+                              const formatted = formatNumberBR(e.target.value);
                               setIntegrateData(prev => ({ 
                                 ...prev, 
                                 valorARS: formatted
@@ -1737,7 +2211,7 @@ const Cargas: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          value={`R$ ${calcularValorBRL().toFixed(2).replace('.', ',')}`}
+                          value={formatCurrency(calcularValorBRL())}
                           readOnly
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
                         />
@@ -1747,7 +2221,7 @@ const Cargas: React.FC = () => {
                         <div className="text-sm">
                           <span className="text-gray-600 dark:text-gray-400">Total das Despesas Adicionais em BRL: </span>
                           <span className="font-medium text-green-600 dark:text-green-400">
-                            R$ {calcularValorBRL().toFixed(2).replace('.', ',')}
+                            {formatCurrency(calcularValorBRL())}
                           </span>
                         </div>
                       </div>
@@ -1784,6 +2258,24 @@ const Cargas: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Vencimento da Despesa (sem adições) */}
+                {(!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) && (
+                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Data de Vencimento da Despesa
+                    </label>
+                    <input
+                      type="date"
+                      value={integrateData.dataVencimentoDespesa}
+                      onChange={(e) => setIntegrateData(prev => ({ ...prev, dataVencimentoDespesa: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Sem adições: será integrada como despesa no valor total da carga.
+                    </p>
+                  </div>
+                )}
 
                 {/* D. Opção de Soma */}
                 {(integrateData.adiantamentoEnabled || integrateData.despesasEnabled || integrateData.diariasEnabled) && (
@@ -1829,7 +2321,7 @@ const Cargas: React.FC = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-medium text-gray-700 dark:text-gray-300">Total Final:</span>
                         <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          R$ {calcularTotalFinal().toFixed(2).replace('.', ',')}
+                          {formatCurrency(calcularTotalFinal())}
                         </span>
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -1855,6 +2347,7 @@ const Cargas: React.FC = () => {
                       adiantamentoPercentual: '70',
                       dataVencimentoAdiantamento: '',
                       dataVencimentoSaldo: '',
+                      dataVencimentoDespesa: '',
                       despesasEnabled: false,
                       valorARS: '',
                       taxaConversao: '',
@@ -1870,7 +2363,6 @@ const Cargas: React.FC = () => {
                 </button>
                 <button
                   onClick={handleIntegrateSubmit}
-                  disabled={!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Integrar

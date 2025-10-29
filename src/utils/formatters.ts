@@ -38,6 +38,14 @@ export const formatDocument = (value: string, type?: 'PF' | 'PJ'): string => {
   return value;
 };
 
+// Formatação de CUIT (Argentina): XX-XXXXXXXX-X
+export const formatCUIT = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`
+}
+
 // Formatação de valor monetário: R$ 10.000,00
 export const formatCurrency = (value: string | number): string => {
   // Se for número, formata diretamente

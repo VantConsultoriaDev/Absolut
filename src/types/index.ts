@@ -26,6 +26,23 @@ export interface Endereco {
   estado: string
 }
 
+export interface Cliente {
+  id: string
+  tipo: 'PF' | 'PJ' | 'INTERNACIONAL'
+  nome: string
+  documento?: string
+  email?: string
+  telefone?: string
+  endereco?: string
+  cidade?: string
+  estado?: string
+  cep?: string
+  observacoes?: string
+  isActive?: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Parceiro {
   id: string
   tipo: 'PF' | 'PJ'
@@ -79,6 +96,7 @@ export interface Veiculo {
   quantidadeCarretas?: number
   possuiDolly?: boolean
   motoristaVinculado?: string
+  carretasVinculadas?: string[]
   isActive?: boolean
   createdAt: Date
   updatedAt: Date
@@ -111,9 +129,11 @@ export interface Carga {
   dataColeta?: Date
   dataEntrega?: Date
   status: 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada'
+  clienteId?: string
   parceiroId?: string
   motoristaId?: string
   veiculoId?: string
+  carretasSelecionadas?: string[]
   crt?: string
   createdAt: Date
   updatedAt: Date
@@ -133,6 +153,7 @@ export interface ThemeContextType {
 
 export interface DatabaseContextType {
   users: User[]
+  clientes: Cliente[]
   parceiros: Parceiro[]
   motoristas: Motorista[]
   veiculos: Veiculo[]
@@ -144,6 +165,12 @@ export interface DatabaseContextType {
   updateUser: (id: string, user: Partial<User>) => User | null
   deleteUser: (id: string) => boolean
   getUserById: (id: string) => User | null
+  
+  // Cliente operations
+  createCliente: (cliente: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>) => Cliente
+  updateCliente: (id: string, cliente: Partial<Cliente>) => Cliente | null
+  deleteCliente: (id: string) => boolean
+  getClienteById: (id: string) => Cliente | null
   
   // Parceiro operations
   createParceiro: (parceiro: Omit<Parceiro, 'id' | 'createdAt' | 'updatedAt'>) => Parceiro

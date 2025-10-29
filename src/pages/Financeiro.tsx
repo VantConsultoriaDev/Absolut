@@ -17,7 +17,10 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 const Financeiro: React.FC = () => {
@@ -41,10 +44,11 @@ const Financeiro: React.FC = () => {
     onClose: () => {
       setShowForm(false)
       setEditingMovimentacao(null)
+      setFormAnchor(null)
       setFormData({
         descricao: '',
         valor: '',
-        tipo: 'receita',
+        tipo: 'despesa',
         categoria: '',
         data: format(new Date(), 'yyyy-MM-dd'),
         status: 'pendente',
@@ -56,15 +60,30 @@ const Financeiro: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [filterStartDate, setFilterStartDate] = useState('')
-  const [filterEndDate, setFilterEndDate] = useState('')
+  const [filterVencStartDate, setFilterVencStartDate] = useState('')
+  const [filterVencEndDate, setFilterVencEndDate] = useState('')
+  const [filterPayStartDate, setFilterPayStartDate] = useState('')
+  const [filterPayEndDate, setFilterPayEndDate] = useState('')
+  // Calendários de intervalo (Vencimento e Pagamento)
+  const [showVencCalendar, setShowVencCalendar] = useState(false)
+  const [vencCalendarPosition, setVencCalendarPosition] = useState({ top: 0, left: 0 })
+  const [vencMonth, setVencMonth] = useState<Date>(new Date())
+  const [tempVencStart, setTempVencStart] = useState<Date | null>(null)
+  const [tempVencEnd, setTempVencEnd] = useState<Date | null>(null)
+
+  const [showPayCalendar, setShowPayCalendar] = useState(false)
+  const [payCalendarPosition, setPayCalendarPosition] = useState({ top: 0, left: 0 })
+  const [payMonth, setPayMonth] = useState<Date>(new Date())
+  const [tempPayStart, setTempPayStart] = useState<Date | null>(null)
+  const [tempPayEnd, setTempPayEnd] = useState<Date | null>(null)
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [formAnchor, setFormAnchor] = useState<{ top: number, left: number } | null>(null)
 
   const [formData, setFormData] = useState({
     descricao: '',
     valor: '',
-    tipo: 'receita',
+    tipo: 'despesa',
     categoria: '',
     data: format(new Date(), 'yyyy-MM-dd'),
     status: 'pendente',
@@ -82,6 +101,96 @@ const Financeiro: React.FC = () => {
     cancelado: { label: 'Adiado', color: 'badge-danger', icon: AlertTriangle }
   }
 
+  // Componente de calendário para seleção de intervalo
+  const RangeCalendar: React.FC<{
+    month: Date,
+    start: Date | null,
+    end: Date | null,
+    onPrev: () => void,
+    onNext: () => void,
+    onSelectDate: (d: Date) => void,
+    onApply: () => void,
+    onClear: () => void
+  }> = ({ month, start, end, onPrev, onNext, onSelectDate, onApply, onClear }) => {
+    const year = month.getFullYear()
+    const m = month.getMonth()
+    const firstWeekday = new Date(year, m, 1).getDay() // 0=Dom,...6=Sab
+    const daysInMonth = new Date(year, m + 1, 0).getDate()
+
+    const cells: (Date | null)[] = []
+    for (let i = 0; i < firstWeekday; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, m, d))
+
+    const rows: (Date | null)[][] = []
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
+
+    const weekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const isSameDay = (a: Date, b: Date) => (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    )
+
+    const inRange = (d: Date) => {
+      if (!start || !end) return false
+      const s = start < end ? start : end
+      const e = end > start ? end : start
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      const sd = new Date(s.getFullYear(), s.getMonth(), s.getDate())
+      const ed = new Date(e.getFullYear(), e.getMonth(), e.getDate())
+      return dd >= sd && dd <= ed
+    }
+
+    return (
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-80 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <button className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700" onClick={onPrev}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="text-sm font-medium">
+            {format(month, 'MMMM yyyy', { locale: ptBR })}
+          </div>
+          <button className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700" onClick={onNext}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 text-xs text-center mb-1">
+          {weekLabels.map(d => (
+            <div key={d} className="text-slate-500 dark:text-slate-400 py-1">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {rows.map((row, ri) => (
+            row.map((cell, ci) => (
+              cell ? (
+                <button
+                  key={`${ri}-${ci}`}
+                  onClick={() => onSelectDate(cell)}
+                  className={`py-2 rounded text-sm transition-colors ${
+                    (start && isSameDay(cell, start)) || (end && isSameDay(cell, end))
+                      ? 'bg-blue-600 text-white'
+                      : inRange(cell)
+                        ? 'bg-blue-100 dark:bg-blue-900/30'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {cell.getDate()}
+                </button>
+              ) : (
+                <div key={`${ri}-${ci}`} />
+              )
+            ))
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          <button className="btn-secondary flex-1" onClick={onClear}>Limpar</button>
+          <button className="btn-primary flex-1" onClick={onApply}>Aplicar</button>
+        </div>
+      </div>
+    )
+  }
+
   const filteredMovimentacoes = useMemo(() => {
     return movimentacoes.filter(movimentacao => {
       const matchSearch = movimentacao.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,25 +199,40 @@ const Financeiro: React.FC = () => {
       const matchType = !filterType || movimentacao.tipo === filterType
       const matchStatus = !filterStatus || movimentacao.status === filterStatus
       
-      let matchesDateRange = true
-      if (filterStartDate && filterEndDate) {
-        const movimentacaoDate = new Date(movimentacao.data)
-        const startDate = new Date(filterStartDate)
-        const endDate = new Date(filterEndDate)
-        matchesDateRange = isWithinInterval(movimentacaoDate, { start: startDate, end: endDate })
-      } else if (filterStartDate) {
-        const movimentacaoDate = new Date(movimentacao.data)
-        const startDate = new Date(filterStartDate)
-        matchesDateRange = movimentacaoDate >= startDate
-      } else if (filterEndDate) {
-        const movimentacaoDate = new Date(movimentacao.data)
-        const endDate = new Date(filterEndDate)
-        matchesDateRange = movimentacaoDate <= endDate
+      // Filtro por Vencimento (movimentacao.data)
+      let matchesVencimentoRange = true
+      if (filterVencStartDate) {
+        const startDate = new Date(filterVencStartDate)
+        const d = new Date(movimentacao.data)
+        matchesVencimentoRange = matchesVencimentoRange && d >= startDate
+      }
+      if (filterVencEndDate) {
+        const endDate = new Date(filterVencEndDate)
+        const d = new Date(movimentacao.data)
+        matchesVencimentoRange = matchesVencimentoRange && d <= endDate
+      }
+
+      // Filtro por Pagamento (movimentacao.dataPagamento)
+      let matchesPagamentoRange = true
+      if (filterPayStartDate || filterPayEndDate) {
+        if (!movimentacao.dataPagamento) {
+          matchesPagamentoRange = false
+        } else {
+          const dp = new Date(movimentacao.dataPagamento)
+          if (filterPayStartDate) {
+            const ps = new Date(filterPayStartDate)
+            matchesPagamentoRange = matchesPagamentoRange && dp >= ps
+          }
+          if (filterPayEndDate) {
+            const pe = new Date(filterPayEndDate)
+            matchesPagamentoRange = matchesPagamentoRange && dp <= pe
+          }
+        }
       }
       
-      return matchSearch && matchType && matchStatus && matchesDateRange
+      return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange
     })
-  }, [movimentacoes, searchTerm, filterType, filterStatus, filterStartDate, filterEndDate])
+  }, [movimentacoes, searchTerm, filterType, filterStatus, filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate])
 
   const stats = useMemo(() => {
     const receitas = movimentacoes.filter(t => t.tipo === 'receita')
@@ -148,7 +272,7 @@ const Financeiro: React.FC = () => {
     setFormData({
       descricao: '',
       valor: '',
-      tipo: 'receita',
+      tipo: 'despesa',
       categoria: '',
       data: format(new Date(), 'yyyy-MM-dd'),
       status: 'pendente',
@@ -156,9 +280,10 @@ const Financeiro: React.FC = () => {
     })
     setEditingMovimentacao(null)
     setShowForm(false)
+    setFormAnchor(null)
   }
 
-  const handleEdit = (movimentacao: any) => {
+  const handleEdit = (movimentacao: any, e?: React.MouseEvent<HTMLButtonElement>) => {
     setFormData({
       descricao: movimentacao.descricao,
       valor: formatCurrency(movimentacao.valor.toString()),
@@ -169,6 +294,14 @@ const Financeiro: React.FC = () => {
       observacoes: movimentacao.observacoes || ''
     })
     setEditingMovimentacao(movimentacao)
+    if (e) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 380)
+      const top = rect.bottom + window.scrollY + 8
+      setFormAnchor({ top, left })
+    } else {
+      setFormAnchor(null)
+    }
     setShowForm(true)
   }
 
@@ -220,7 +353,7 @@ const Financeiro: React.FC = () => {
         setShowPaymentModal(true);
       }
     } else {
-      updateMovimentacao(id, { status: newStatus });
+      updateMovimentacao(id, { status: newStatus, dataPagamento: null });
     }
     setShowStatusDropdown(null);
   };
@@ -245,7 +378,12 @@ const Financeiro: React.FC = () => {
           <p className="text-slate-600 dark:text-slate-400">Gestão de receitas e despesas</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setFormAnchor(null)
+            setEditingMovimentacao(null)
+            setFormData(prev => ({ ...prev, tipo: 'despesa' }))
+            setShowForm(true)
+          }}
           className="btn-primary"
         >
           <Plus className="h-5 w-5" />
@@ -300,7 +438,7 @@ const Financeiro: React.FC = () => {
       {/* Filters */}
       <div className="card p-6 space-y-4">
         <h3 className="font-semibold text-slate-900 dark:text-slate-50">Filtros</h3>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <input
@@ -308,16 +446,16 @@ const Financeiro: React.FC = () => {
               placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
+              className="input-field pl-10 h-11 text-sm"
             />
           </div>
 
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="input-field"
+            className="input-field h-11 text-sm"
           >
-            <option value="">Todos os tipos</option>
+            <option value="">Tipos</option>
             <option value="receita">Receitas</option>
             <option value="despesa">Despesas</option>
           </select>
@@ -325,29 +463,163 @@ const Financeiro: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="input-field"
+            className="input-field h-11 text-sm"
           >
-            <option value="">Todos os status</option>
+            <option value="">Status</option>
             {Object.entries(statusConfig).map(([status, config]) => (
               <option key={status} value={status}>{config.label}</option>
             ))}
           </select>
 
-          <input
-            type="date"
-            value={filterStartDate}
-            onChange={(e) => setFilterStartDate(e.target.value)}
-            className="input-field"
-          />
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento</label>
+            <button
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                setVencCalendarPosition({
+                  top: rect.bottom + window.scrollY + 5,
+                  left: rect.left + window.scrollX
+                })
+                const s = filterVencStartDate ? new Date(filterVencStartDate) : null
+                const ed = filterVencEndDate ? new Date(filterVencEndDate) : null
+                setTempVencStart(s)
+                setTempVencEnd(ed)
+                setVencMonth(s || new Date())
+                setShowVencCalendar(true)
+              }}
+              className="input-field flex items-center justify-between h-11 text-sm"
+            >
+              <span className="text-sm">
+                {filterVencStartDate && filterVencEndDate
+                  ? `${format(new Date(filterVencStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(new Date(filterVencEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                  : filterVencStartDate
+                    ? `De ${format(new Date(filterVencStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                    : 'Selecionar período'}
+              </span>
+              <Calendar className="h-5 w-5 text-slate-400" />
+            </button>
+          </div>
 
-          <input
-            type="date"
-            value={filterEndDate}
-            onChange={(e) => setFilterEndDate(e.target.value)}
-            className="input-field"
-          />
+          <div>
+            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento</label>
+            <button
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                setPayCalendarPosition({
+                  top: rect.bottom + window.scrollY + 5,
+                  left: rect.left + window.scrollX
+                })
+                const s = filterPayStartDate ? new Date(filterPayStartDate) : null
+                const ed = filterPayEndDate ? new Date(filterPayEndDate) : null
+                setTempPayStart(s)
+                setTempPayEnd(ed)
+                setPayMonth(s || new Date())
+                setShowPayCalendar(true)
+              }}
+              className="input-field flex items-center justify-between h-11 text-sm"
+            >
+              <span className="text-sm">
+                {filterPayStartDate && filterPayEndDate
+                  ? `${format(new Date(filterPayStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(new Date(filterPayEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                  : filterPayStartDate
+                    ? `De ${format(new Date(filterPayStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
+                    : 'Selecionar período'}
+              </span>
+              <Calendar className="h-5 w-5 text-slate-400" />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Calendário de Vencimento (overlay ancorado) */}
+      {showVencCalendar && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowVencCalendar(false)} />
+          <div
+            className="fixed z-50"
+            style={{ top: `${vencCalendarPosition.top}px`, left: `${vencCalendarPosition.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RangeCalendar
+              month={vencMonth}
+              start={tempVencStart}
+              end={tempVencEnd}
+              onPrev={() => setVencMonth(new Date(vencMonth.getFullYear(), vencMonth.getMonth() - 1, 1))}
+              onNext={() => setVencMonth(new Date(vencMonth.getFullYear(), vencMonth.getMonth() + 1, 1))}
+              onSelectDate={(d) => {
+                if (!tempVencStart || (tempVencStart && tempVencEnd)) {
+                  setTempVencStart(d)
+                  setTempVencEnd(null)
+                } else {
+                  if (d < tempVencStart) {
+                    setTempVencEnd(tempVencStart)
+                    setTempVencStart(d)
+                  } else {
+                    setTempVencEnd(d)
+                  }
+                }
+              }}
+              onClear={() => {
+                setTempVencStart(null)
+                setTempVencEnd(null)
+                setFilterVencStartDate('')
+                setFilterVencEndDate('')
+                setShowVencCalendar(false)
+              }}
+              onApply={() => {
+                setFilterVencStartDate(tempVencStart ? format(tempVencStart, 'yyyy-MM-dd') : '')
+                setFilterVencEndDate(tempVencEnd ? format(tempVencEnd, 'yyyy-MM-dd') : '')
+                setShowVencCalendar(false)
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Calendário de Pagamento (overlay ancorado) */}
+      {showPayCalendar && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowPayCalendar(false)} />
+          <div
+            className="fixed z-50"
+            style={{ top: `${payCalendarPosition.top}px`, left: `${payCalendarPosition.left}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RangeCalendar
+              month={payMonth}
+              start={tempPayStart}
+              end={tempPayEnd}
+              onPrev={() => setPayMonth(new Date(payMonth.getFullYear(), payMonth.getMonth() - 1, 1))}
+              onNext={() => setPayMonth(new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 1))}
+              onSelectDate={(d) => {
+                if (!tempPayStart || (tempPayStart && tempPayEnd)) {
+                  setTempPayStart(d)
+                  setTempPayEnd(null)
+                } else {
+                  if (d < tempPayStart) {
+                    setTempPayEnd(tempPayStart)
+                    setTempPayStart(d)
+                  } else {
+                    setTempPayEnd(d)
+                  }
+                }
+              }}
+              onClear={() => {
+                setTempPayStart(null)
+                setTempPayEnd(null)
+                setFilterPayStartDate('')
+                setFilterPayEndDate('')
+                setShowPayCalendar(false)
+              }}
+              onApply={() => {
+                setFilterPayStartDate(tempPayStart ? format(tempPayStart, 'yyyy-MM-dd') : '')
+                setFilterPayEndDate(tempPayEnd ? format(tempPayEnd, 'yyyy-MM-dd') : '')
+                setShowPayCalendar(false)
+              }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Table */}
       <div className="card overflow-hidden">
@@ -355,7 +627,7 @@ const Financeiro: React.FC = () => {
           <table className="w-full">
             <thead>
               <tr className="table-header">
-                <th className="table-cell text-left">Data</th>
+                <th className="table-cell text-left">Vencimento</th>
                 <th className="table-cell text-left">Descrição</th>
                 <th className="table-cell text-left">Categoria</th>
                 <th className="table-cell text-left">Tipo</th>
@@ -409,7 +681,7 @@ const Financeiro: React.FC = () => {
                     <td className="table-cell">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleEdit(movimentacao)}
+                          onClick={(e) => handleEdit(movimentacao, e)}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           title="Editar"
                         >
@@ -480,129 +752,127 @@ const Financeiro: React.FC = () => {
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div ref={modalRef} className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                {editingMovimentacao ? 'Editar Movimentação' : 'Nova Movimentação'}
-              </h3>
-              <button onClick={resetForm} className="btn-ghost p-2">
-                <X className="h-5 w-5" />
-              </button>
+        <>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+          {formAnchor ? (
+            <div
+              ref={modalRef}
+              className="fixed z-50 card w-full max-w-md max-h-[90vh] overflow-y-auto"
+              style={{ top: `${formAnchor.top}px`, left: `${formAnchor.left}px` }}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {editingMovimentacao ? 'Editar Movimentação' : 'Nova Movimentação'}
+                </h3>
+                <button onClick={resetForm} className="btn-ghost p-2">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
+                  <input type="text" value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} className="input-field" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor</label>
+                  <input type="text" value={formData.valor} onChange={(e) => setFormData({ ...formData, valor: formatCurrency(e.target.value) })} className="input-field" placeholder="R$ 0,00" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
+                  <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })} className="input-field" required>
+                    <option value="receita">Receita</option>
+                    <option value="despesa">Despesa</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
+                  <select value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} className="input-field" required>
+                    <option value="">Selecione uma categoria</option>
+                    {categorias[formData.tipo as keyof typeof categorias].map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data</label>
+                  <input type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} className="input-field" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                  <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input-field" required>
+                    <option value="pendente">Pendente</option>
+                    <option value="pago">Pago</option>
+                    <option value="cancelado">Adiado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observações</label>
+                  <textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} className="input-field" rows={3} />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={resetForm} className="btn-secondary flex-1">Cancelar</button>
+                  <button type="submit" className="btn-primary flex-1">{editingMovimentacao ? 'Atualizar' : 'Criar'}</button>
+                </div>
+              </form>
             </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Descrição
-                </label>
-                <input
-                  type="text"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  className="input-field"
-                  required
-                />
+          ) : (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div ref={modalRef} className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{editingMovimentacao ? 'Editar Movimentação' : 'Nova Movimentação'}</h3>
+                  <button onClick={resetForm} className="btn-ghost p-2"><X className="h-5 w-5" /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
+                    <input type="text" value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} className="input-field" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor</label>
+                    <input type="text" value={formData.valor} onChange={(e) => setFormData({ ...formData, valor: formatCurrency(e.target.value) })} className="input-field" placeholder="R$ 0,00" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
+                    <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })} className="input-field" required>
+                      <option value="receita">Receita</option>
+                      <option value="despesa">Despesa</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
+                    <select value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} className="input-field" required>
+                      <option value="">Selecione uma categoria</option>
+                      {categorias[formData.tipo as keyof typeof categorias].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data</label>
+                    <input type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} className="input-field" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                    <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input-field" required>
+                      <option value="pendente">Pendente</option>
+                      <option value="pago">Pago</option>
+                      <option value="cancelado">Adiado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observações</label>
+                    <textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} className="input-field" rows={3} />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={resetForm} className="btn-secondary flex-1">Cancelar</button>
+                    <button type="submit" className="btn-primary flex-1">{editingMovimentacao ? 'Atualizar' : 'Criar'}</button>
+                  </div>
+                </form>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Valor
-                </label>
-                <input
-                  type="text"
-                  value={formData.valor}
-                  onChange={(e) => setFormData({ ...formData, valor: formatCurrency(e.target.value) })}
-                  className="input-field"
-                  placeholder="R$ 0,00"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Tipo
-                </label>
-                <select
-                  value={formData.tipo}
-                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })}
-                  className="input-field"
-                  required
-                >
-                  <option value="receita">Receita</option>
-                  <option value="despesa">Despesa</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Categoria
-                </label>
-                <select
-                  value={formData.categoria}
-                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categorias[formData.tipo as keyof typeof categorias].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Data
-                </label>
-                <input
-                  type="date"
-                  value={formData.data}
-                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                  className="input-field"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="pendente">Pendente</option>
-                  <option value="pago">Pago</option>
-                  <option value="cancelado">Adiado</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Observações
-                </label>
-                <textarea
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  className="input-field"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={resetForm} className="btn-secondary flex-1">
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary flex-1">
-                  {editingMovimentacao ? 'Atualizar' : 'Criar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal de confirmação de exclusão */}

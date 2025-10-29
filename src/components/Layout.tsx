@@ -11,7 +11,8 @@ import {
   Sun, 
   Moon,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  UserCheck
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -37,7 +38,8 @@ const Layout: React.FC = () => {
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
-    { name: 'Parceiros', href: '/parceiros', icon: Users, permission: 'parceiros' },
+    { name: 'Parceiros', href: '/parceiros', icon: UserCheck, permission: 'parceiros' },
+    { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ]
 
   const hasPermission = (permission: string) => {
