@@ -1,4 +1,4 @@
-import React from 'react';
+// Removido: import React from 'react';
 
 interface StandardCheckboxProps {
   label: string;

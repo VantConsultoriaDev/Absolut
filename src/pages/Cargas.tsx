@@ -529,8 +529,8 @@ const Cargas: React.FC = () => {
     setEditingCarga(carga);
     if (e) {
       const rect = e.currentTarget.getBoundingClientRect();
-      const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
-      const top = rect.bottom + window.scrollY + 8;
+      // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
+      // const top = rect.bottom + window.scrollY + 8; // Removido
       // Removed setFormAnchor as it's not used for modal positioning anymore
     } else {
       // Removed setFormAnchor as it's not used for modal positioning anymore
@@ -1070,8 +1070,8 @@ const Cargas: React.FC = () => {
           <button
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
-              const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520);
-              const top = rect.bottom + window.scrollY + 8;
+              // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
+              // const top = rect.bottom + window.scrollY + 8; // Removido
               // Removed setFormAnchor as it's not used for modal positioning anymore
               setShowForm(true);
               setHasUnsavedChanges(false);

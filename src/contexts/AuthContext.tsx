@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => { // _event para ignorar o parâmetro não utilizado
       if (session) {
         // Buscar dados do perfil da tabela public.profiles
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabase! // Adicionado '!' para afirmar que supabase não é nulo
           .from('profiles')
           .select('first_name, last_name, role, permissions')
           .eq('id', session.user.id)
@@ -78,8 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             role: defaultRole,
             isActive: true,
             permissions: getPermissionsByRole(defaultRole),
-            createdAt: new Date(session.user.created_at),
-            updatedAt: new Date(session.user.updated_at),
+            createdAt: new Date(session.user.created_at!), // Adicionado '!' para afirmar que created_at não é nulo
+            updatedAt: new Date(session.user.updated_at!), // Adicionado '!' para afirmar que updated_at não é nulo
             password: ''
           });
         } else {
@@ -93,8 +93,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             isActive: true,
             // Type assertion para garantir que 'permissions' está no formato correto
             permissions: (profile.permissions as User['permissions']) || getPermissionsByRole(userRole),
-            createdAt: new Date(session.user.created_at),
-            updatedAt: new Date(session.user.updated_at),
+            createdAt: new Date(session.user.created_at!), // Adicionado '!' para afirmar que created_at não é nulo
+            updatedAt: new Date(session.user.updated_at!), // Adicionado '!' para afirmar que updated_at não é nulo
             password: ''
           });
         }

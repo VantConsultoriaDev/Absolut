@@ -110,7 +110,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
               <p className="stat-label whitespace-nowrap">Entregues</p>
-              <p className="stat-value">{cargoStats.entregues}</p>
+              <p className="stat-value">{cargoStats.entregue}</p> {/* Corrigido de .entregues para .entregue */}
             </div>
             <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
               <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
