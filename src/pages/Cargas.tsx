@@ -1,32 +1,83 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
-import { useModal } from '../hooks/useModal';
-import { format } from 'date-fns';
+import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
-import StandardCheckbox from '../components/StandardCheckbox';
-import { ImportService } from '../services/importService';
-import { undoService } from '../services/undoService'; // Atualizado para importar do serviço
+import { undoService } from '../services/undoService';
+import { Carga } from '../types';
 import {
   Plus,
   Search,
-  Package,
-  Truck,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  DollarSign,
-  Edit,
-  Trash2,
   RefreshCw,
   Link,
   Upload,
   CreditCard,
   Calendar,
-  ChevronLeft,
-  ChevronRight
+  CheckCircle,
+  AlertTriangle,
+  Edit,
+  Trash2,
 } from 'lucide-react';
+
+// Importar componentes modulares e constantes
+import RangeCalendar from '../components/RangeCalendar';
+import CargasStats from '../components/cargas/CargasStats';
+import CargaFormModal, { CargaFormData } from '../components/cargas/CargaFormModal';
+import CargaLinkModal from '../components/cargas/CargaLinkModal';
+import CargaIntegrateModal from '../components/cargas/CargaIntegrateModal';
+import CargaImportModal from '../components/cargas/CargaImportModal';
+import { UFS_ORDENADAS, STATUS_CONFIG } from '../utils/cargasConstants';
+
+// Define IntegrateData structure locally for Cargas.tsx state
+interface IntegrateData {
+  adiantamentoEnabled: boolean;
+  adiantamentoPercentual: string;
+  dataVencimentoAdiantamento: string;
+  dataVencimentoSaldo: string;
+  dataVencimentoDespesa: string;
+  despesasEnabled: boolean;
+  valorARS: string;
+  taxaConversao: string;
+  valorBRL: string;
+  valorBRLExtra: string;
+  diariasEnabled: boolean;
+  valorDiarias: string;
+  somaOpcao: 'adiantamento' | 'saldo';
+}
+
+const initialFormData: CargaFormData = {
+  crt: '',
+  origem: '',
+  destino: '',
+  clienteId: '',
+  ufOrigemSelecionada: '',
+  cidadeOrigem: '',
+  ufDestinoSelecionada: '',
+  cidadeDestino: '',
+  dataColeta: format(new Date(), 'yyyy-MM-dd'),
+  dataEntrega: format(new Date(), 'yyyy-MM-dd'),
+  valor: '',
+  peso: '',
+  observacoes: '',
+  status: 'a_coletar'
+};
+
+const initialIntegrateData: IntegrateData = {
+  adiantamentoEnabled: false,
+  adiantamentoPercentual: '70',
+  dataVencimentoAdiantamento: '',
+  dataVencimentoSaldo: '',
+  dataVencimentoDespesa: format(new Date(), 'yyyy-MM-dd'),
+  despesasEnabled: false,
+  valorARS: '',
+  taxaConversao: '',
+  valorBRL: '',
+  valorBRLExtra: '',
+  diariasEnabled: false,
+  valorDiarias: '',
+  somaOpcao: 'adiantamento'
+};
 
 const Cargas: React.FC = () => {
   const location = useLocation();
@@ -35,56 +86,24 @@ const Cargas: React.FC = () => {
     createCarga, 
     updateCarga, 
     deleteCarga,
-    parceiros,
-    motoristas,
     veiculos,
     clientes,
     createMovimentacao,
     movimentacoes
   } = useDatabase();
 
-  // Lista de UFs ordenada conforme especificação
-  const ufsOrdenadas = [
-    { value: 'internacional', label: 'Internacional' },
-    { value: 'RS', label: 'Rio Grande do Sul (RS)' },
-    { value: 'SP', label: 'São Paulo (SP)' },
-    { value: 'AC', label: 'Acre (AC)' },
-    { value: 'AL', label: 'Alagoas (AL)' },
-    { value: 'AP', label: 'Amapá (AP)' },
-    { value: 'AM', label: 'Amazonas (AM)' },
-    { value: 'BA', label: 'Bahia (BA)' },
-    { value: 'CE', label: 'Ceará (CE)' },
-    { value: 'DF', label: 'Distrito Federal (DF)' },
-    { value: 'ES', label: 'Espírito Santo (ES)' },
-    { value: 'GO', label: 'Goiás (GO)' },
-    { value: 'MA', label: 'Maranhão (MA)' },
-    { value: 'MT', label: 'Mato Grosso (MT)' },
-    { value: 'MS', label: 'Mato Grosso do Sul (MS)' },
-    { value: 'MG', label: 'Minas Gerais (MG)' },
-    { value: 'PA', label: 'Pará (PA)' },
-    { value: 'PB', label: 'Paraíba (PB)' },
-    { value: 'PR', label: 'Paraná (PR)' },
-    { value: 'PE', label: 'Pernambuco (PE)' },
-    { value: 'PI', label: 'Piauí (PI)' },
-    { value: 'RJ', label: 'Rio de Janeiro (RJ)' },
-    { value: 'RN', label: 'Rio Grande do Norte (RN)' },
-    { value: 'RO', label: 'Rondônia (RO)' },
-    { value: 'RR', label: 'Roraima (RR)' },
-    { value: 'SC', label: 'Santa Catarina (SC)' },
-    { value: 'SE', label: 'Sergipe (SE)' },
-    { value: 'TO', label: 'Tocantins (TO)' }
-  ];
-
   const [showForm, setShowForm] = useState(false);
-  const [editingCarga, setEditingCarga] = useState<any>(null);
+  const [editingCarga, setEditingCarga] = useState<Carga | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  
   // Filtros de intervalo: Coleta e Entrega
   const [filterColetaStartDate, setFilterColetaStartDate] = useState('');
   const [filterColetaEndDate, setFilterColetaEndDate] = useState('');
   const [filterEntregaStartDate, setFilterEntregaStartDate] = useState('');
   const [filterEntregaEndDate, setFilterEntregaEndDate] = useState('');
-  // Calendários ancorados
+  
+  // Calendários ancorados state
   const [showColetaCalendar, setShowColetaCalendar] = useState(false);
   const [coletaCalendarPosition, setColetaCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
   const [coletaMonth, setColetaMonth] = useState<Date>(new Date());
@@ -95,47 +114,35 @@ const Cargas: React.FC = () => {
   const [entregaMonth, setEntregaMonth] = useState<Date>(new Date());
   const [tempEntregaStart, setTempEntregaStart] = useState<Date | null>(null);
   const [tempEntregaEnd, setTempEntregaEnd] = useState<Date | null>(null);
+  
   const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number} | null>(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  
+  // Form State
+  const [formData, setFormData] = useState<CargaFormData>(initialFormData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [originalFormData, setOriginalFormData] = useState<any>(null);
+  const [originalFormData, setOriginalFormData] = useState<CargaFormData | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Linking State
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [linkingCarga, setLinkingCarga] = useState<any>(null);
+  const [linkingCarga, setLinkingCarga] = useState<Carga | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState('');
   const [selectedMotorista, setSelectedMotorista] = useState('');
   const [selectedVeiculo, setSelectedVeiculo] = useState('');
   const [selectedCarretas, setSelectedCarretas] = useState<string[]>([]);
+
+  // Import State
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importStatus, setImportStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
-  const [importMessage, setImportMessage] = useState('');
+
+  // Integrate State
   const [showIntegrateModal, setShowIntegrateModal] = useState(false);
-  const [integratingCarga, setIntegratingCarga] = useState<any>(null);
+  const [integratingCarga, setIntegratingCarga] = useState<Carga | null>(null);
+  const [integrateData, setIntegrateData] = useState<IntegrateData>(initialIntegrateData);
+
+  // Delete State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id: string, descricao: string} | null>(null);
-  const [integrateData, setIntegrateData] = useState({
-    // A. Adiantamento
-    adiantamentoEnabled: false,
-    adiantamentoPercentual: '70',
-    dataVencimentoAdiantamento: '',
-    dataVencimentoSaldo: '',
-    dataVencimentoDespesa: '',
-    
-    // B. Despesas Adicionais
-    despesasEnabled: false,
-    valorARS: '',
-    taxaConversao: '',
-    valorBRL: '',
-    valorBRLExtra: '', // Added missing field
-    
-    // C. Diárias
-    diariasEnabled: false,
-    valorDiarias: '',
-    
-    // D. Opção de Soma
-    somaOpcao: 'adiantamento' as 'adiantamento' | 'saldo'
-  });
 
   // useEffect para aplicar filtro de status vindo da navegação
   useEffect(() => {
@@ -144,191 +151,305 @@ const Cargas: React.FC = () => {
     }
   }, [location.state]);
 
-  const [formData, setFormData] = useState<{
-    crt: string;
-    origem: string;
-    destino: string;
-    clienteId?: string;
-    ufOrigemSelecionada: string;
-    cidadeOrigem: string;
-    ufDestinoSelecionada: string;
-    cidadeDestino: string;
-    dataColeta: string;
-    dataEntrega: string;
-    valor: string;
-    peso: string;
-    observacoes: string;
-    status: 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada';
-  }>({
-    crt: '',
-    origem: '',
-    destino: '',
-    clienteId: '',
-    ufOrigemSelecionada: '', // Added missing field
-    cidadeOrigem: '',        // Added missing field
-    ufDestinoSelecionada: '',// Added missing field
-    cidadeDestino: '',       // Added missing field
-    dataColeta: format(new Date(), 'yyyy-MM-dd'),
-    dataEntrega: format(new Date(), 'yyyy-MM-dd'),
-    valor: '',
-    peso: '',
-    observacoes: '',
-    status: 'a_coletar'
-  });
-
-  // Hook para gerenciar fechamento do modal
-  const { modalRef } = useModal({
-    isOpen: showForm,
-    onClose: () => {
-      setShowForm(false);
-      setEditingCarga(null);
-      // Removed setFormAnchor(null) as it's not used for modal positioning anymore
-      setFormData({
-        crt: '',
-        origem: '',
-        destino: '',
-        clienteId: '',
-        ufOrigemSelecionada: '',
-        cidadeOrigem: '',
-        ufDestinoSelecionada: '',
-        cidadeDestino: '',
-        dataColeta: format(new Date(), 'yyyy-MM-dd'),
-        dataEntrega: format(new Date(), 'yyyy-MM-dd'),
-        valor: '',
-        peso: '',
-        observacoes: '',
-        status: 'a_coletar'
-      });
+  // Função auxiliar para extrair UF e cidade de uma string
+  const extrairUfECidade = (localCompleto: string) => {
+    if (localCompleto === 'Internacional') {
+      return { uf: 'internacional', cidade: '' };
     }
-  });
-
-  // Status com cores e ícones atualizados
-  const statusConfig = {
-    a_coletar: { 
-      label: 'À coletar', 
-      color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      bgColor: 'bg-orange-100',
-      textColor: 'text-orange-600',
-      icon: Clock
-    },
-    em_transito: { 
-      label: 'Em trânsito', 
-      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-600',
-      icon: Truck
-    },
-    armazenada: { 
-      label: 'Armazenada', 
-      color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-600',
-      icon: Package
-    },
-    entregue: { 
-      label: 'Entregue', 
-      color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-600',
-      icon: CheckCircle
-    },
-    cancelada: { 
-      label: 'Cancelada', 
-      color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      bgColor: 'bg-red-100',
-      textColor: 'text-red-600',
-      icon: AlertTriangle
+    const partes = localCompleto.split(' - ');
+    if (partes.length === 2) {
+      return { uf: partes[1], cidade: partes[0] };
+    } else {
+      return { uf: localCompleto, cidade: '' };
     }
   };
 
-  // Calendário de intervalo reutilizável
-  const RangeCalendar: React.FC<{ 
-    month: Date,
-    start: Date | null,
-    end: Date | null,
-    onPrev: () => void,
-    onNext: () => void,
-    onSelectDate: (d: Date) => void,
-    onApply: () => void,
-    onClear: () => void
-  }> = ({ month, start, end, onPrev, onNext, onSelectDate, onApply, onClear }) => {
-    const year = month.getFullYear();
-    const m = month.getMonth();
-    const firstWeekday = new Date(year, m, 1).getDay();
-    const daysInMonth = new Date(year, m + 1, 0).getDate();
+  // Handlers de Formulário
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => {
+      const newFormData = { ...prev, [field]: value };
+      
+      // Detectar se há mudanças comparando com os dados originais
+      if (originalFormData) {
+        const hasChanges = Object.keys(newFormData).some(key => 
+          (newFormData as any)[key] !== (originalFormData as any)[key]
+        );
+        setHasUnsavedChanges(hasChanges);
+      }
+      return newFormData;
+    });
+  };
 
-    const cells: (Date | null)[] = [];
-    for (let i = 0; i < firstWeekday; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, m, d));
-    const rows: (Date | null)[][] = [];
-    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  const performReset = () => {
+    setFormData(initialFormData);
+    setEditingCarga(null);
+    setShowForm(false);
+    setHasUnsavedChanges(false);
+    setOriginalFormData(null);
+    setShowCancelConfirm(false);
+  };
 
-    const weekLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    const isSameDay = (a: Date, b: Date) => (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-    const inRange = (d: Date) => {
-      if (!start || !end) return false;
-      const s = start < end ? start : end;
-      const e = end > start ? end : start;
-      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const sd = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-      const ed = new Date(e.getFullYear(), e.getMonth(), e.getDate());
-      return dd >= sd && dd <= ed;
+  const handleCloseForm = () => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirm(true);
+      return;
+    }
+    performReset();
+  };
+
+  const handleEdit = (carga: Carga) => {
+    const origemInfo = extrairUfECidade(carga.origem);
+    const destinoInfo = extrairUfECidade(carga.destino);
+    
+    const formDataToSet: CargaFormData = {
+      crt: carga.crt || carga.descricao || '',
+      origem: carga.origem,
+      destino: carga.destino,
+      clienteId: carga.clienteId || '',
+      ufOrigemSelecionada: origemInfo.uf,
+      cidadeOrigem: origemInfo.cidade,
+      ufDestinoSelecionada: destinoInfo.uf,
+      cidadeDestino: destinoInfo.cidade,
+      dataColeta: format(new Date(carga.dataColeta || new Date()), 'yyyy-MM-dd'),
+      dataEntrega: format(new Date(carga.dataEntrega || new Date()), 'yyyy-MM-dd'),
+      valor: formatCurrency(carga.valor.toString()),
+      peso: carga.peso.toString(),
+      observacoes: carga.observacoes || '',
+      status: carga.status
+    };
+    
+    setFormData(formDataToSet);
+    setOriginalFormData(formDataToSet);
+    setEditingCarga(carga);
+    setShowForm(true);
+    setHasUnsavedChanges(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (formData.crt.length > 10) {
+      alert('CRT deve ter no máximo 10 caracteres');
+      return;
+    }
+    if (!formData.ufOrigemSelecionada || !formData.ufDestinoSelecionada) {
+      alert('Selecione a UF de origem e destino');
+      return;
+    }
+
+    const origemCompleta = formData.ufOrigemSelecionada === 'internacional' 
+      ? 'Internacional'
+      : formData.cidadeOrigem 
+        ? `${formData.cidadeOrigem} - ${formData.ufOrigemSelecionada}`
+        : formData.ufOrigemSelecionada;
+
+    const destinoCompleta = formData.ufDestinoSelecionada === 'internacional' 
+      ? 'Internacional'
+      : formData.cidadeDestino 
+        ? `${formData.cidadeDestino} - ${formData.ufDestinoSelecionada}`
+        : formData.ufDestinoSelecionada;
+    
+    const cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'> = {
+      descricao: formData.crt || 'Carga sem descrição',
+      origem: origemCompleta,
+      destino: destinoCompleta,
+      peso: parseFloat(formData.peso),
+      valor: parseCurrency(formData.valor),
+      dataColeta: new Date(formData.dataColeta),
+      dataEntrega: new Date(formData.dataEntrega),
+      status: formData.status,
+      crt: formData.crt,
+      clienteId: formData.clienteId || undefined
     };
 
-    return (
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-80 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={onPrev}>
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <div className="text-sm font-medium">
-            {format(month, 'MMMM yyyy', { locale: ptBR })}
-          </div>
-          <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={onNext}>
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-xs text-center mb-1">
-          {weekLabels.map(d => (
-            <div key={d} className="text-gray-500 dark:text-gray-400 py-1">{d}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {rows.map((row, ri) => (
-            row.map((cell, ci) => (
-              cell ? (
-                <button
-                  key={`${ri}-${ci}`}
-                  onClick={() => onSelectDate(cell)}
-                  className={`py-2 rounded text-sm transition-colors ${
-                    (start && isSameDay(cell, start)) || (end && isSameDay(cell, end))
-                      ? 'bg-blue-600 text-white'
-                      : inRange(cell)
-                        ? 'bg-blue-100 dark:bg-blue-900/30'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {cell.getDate()}
-                </button>
-              ) : (
-                <div key={`${ri}-${ci}`} />
-              )
-            ))
-          ))}
-        </div>
-        <div className="flex items-center gap-2 mt-3">
-          <button className="btn-secondary flex-1" onClick={onClear}>Limpar</button>
-          <button className="btn-primary flex-1" onClick={onApply}>Aplicar</button>
-        </div>
-      </div>
-    );
+    if (editingCarga) {
+      updateCarga(editingCarga.id, cargaData);
+    } else {
+      createCarga(cargaData);
+    }
+
+    performReset();
   };
 
-  // Filtrar cargas
+  // Handlers de Ações
+  const handleDelete = (id: string) => {
+    const carga = cargas.find(c => c.id === id);
+    if (carga) {
+      setDeleteTarget({
+        id: id,
+        descricao: carga.descricao || carga.crt || 'Carga sem descrição'
+      });
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      const deletedCarga = cargas.find(c => c.id === deleteTarget.id);
+      
+      if (deletedCarga) {
+        deleteCarga(deleteTarget.id);
+        undoService.addUndoAction({
+          type: 'delete_cargo',
+          description: `Carga "${deleteTarget.descricao}" excluída`,
+          data: deletedCarga,
+          undoFunction: async () => {
+            createCarga(deletedCarga);
+          }
+        });
+      }
+      setShowDeleteConfirm(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleChangeStatus = (id: string, newStatus: Carga['status']) => {
+    updateCarga(id, { status: newStatus });
+    setShowStatusDropdown(null);
+  };
+
+  // Handlers de Vinculação
+  const handleLinkParceiro = (carga: Carga) => {
+    setLinkingCarga(carga);
+    setSelectedParceiro(carga.parceiroId || '');
+    setSelectedMotorista(carga.motoristaId || '');
+    setSelectedVeiculo(carga.veiculoId || '');
+    setSelectedCarretas(carga.carretasSelecionadas || []);
+    setShowLinkModal(true);
+  };
+
+  const handleSaveLink = () => {
+    if (linkingCarga) {
+      const veiculoSelecionado = veiculos.find(v => v.id === selectedVeiculo);
+      const isCavalo = veiculoSelecionado?.tipo === 'Cavalo';
+      
+      const carretasParaSalvar = isCavalo ? selectedCarretas : undefined;
+
+      updateCarga(linkingCarga.id, {
+        parceiroId: selectedParceiro || undefined,
+        motoristaId: selectedMotorista || undefined,
+        veiculoId: selectedVeiculo || undefined,
+        carretasSelecionadas: carretasParaSalvar
+      });
+      handleCloseLinkModal();
+    }
+  };
+
+  const handleCloseLinkModal = () => {
+    setShowLinkModal(false);
+    setLinkingCarga(null);
+    setSelectedParceiro('');
+    setSelectedMotorista('');
+    setSelectedVeiculo('');
+    setSelectedCarretas([]);
+  };
+
+  // Handlers de Integração Financeira
+  const handleIntegrateFinanceiro = (carga: Carga) => {
+    setIntegratingCarga(carga);
+    setIntegrateData(initialIntegrateData);
+    setShowIntegrateModal(true);
+  };
+
+  const handleCloseIntegrateModal = () => {
+    setShowIntegrateModal(false);
+    setIntegratingCarga(null);
+    setIntegrateData(initialIntegrateData);
+  };
+
+  const handleIntegrateSubmit = () => {
+    if (!integratingCarga) return;
+
+    const jaIntegrada = movimentacoes.some(m => m.cargaId === integratingCarga.id);
+    if (jaIntegrada) {
+      alert('Esta carga já possui integração financeira. Exclua a movimentação para reintegrar.');
+      return;
+    }
+
+    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    const destinoInfo = extrairUfECidade(integratingCarga.destino || '');
+    const cidadeDestino = destinoInfo.cidade || integratingCarga.destino || '';
+    const crtDisplay = integratingCarga.crt || integratingCarga.descricao || integratingCarga.id;
+    const motoristaSufixo = integratingCarga.motoristaId ? ' - Motorista vinculado' : '';
+
+    // Extras calculation (moved from modal to here for submission)
+    const calcularValorBRL = () => {
+      if (!integrateData.despesasEnabled) return 0;
+      const valorARS = parseCurrency(integrateData.valorARS || '');
+      const taxa = parseCurrency(integrateData.taxaConversao || '');
+      const extraBRL = parseCurrency(integrateData.valorBRLExtra || '');
+      return (valorARS * taxa) + extraBRL;
+    };
+    const despesasAdicionais = calcularValorBRL();
+    const diarias = integrateData.diariasEnabled ? parseCurrency(integrateData.valorDiarias || '') : 0;
+    const extrasTotal = despesasAdicionais + diarias;
+
+    // Case 1: No split, no extras
+    if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorTotal,
+        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: new Date(integrateData.dataVencimentoDespesa || new Date()),
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Integração sem adiantamento. Valor da carga: ${formatCurrency(valorTotal)}`
+      });
+    } 
+    // Case 2: With split (Adiantamento/Saldo)
+    else if (integrateData.adiantamentoEnabled) {
+      const percentual = parseFloat(integrateData.adiantamentoPercentual || '0') / 100;
+      const valorAdiantamento = valorTotal * percentual;
+      const valorSaldo = valorTotal - valorAdiantamento;
+
+      const valorAdiantamentoFinal = integrateData.somaOpcao === 'adiantamento' ? (valorAdiantamento + extrasTotal) : valorAdiantamento;
+      const valorSaldoFinal = integrateData.somaOpcao === 'saldo' ? (valorSaldo + extrasTotal) : valorSaldo;
+
+      const dataAdiant = integrateData.dataVencimentoAdiantamento ? new Date(integrateData.dataVencimentoAdiantamento) : new Date();
+      const dataSaldo = integrateData.dataVencimentoSaldo ? new Date(integrateData.dataVencimentoSaldo) : new Date();
+
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorAdiantamentoFinal,
+        descricao: `Adiantamento - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataAdiant,
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Adiantamento ${integrateData.adiantamentoPercentual}%: ${formatCurrency(valorAdiantamento)}${extrasTotal > 0 && integrateData.somaOpcao === 'adiantamento' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorSaldoFinal,
+        descricao: `Saldo- CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: dataSaldo,
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Saldo ${100 - parseFloat(integrateData.adiantamentoPercentual)}%: ${formatCurrency(valorSaldo)}${extrasTotal > 0 && integrateData.somaOpcao === 'saldo' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+    } 
+    // Case 3: No split, but with extras
+    else {
+      const valorFinal = valorTotal + extrasTotal;
+      createMovimentacao({
+        tipo: 'despesa',
+        valor: valorFinal,
+        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
+        categoria: 'FRETE',
+        data: new Date(integrateData.dataVencimentoDespesa || new Date()),
+        status: 'pendente',
+        cargaId: integratingCarga.id,
+        observacoes: `Valor da carga: ${formatCurrency(valorTotal)}${extrasTotal > 0 ? `, Extras: ${formatCurrency(extrasTotal)}` : ''}`
+      });
+    }
+
+    handleCloseIntegrateModal();
+  };
+
+  // Filtering logic
   const filteredCargas = useMemo(() => {
     return cargas.filter(carga => {
       const matchSearch = carga.crt?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -337,7 +458,6 @@ const Cargas: React.FC = () => {
       
       const matchStatus = !filterStatus || carga.status === filterStatus;
       
-      // Filtro por Coleta (dataColeta)
       let matchesColetaRange = true;
       if (filterColetaStartDate) {
         const startDate = new Date(filterColetaStartDate);
@@ -350,7 +470,6 @@ const Cargas: React.FC = () => {
         matchesColetaRange = matchesColetaRange && d <= endDate;
       }
 
-      // Filtro por Entrega (dataEntrega)
       let matchesEntregaRange = true;
       if (filterEntregaStartDate || filterEntregaEndDate) {
         if (!carga.dataEntrega) {
@@ -372,7 +491,7 @@ const Cargas: React.FC = () => {
     }).sort((a, b) => new Date(b.dataColeta || new Date()).getTime() - new Date(a.dataColeta || new Date()).getTime());
   }, [cargas, searchTerm, filterStatus, filterColetaStartDate, filterColetaEndDate, filterEntregaStartDate, filterEntregaEndDate]);
 
-  // Estatísticas
+  // Stats calculation
   const stats = useMemo(() => {
     const total = cargas.length;
     const aColetar = cargas.filter(c => c.status === 'a_coletar').length;
@@ -383,684 +502,6 @@ const Cargas: React.FC = () => {
     
     return { total, aColetar, emTransito, armazenadas, entregues, valorTotal };
   }, [cargas]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validar CRT (máximo 10 caracteres)
-    if (formData.crt.length > 10) {
-      alert('CRT deve ter no máximo 10 caracteres');
-      return;
-    }
-
-    // Validar se UF de origem foi selecionada
-    if (!formData.ufOrigemSelecionada) {
-      alert('Selecione a UF de origem');
-      return;
-    }
-
-    // Validar se UF de destino foi selecionada
-    if (!formData.ufDestinoSelecionada) {
-      alert('Selecione a UF de destino');
-      return;
-    }
-
-    // Construir origem baseada na UF e cidade
-    const origemCompleta = formData.ufOrigemSelecionada === 'internacional' 
-      ? 'Internacional'
-      : formData.cidadeOrigem 
-        ? `${formData.cidadeOrigem} - ${formData.ufOrigemSelecionada}`
-        : formData.ufOrigemSelecionada;
-
-    // Construir destino baseada na UF e cidade
-    const destinoCompleto = formData.ufDestinoSelecionada === 'internacional' 
-      ? 'Internacional'
-      : formData.cidadeDestino 
-        ? `${formData.cidadeDestino} - ${formData.ufDestinoSelecionada}`
-        : formData.ufDestinoSelecionada;
-    
-    const cargaData = {
-      descricao: formData.crt || 'Carga sem descrição',
-      origem: origemCompleta,
-      destino: destinoCompleto,
-      peso: parseFloat(formData.peso),
-      valor: parseCurrency(formData.valor),
-      dataColeta: new Date(formData.dataColeta),
-      dataEntrega: new Date(formData.dataEntrega),
-      status: formData.status,
-      crt: formData.crt,
-      clienteId: (formData as any).clienteId || undefined
-    };
-
-    if (editingCarga) {
-      updateCarga(editingCarga.id, cargaData);
-    } else {
-      createCarga(cargaData);
-    }
-
-    performReset(); // Call performReset directly
-  };
-
-  const resetForm = () => {
-    if (hasUnsavedChanges) {
-      setShowCancelConfirm(true);
-      return;
-    }
-    
-    performReset();
-  };
-
-  const handleFormChange = (field: string, value: string) => {
-    const newFormData = { ...formData, [field]: value };
-    setFormData(newFormData);
-    
-    // Detectar se há mudanças comparando com os dados originais
-    if (originalFormData) {
-      const hasChanges = Object.keys(newFormData).some(key => 
-        (newFormData as any)[key] !== (originalFormData as any)[key]
-      );
-      setHasUnsavedChanges(hasChanges);
-    }
-  };
-
-  const performReset = () => {
-    setFormData({
-      crt: '',
-      origem: '',
-      destino: '',
-      clienteId: '',
-      ufOrigemSelecionada: '',
-      cidadeOrigem: '',
-      ufDestinoSelecionada: '',
-      cidadeDestino: '',
-      dataColeta: format(new Date(), 'yyyy-MM-dd'),
-      dataEntrega: format(new Date(), 'yyyy-MM-dd'),
-      valor: '',
-      peso: '',
-      observacoes: '',
-      status: 'a_coletar'
-    });
-    setEditingCarga(null);
-    setShowForm(false);
-    setHasUnsavedChanges(false);
-    setOriginalFormData(null);
-    setShowCancelConfirm(false);
-  };
-
-  // Função auxiliar para extrair UF e cidade de uma string
-  const extrairUfECidade = (localCompleto: string) => {
-    if (localCompleto === 'Internacional') {
-      return { uf: 'internacional', cidade: '' };
-    }
-    
-    // Padrão: "Cidade - UF" ou apenas "UF"
-    const partes = localCompleto.split(' - ');
-    if (partes.length === 2) {
-      return { uf: partes[1], cidade: partes[0] };
-    } else {
-      // Apenas UF
-      return { uf: localCompleto, cidade: '' };
-    }
-  };
-
-  const handleEdit = (carga: any, e?: React.MouseEvent<HTMLButtonElement>) => {
-    const origemInfo = extrairUfECidade(carga.origem);
-    const destinoInfo = extrairUfECidade(carga.destino);
-    
-    const formDataToSet = {
-      crt: carga.crt || carga.descricao || '',
-      origem: carga.origem,
-      destino: carga.destino,
-      clienteId: carga.clienteId || '',
-      ufOrigemSelecionada: origemInfo.uf,
-      cidadeOrigem: origemInfo.cidade,
-      ufDestinoSelecionada: destinoInfo.uf,
-      cidadeDestino: destinoInfo.cidade,
-      dataColeta: format(new Date(carga.dataColeta), 'yyyy-MM-dd'),
-      dataEntrega: format(new Date(carga.dataEntrega), 'yyyy-MM-dd'),
-      valor: formatCurrency(carga.valor.toString()),
-      peso: carga.peso.toString(),
-      observacoes: carga.observacoes || '',
-      status: carga.status
-    };
-    
-    setFormData(formDataToSet);
-    setOriginalFormData(formDataToSet);
-    setEditingCarga(carga);
-    setShowForm(true);
-    setHasUnsavedChanges(false);
-  };
-
-  const handleDelete = (id: string) => {
-    const carga = cargas.find(c => c.id === id);
-    if (carga) {
-      setDeleteTarget({
-        id: id,
-        descricao: carga.descricao || carga.crt || 'Carga sem descrição'
-      });
-      setShowDeleteConfirm(true);
-    }
-  };
-
-  const confirmDelete = () => {
-    if (deleteTarget) {
-      // Salvar dados para desfazer
-      const deletedCarga = cargas.find(c => c.id === deleteTarget.id);
-      
-      if (deletedCarga) {
-        // Executar exclusão
-        deleteCarga(deleteTarget.id);
-
-        // Adicionar ação de desfazer
-        undoService.addUndoAction({
-          type: 'delete_cargo',
-          description: `Carga "${deleteTarget.descricao}" excluída`,
-          data: deletedCarga,
-          undoFunction: async () => {
-            createCarga(deletedCarga);
-          }
-        });
-      }
-
-      setShowDeleteConfirm(false);
-      setDeleteTarget(null);
-    }
-  };
-
-  const handleChangeStatus = (id: string, newStatus: 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada') => {
-    updateCarga(id, { status: newStatus });
-    setShowStatusDropdown(null);
-  };
-
-  const handleLinkParceiro = (carga: any) => {
-    setLinkingCarga(carga);
-    setSelectedParceiro(carga.parceiroId || '');
-    setSelectedMotorista(carga.motoristaId || '');
-    setSelectedVeiculo(carga.veiculoId || '');
-    setSelectedCarretas(carga.carretasSelecionadas || []);
-    setShowLinkModal(true);
-  };
-
-  const handleSaveLink = () => {
-    if (linkingCarga) {
-      const veiculoSelecionado = veiculos.find(v => v.id === selectedVeiculo);
-      const isCavalo = veiculoSelecionado?.tipo === 'Cavalo';
-      
-      // Se o veículo não for Cavalo, limpa a seleção de carretas
-      const carretasParaSalvar = isCavalo ? selectedCarretas : undefined;
-
-      updateCarga(linkingCarga.id, {
-        parceiroId: selectedParceiro || undefined,
-        motoristaId: selectedMotorista || undefined,
-        veiculoId: selectedVeiculo || undefined,
-        carretasSelecionadas: carretasParaSalvar
-      });
-      setShowLinkModal(false);
-      setLinkingCarga(null);
-      setSelectedParceiro('');
-      setSelectedMotorista('');
-      setSelectedVeiculo('');
-      setSelectedCarretas([]);
-    }
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const validTypes = [
-        'text/csv',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      ];
-      
-      if (validTypes.includes(file.type) || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        setImportFile(file);
-        setImportStatus('idle');
-        setImportMessage('');
-      } else {
-        setImportMessage('Formato de arquivo não suportado. Use CSV ou Excel (.xlsx, .xls)');
-        setImportStatus('error');
-      }
-    }
-  };
-
-  const processImport = async () => {
-    if (!importFile) return;
-
-    setImportStatus('processing');
-    setImportMessage('Processando arquivo...');
-
-    try {
-      const result = await ImportService.processFile(importFile);
-      
-      if (!result.success && result.data!.length === 0) {
-        setImportStatus('error');
-        setImportMessage(result.errors.join('\n'));
-        return;
-      }
-
-      // Importar dados válidos
-      const importedCargas: any[] = [];
-      for (const cargaData of result.data!) {
-        try {
-          const newCarga = await createCarga(cargaData);
-          importedCargas.push(newCarga || cargaData);
-        } catch (error) {
-          result.errorCount++;
-          result.successCount--;
-          result.errors.push(`Erro ao salvar carga: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-        }
-      }
-
-      // Adicionar ação de desfazer se cargas foram importadas com sucesso
-      if (importedCargas.length > 0) {
-        undoService.addUndoAction({
-          type: 'import_csv',
-          description: `Importação de ${importedCargas.length} cargas do arquivo "${importFile.name}"`,
-          data: importedCargas,
-          undoFunction: async () => {
-            // Excluir todas as cargas importadas
-            for (const carga of importedCargas) {
-              try {
-                await deleteCarga(carga.id);
-              } catch (error) {
-                console.error('Erro ao desfazer importação:', error);
-              }
-            }
-          }
-        });
-      }
-      
-      // Determinar status final
-      if (result.successCount > 0) {
-        setImportStatus('success');
-        let message = `Importação concluída! ${result.successCount} cargas importadas com sucesso`;
-        
-        if (result.errorCount > 0) {
-          message += `, ${result.errorCount} erros encontrados`;
-        }
-        
-        if (result.errors.length > 0) {
-          message += `\n\nDetalhes dos erros:\n${result.errors.slice(0, 5).join('\n')}`;
-          if (result.errors.length > 5) {
-            message += `\n... e mais ${result.errors.length - 5} erros`;
-          }
-        }
-        
-        setImportMessage(message);
-      } else {
-        setImportStatus('error');
-        setImportMessage(`Nenhuma carga foi importada.\n\nErros encontrados:\n${result.errors.slice(0, 10).join('\n')}`);
-      }
-      
-      // Limpar após 5 segundos para dar tempo de ler os erros
-      setTimeout(() => {
-        setShowImportModal(false);
-        setImportFile(null);
-        setImportStatus('idle');
-        setImportMessage('');
-      }, 5000);
-      
-    } catch (error) {
-       setImportStatus('error');
-       setImportMessage(`Erro ao processar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-     }
-   };
-
-  const handleIntegrateFinanceiro = (carga: any) => {
-    setIntegratingCarga(carga);
-    setIntegrateData({
-      // A. Adiantamento
-      adiantamentoEnabled: false,
-      adiantamentoPercentual: '70',
-      dataVencimentoAdiantamento: '',
-      dataVencimentoSaldo: '',
-      dataVencimentoDespesa: format(new Date(), 'yyyy-MM-dd'),
-      
-      // B. Despesas Adicionais
-      despesasEnabled: false,
-      valorARS: '',
-      taxaConversao: '',
-      valorBRL: '',
-      valorBRLExtra: '', // Added missing field
-      
-      // C. Diárias
-      diariasEnabled: false,
-      valorDiarias: '',
-      
-      // D. Opção de Soma
-      somaOpcao: 'adiantamento'
-    });
-    setShowIntegrateModal(true);
-  };
-
-   // Funções auxiliares para cálculos automáticos
-  const formatNumberBR = (value: string): string => {
-    const numbers = value.replace(/\D/g, '');
-    if (!numbers) return '';
-    const amount = parseInt(numbers, 10) / 100;
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const calcularValorBRL = () => {
-    if (!integrateData.despesasEnabled) return 0;
-    const valorARS = parseCurrency(integrateData.valorARS || '');
-    const taxa = parseCurrency(integrateData.taxaConversao || '');
-    const extraBRL = parseCurrency(integrateData.valorBRLExtra || '');
-    return (valorARS * taxa) + extraBRL;
-  };
-
-  const calcularAdiantamento = () => {
-    if (!integrateData.adiantamentoEnabled || !integratingCarga) return 0;
-    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-    const percentual = parseFloat(integrateData.adiantamentoPercentual) / 100;
-    return valorTotal * percentual;
-  };
-
-  const calcularSaldo = () => {
-    if (!integrateData.adiantamentoEnabled || !integratingCarga) return 0;
-    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-    return valorTotal - calcularAdiantamento();
-  };
-
-  const calcularTotalFinal = () => {
-    const valorBRL = calcularValorBRL();
-    const diarias = integrateData.diariasEnabled ? 
-      parseCurrency(integrateData.valorDiarias || '') : 0;
-    const valorTotal = integratingCarga ? 
-      parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0;
-    
-    if (integrateData.adiantamentoEnabled) {
-      if (integrateData.somaOpcao === 'adiantamento') {
-        return calcularAdiantamento() + valorBRL + diarias;
-      } else {
-        return calcularSaldo() + valorBRL + diarias;
-      }
-    } else {
-      return valorTotal + valorBRL + diarias;
-    }
-  };
-
-  const handleIntegrateSubmit = () => {
-    if (!integratingCarga) return;
-
-    // Impedir múltiplas integrações por carga
-    const jaIntegrada = movimentacoes.some(m => m.cargaId === integratingCarga.id);
-    if (jaIntegrada) {
-      alert('Esta carga já possui integração financeira. Exclua a movimentação para reintegrar.');
-      return;
-    }
-
-    const valorTotal = parseFloat(integratingCarga.valor?.toString().replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-
-    // Dados para descrição
-    const destinoInfo = extrairUfECidade(integratingCarga.destino || '');
-    const cidadeDestino = destinoInfo.cidade || integratingCarga.destino || '';
-    const crtDisplay = integratingCarga.crt || integratingCarga.descricao || integratingCarga.id;
-    const motoristaSufixo = integratingCarga.motoristaId ? ' - Motorista vinculado' : '';
-
-    // Extras
-    const despesasAdicionais = integrateData.despesasEnabled ? (() => {
-      const valorARS = parseCurrency(integrateData.valorARS || '');
-      const taxa = parseCurrency(integrateData.taxaConversao || '');
-      const extraBRL = parseCurrency(integrateData.valorBRLExtra || '');
-      return (valorARS * taxa) + extraBRL;
-    })() : 0;
-    const diarias = integrateData.diariasEnabled ? parseCurrency(integrateData.valorDiarias || '') : 0;
-    const extrasTotal = despesasAdicionais + diarias;
-
-    // Sem adiantamento, sem extras/diárias: uma única despesa FRETE
-    if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
-      let dataMov = new Date();
-      if (integrateData.dataVencimentoDespesa) {
-        dataMov = new Date(integrateData.dataVencimentoDespesa);
-      }
-
-      createMovimentacao({
-        tipo: 'despesa',
-        valor: valorTotal,
-        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
-        categoria: 'FRETE',
-        data: dataMov,
-        status: 'pendente',
-        cargaId: integratingCarga.id,
-        observacoes: `Integração sem adiantamento. Valor da carga: ${formatCurrency(valorTotal)}`
-      });
-
-      setShowIntegrateModal(false);
-      setIntegratingCarga(null);
-      setIntegrateData({
-        // A. Adiantamento
-        adiantamentoEnabled: false,
-        adiantamentoPercentual: '70',
-        dataVencimentoAdiantamento: '',
-        dataVencimentoSaldo: '',
-        dataVencimentoDespesa: '',
-        
-        // B. Despesas Adicionais
-        despesasEnabled: false,
-        valorARS: '',
-        taxaConversao: '',
-        valorBRL: '',
-        valorBRLExtra: '',
-        
-        // C. Diárias
-        diariasEnabled: false,
-        valorDiarias: '',
-        
-        // D. Opção de Soma
-        somaOpcao: 'adiantamento'
-      });
-
-      return;
-    }
-
-    // Com adiantamento: criar duas despesas FRETE (Adiantamento e Saldo)
-    if (integrateData.adiantamentoEnabled) {
-      const percentual = parseFloat(integrateData.adiantamentoPercentual || '0') / 100;
-      const valorAdiantamento = valorTotal * percentual;
-      const valorSaldo = valorTotal - valorAdiantamento;
-
-      const valorAdiantamentoFinal = integrateData.somaOpcao === 'adiantamento' ? (valorAdiantamento + extrasTotal) : valorAdiantamento;
-      const valorSaldoFinal = integrateData.somaOpcao === 'saldo' ? (valorSaldo + extrasTotal) : valorSaldo;
-
-      const dataAdiant = integrateData.dataVencimentoAdiantamento ? new Date(integrateData.dataVencimentoAdiantamento) : new Date();
-      const dataSaldo = integrateData.dataVencimentoSaldo ? new Date(integrateData.dataVencimentoSaldo) : new Date();
-
-      // Despesa de Adiantamento
-      createMovimentacao({
-        tipo: 'despesa',
-        valor: valorAdiantamentoFinal,
-        descricao: `Adiantamento - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
-        categoria: 'FRETE',
-        data: dataAdiant,
-        status: 'pendente',
-        cargaId: integratingCarga.id,
-        observacoes: `Adiantamento ${integrateData.adiantamentoPercentual}%: ${formatCurrency(valorAdiantamento)}${extrasTotal > 0 && integrateData.somaOpcao === 'adiantamento' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
-      });
-
-      // Despesa de Saldo
-      createMovimentacao({
-        tipo: 'despesa',
-        valor: valorSaldoFinal,
-        descricao: `Saldo- CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
-        categoria: 'FRETE',
-        data: dataSaldo,
-        status: 'pendente',
-        cargaId: integratingCarga.id,
-        observacoes: `Saldo ${100 - parseFloat(integrateData.adiantamentoPercentual)}%: ${formatCurrency(valorSaldo)}${extrasTotal > 0 && integrateData.somaOpcao === 'saldo' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
-      });
-
-      setShowIntegrateModal(false);
-      setIntegratingCarga(null);
-      setIntegrateData({
-        // A. Adiantamento
-        adiantamentoEnabled: false,
-        adiantamentoPercentual: '70',
-        dataVencimentoAdiantamento: '',
-        dataVencimentoSaldo: '',
-        dataVencimentoDespesa: '',
-        
-        // B. Despesas Adicionais
-        despesasEnabled: false,
-        valorARS: '',
-        taxaConversao: '',
-        valorBRL: '',
-        valorBRLExtra: '',
-        
-        // C. Diárias
-        diariasEnabled: false,
-        valorDiarias: '',
-        
-        // D. Opção de Soma
-        somaOpcao: 'adiantamento'
-      });
-
-      return;
-    }
-
-    // Sem adiantamento, mas com extras/diárias: uma única despesa FRETE somando tudo
-    {
-      let dataMov = new Date();
-      if (integrateData.dataVencimentoDespesa) {
-        dataMov = new Date(integrateData.dataVencimentoDespesa);
-      }
-
-      const valorFinal = valorTotal + extrasTotal;
-
-      createMovimentacao({
-        tipo: 'despesa',
-        valor: valorFinal,
-        descricao: `Frete - CRT ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`,
-        categoria: 'FRETE',
-        data: dataMov,
-        status: 'pendente',
-        cargaId: integratingCarga.id,
-        observacoes: `Valor da carga: ${formatCurrency(valorTotal)}${extrasTotal > 0 ? `, Extras: ${formatCurrency(extrasTotal)}` : ''}`
-      });
-
-      setShowIntegrateModal(false);
-      setIntegratingCarga(null);
-      setIntegrateData({
-        // A. Adiantamento
-        adiantamentoEnabled: false,
-        adiantamentoPercentual: '70',
-        dataVencimentoAdiantamento: '',
-        dataVencimentoSaldo: '',
-        dataVencimentoDespesa: '',
-        
-        // B. Despesas Adicionais
-        despesasEnabled: false,
-        valorARS: '',
-        taxaConversao: '',
-        valorBRL: '',
-        valorBRLExtra: '',
-        
-        // C. Diárias
-        diariasEnabled: false,
-        valorDiarias: '',
-        
-        // D. Opção de Soma
-        somaOpcao: 'adiantamento'
-      });
-    }
-   };
-
-  const filteredMotoristas = useMemo(() => {
-    if (!selectedParceiro) {
-      // Retorna motoristas + parceiros PF que são motoristas
-      const parceiroMotoristas = parceiros
-        .filter(p => p.tipo === 'PF' && p.isMotorista)
-        .map(p => ({
-          id: p.id,
-          parceiroId: p.id,
-          nome: p.nome || '',
-          cpf: p.documento || '',
-          cnh: p.cnh || '',
-          categoriaCnh: '',
-          validadeCnh: new Date(),
-          telefone: p.telefone || '',
-          isActive: p.isActive,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt
-        }));
-      return [...motoristas, ...parceiroMotoristas];
-    }
-    
-    // Se um parceiro específico foi selecionado
-    const motoristasDoParceiro = motoristas.filter(m => m.parceiroId === selectedParceiro);
-    
-    // Verifica se o próprio parceiro é motorista
-    const parceiro = parceiros.find(p => p.id === selectedParceiro);
-    if (parceiro && parceiro.tipo === 'PF' && parceiro.isMotorista) {
-      const parceiroComoMotorista = {
-        id: parceiro.id,
-        parceiroId: parceiro.id,
-        nome: parceiro.nome || '',
-        cpf: parceiro.documento || '',
-        cnh: parceiro.cnh || '',
-        categoriaCnh: '',
-        validadeCnh: new Date(),
-        telefone: parceiro.telefone || '',
-        isActive: parceiro.isActive,
-        createdAt: parceiro.createdAt,
-        updatedAt: new Date()
-      };
-      return [...motoristasDoParceiro, parceiroComoMotorista];
-    }
-    
-    return motoristasDoParceiro;
-  }, [selectedParceiro, motoristas, parceiros]);
-
-  const filteredVeiculos = useMemo(() => {
-    // Filtra apenas Truck e Cavalo para a seleção principal de veículo
-    const base = selectedParceiro 
-      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo !== 'Carreta') 
-      : veiculos.filter(v => v.tipo !== 'Carreta');
-    return base;
-  }, [selectedParceiro, veiculos]);
-
-  const filteredCarretas = useMemo(() => {
-    // Filtra apenas Carretas para a seleção secundária
-    return selectedParceiro 
-      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta') 
-      : [];
-  }, [selectedParceiro, veiculos]);
-
-  // Seleção automática de veículo quando motorista é selecionado
-  React.useEffect(() => {
-    if (selectedMotorista) {
-      // Verifica se o motorista selecionado é um parceiro-motorista
-      const motoristaData = filteredMotoristas.find(m => m.id === selectedMotorista);
-      if (motoristaData) {
-        // Se for um parceiro-motorista (id do motorista = id do parceiro)
-        if (motoristaData.id === motoristaData.parceiroId) {
-          // Busca veículo vinculado ao parceiro
-          const veiculoDoParceiro = veiculos.find(v => v.parceiroId === motoristaData.parceiroId);
-          if (veiculoDoParceiro) {
-            setSelectedVeiculo(veiculoDoParceiro.id);
-          }
-        } else {
-          // Para motoristas tradicionais, busca por veiculoVinculado
-          const motoristaCompleto = motoristas.find(m => m.id === selectedMotorista);
-          if (motoristaCompleto?.veiculoVinculado) {
-            setSelectedVeiculo(motoristaCompleto.veiculoVinculado);
-          }
-        }
-      }
-    }
-  }, [selectedMotorista, filteredMotoristas, veiculos, motoristas]);
-
-  // Verifica se o veículo selecionado é um Cavalo
-  const isSelectedVehicleCavalo = useMemo(() => {
-    if (!selectedVeiculo) return false;
-    const veiculo = veiculos.find(v => v.id === selectedVeiculo);
-    return veiculo?.tipo === 'Cavalo';
-  }, [selectedVeiculo, veiculos]);
-
 
   return (
     <div className="space-y-6">
@@ -1093,85 +534,7 @@ const Cargas: React.FC = () => {
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {/* Total */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* À Coletar */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">À Coletar</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.aColetar}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Em Trânsito */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Em Trânsito</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.emTransito}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Armazenadas */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Package className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Armazenadas</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.armazenadas}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Entregues */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Entregues</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.entregues}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Valor Total */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Valor Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(stats.valorTotal)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CargasStats stats={stats} />
 
       {/* Filtros */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -1195,7 +558,7 @@ const Cargas: React.FC = () => {
             className="input-field h-11 text-sm"
           >
             <option value="">Status</option>
-            {Object.entries(statusConfig).map(([status, config]) => (
+            {Object.entries(STATUS_CONFIG).map(([status, config]) => (
               <option key={status} value={status}>{config.label}</option>
             ))}
           </select>
@@ -1204,6 +567,7 @@ const Cargas: React.FC = () => {
           <div>
             <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Coleta</label>
             <button
+              type="button"
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
                 setColetaCalendarPosition({
@@ -1234,6 +598,7 @@ const Cargas: React.FC = () => {
           <div>
             <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Entrega</label>
             <button
+              type="button"
               onClick={(e) => {
                 const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
                 setEntregaCalendarPosition({
@@ -1275,8 +640,8 @@ const Cargas: React.FC = () => {
               month={coletaMonth}
               start={tempColetaStart}
               end={tempColetaEnd}
-              onPrev={() => setColetaMonth(new Date(coletaMonth.getFullYear(), coletaMonth.getMonth() - 1, 1))}
-              onNext={() => setColetaMonth(new Date(coletaMonth.getFullYear(), coletaMonth.getMonth() + 1, 1))}
+              onPrev={() => setColetaMonth(prev => subMonths(prev, 1))}
+              onNext={() => setColetaMonth(prev => addMonths(prev, 1))}
               onSelectDate={(d) => {
                 if (!tempColetaStart || (tempColetaStart && tempColetaEnd)) {
                   setTempColetaStart(d);
@@ -1320,8 +685,8 @@ const Cargas: React.FC = () => {
               month={entregaMonth}
               start={tempEntregaStart}
               end={tempEntregaEnd}
-              onPrev={() => setEntregaMonth(new Date(entregaMonth.getFullYear(), entregaMonth.getMonth() - 1, 1))}
-              onNext={() => setEntregaMonth(new Date(entregaMonth.getFullYear(), entregaMonth.getMonth() + 1, 1))}
+              onPrev={() => setEntregaMonth(prev => subMonths(prev, 1))}
+              onNext={() => setEntregaMonth(prev => addMonths(prev, 1))}
               onSelectDate={(d) => {
                 if (!tempEntregaStart || (tempEntregaStart && tempEntregaEnd)) {
                   setTempEntregaStart(d);
@@ -1390,7 +755,7 @@ const Cargas: React.FC = () => {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredCargas.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhuma carga encontrada
                   </td>
                 </tr>
@@ -1435,14 +800,15 @@ const Cargas: React.FC = () => {
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusConfig[carga.status as keyof typeof statusConfig].color}`}>
-                        {statusConfig[carga.status as keyof typeof statusConfig]?.label || 'Desconhecido'}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_CONFIG[carga.status as keyof typeof STATUS_CONFIG].color}`}>
+                        {STATUS_CONFIG[carga.status as keyof typeof STATUS_CONFIG]?.label || 'Desconhecido'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 items-center">
                         <button
-                          onClick={(e) => handleEdit(carga, e)}
+                          type="button"
+                          onClick={() => handleEdit(carga)}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           title="Editar"
                         >
@@ -1450,6 +816,7 @@ const Cargas: React.FC = () => {
                         </button>
                         <div className="relative">
                           <button
+                            type="button"
                             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setDropdownPosition({
@@ -1465,6 +832,7 @@ const Cargas: React.FC = () => {
                           </button>
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleLinkParceiro(carga)}
                           className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                           title="Vincular parceiro/motorista"
@@ -1472,6 +840,7 @@ const Cargas: React.FC = () => {
                           <Link className="h-4 w-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleIntegrateFinanceiro(carga)}
                           className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
                           title="Integrar Financeiro"
@@ -1479,6 +848,7 @@ const Cargas: React.FC = () => {
                           <CreditCard className="h-4 w-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(carga.id)}
                           className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           title="Excluir"
@@ -1495,273 +865,9 @@ const Cargas: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal do Formulário */}
-      {showForm && (
-        <>
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-              ref={modalRef}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {editingCarga ? 'Editar Carga' : 'Nova Carga'}
-                  </h3>
-                  <button
-                    onClick={resetForm}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        CRT
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.crt}
-                        onChange={(e) => handleFormChange('crt', e.target.value.slice(0, 10))}
-                        placeholder="Ex: BR722"
-                        className="input-field"
-                        maxLength={10}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Status
-                      </label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value as 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada' })}
-                        className="input-field"
-                        required
-                      >
-                        <option value="a_coletar">À coletar</option>
-                        <option value="em_transito">Em trânsito</option>
-                        <option value="armazenada">Armazenada</option>
-                        <option value="entregue">Entregue</option>
-                        <option value="cancelada">Cancelada</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Cliente
-                      </label>
-                      <select
-                        value={(formData as any).clienteId || ''}
-                        onChange={(e) => handleFormChange('clienteId', e.target.value)}
-                        className="input-field"
-                      >
-                        <option value="">Selecione um cliente</option>
-                        {clientes.map((c) => (
-                          <option key={c.id} value={c.id}>{c.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ORIGEM */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        UF Origem *
-                      </label>
-                      <select
-                        value={formData.ufOrigemSelecionada}
-                        onChange={(e) => {
-                          handleFormChange('ufOrigemSelecionada', e.target.value);
-                          // Limpar cidade quando mudar UF
-                          if (formData.cidadeOrigem) {
-                            handleFormChange('cidadeOrigem', '');
-                          }
-                        }}
-                        className="input-field"
-                        required
-                      >
-                        <option value="">Selecione a UF de origem</option>
-                        {ufsOrdenadas.map((uf) => (
-                          <option key={uf.value} value={uf.value}>
-                            {uf.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {formData.ufOrigemSelecionada && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Cidade Origem
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.cidadeOrigem}
-                          onChange={(e) => handleFormChange('cidadeOrigem', e.target.value)}
-                          placeholder={formData.ufOrigemSelecionada === 'internacional' ? "Digite a cidade/país de origem" : "Digite a cidade de origem"}
-                          className="input-field"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* DESTINO */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        UF Destino *
-                      </label>
-                      <select
-                        value={formData.ufDestinoSelecionada}
-                        onChange={(e) => {
-                          handleFormChange('ufDestinoSelecionada', e.target.value);
-                          // Limpar cidade quando mudar UF
-                          if (formData.cidadeDestino) {
-                            handleFormChange('cidadeDestino', '');
-                          }
-                        }}
-                        className="input-field"
-                        required
-                      >
-                        <option value="">Selecione a UF de destino</option>
-                        {ufsOrdenadas.map((uf) => (
-                          <option key={uf.value} value={uf.value}>
-                            {uf.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {formData.ufDestinoSelecionada && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Cidade Destino
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.cidadeDestino}
-                          onChange={(e) => handleFormChange('cidadeDestino', e.target.value)}
-                          placeholder={formData.ufDestinoSelecionada === 'internacional' ? "Digite a cidade/país de destino" : "Digite a cidade de destino"}
-                          className="input-field"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Data de Coleta *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.dataColeta}
-                      onChange={(e) => setFormData({ ...formData, dataColeta: e.target.value })}
-                      className="input-field"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Data de Entrega *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.dataEntrega}
-                      onChange={(e) => setFormData({ ...formData, dataEntrega: e.target.value })}
-                      className="input-field"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Peso (toneladas) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.peso}
-                      onChange={(e) => setFormData({ ...formData, peso: e.target.value })}
-                      className="input-field"
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Valor (R$) *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.valor}
-                      onChange={(e) => {
-                        const formatted = formatCurrency(e.target.value);
-                        setFormData({ ...formData, valor: formatted });
-                      }}
-                      className="input-field"
-                      placeholder="R$ 0,00"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Observações
-                  </label>
-                  <textarea
-                    value={formData.observacoes}
-                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                    className="input-field"
-                    rows={3}
-                    placeholder="Observações adicionais..."
-                  />
-                </div>
-
-                <div className="flex space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="btn-secondary flex-1"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary flex-1"
-                  >
-                    {editingCarga ? 'Atualizar' : 'Criar'}
-                  </button>
-                </div>
-              </form>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Dropdown de status sobreposto */}
       {showStatusDropdown && dropdownPosition && (
         <>
-          {/* Overlay para fechar o dropdown ao clicar fora */}
           <div 
             className="fixed inset-0 z-40" 
             onClick={() => {
@@ -1769,7 +875,6 @@ const Cargas: React.FC = () => {
               setDropdownPosition(null);
             }}
           />
-          {/* Dropdown sobreposto */}
           <div 
             className="fixed z-50 w-48 rounded-lg shadow-xl bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 border border-gray-100 dark:border-gray-600"
             style={{
@@ -1781,10 +886,11 @@ const Cargas: React.FC = () => {
               <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
                 Alterar Status
               </div>
-              {Object.entries(statusConfig).map(([key, cfg]) => (
+              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
                 <button
                   key={key}
-                  onClick={() => handleChangeStatus(showStatusDropdown, key as 'entregue' | 'em_transito' | 'a_coletar' | 'armazenada' | 'cancelada')}
+                  type="button"
+                  onClick={() => handleChangeStatus(showStatusDropdown, key as Carga['status'])}
                   className={`w-full flex items-center px-4 py-3 text-sm transition-colors ${
                     filteredCargas.find(c => c.id === showStatusDropdown)?.status === key 
                       ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
@@ -1807,623 +913,53 @@ const Cargas: React.FC = () => {
         </>
       )}
 
-      {/* Modal de vinculação */}
-      {showLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Vincular Parceiro/Motorista/Veículo
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Parceiro
-                </label>
-                <select
-                  value={selectedParceiro}
-                  onChange={(e) => {
-                    setSelectedParceiro(e.target.value);
-                    setSelectedMotorista('');
-                    setSelectedVeiculo('');
-                    setSelectedCarretas([]);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">Selecione um parceiro</option>
-                  {parceiros.map(parceiro => (
-                    <option key={parceiro.id} value={parceiro.id}>
-                      {parceiro.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {/* Modals */}
+      <CargaFormModal
+        isOpen={showForm}
+        formData={formData}
+        editingCarga={editingCarga}
+        clientes={clientes}
+        ufsOrdenadas={UFS_ORDENADAS}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onClose={handleCloseForm}
+        onFormChange={handleFormChange}
+        onSubmit={handleSubmit}
+        onConfirmCancel={performReset}
+        showCancelConfirm={showCancelConfirm}
+        setShowCancelConfirm={setShowCancelConfirm}
+      />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Motorista
-                </label>
-                <select
-                  value={selectedMotorista}
-                  onChange={(e) => setSelectedMotorista(e.target.value)}
-                  disabled={!selectedParceiro}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                >
-                  <option value="">Selecione um motorista</option>
-                  {filteredMotoristas.map(motorista => (
-                    <option key={motorista.id} value={motorista.id}>
-                      {motorista.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <CargaLinkModal
+        isOpen={showLinkModal}
+        linkingCarga={linkingCarga}
+        onClose={handleCloseLinkModal}
+        onSave={handleSaveLink}
+        selectedParceiro={selectedParceiro}
+        setSelectedParceiro={setSelectedParceiro}
+        selectedMotorista={selectedMotorista}
+        setSelectedMotorista={setSelectedMotorista}
+        selectedVeiculo={selectedVeiculo}
+        setSelectedVeiculo={setSelectedVeiculo}
+        selectedCarretas={selectedCarretas}
+        setSelectedCarretas={setSelectedCarretas}
+      />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Veículo (Truck ou Cavalo)
-                </label>
-                <select
-                  value={selectedVeiculo}
-                  onChange={(e) => {
-                    setSelectedVeiculo(e.target.value);
-                    setSelectedCarretas([]); // Limpa carretas ao mudar o veículo principal
-                  }}
-                  disabled={!selectedParceiro}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
-                >
-                  <option value="">Selecione um veículo</option>
-                  {filteredVeiculos.map(veiculo => (
-                    <option key={veiculo.id} value={veiculo.id}>
-                      {veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.placaCavalo || veiculo.placa)} ({veiculo.tipo})
-                    </option>
-                  ))}
-                </select>
-              </div>
+      <CargaIntegrateModal
+        isOpen={showIntegrateModal}
+        integratingCarga={integratingCarga}
+        movimentacoes={movimentacoes}
+        onClose={handleCloseIntegrateModal}
+        onIntegrate={handleIntegrateSubmit}
+        integrateData={integrateData}
+        setIntegrateData={setIntegrateData}
+      />
 
-              {/* Seleção de Carretas quando o veículo for Cavalo */}
-              {isSelectedVehicleCavalo && filteredCarretas.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Carretas do Parceiro (selecione uma ou mais)
-                  </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2">
-                    {filteredCarretas.map(carreta => (
-                      <label key={carreta.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {carreta.placaCarreta || carreta.placa || 'Carreta sem placa'}
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={selectedCarretas.includes(carreta.id)}
-                          onChange={() => {
-                            setSelectedCarretas(prev => prev.includes(carreta.id)
-                              ? prev.filter(id => id !== carreta.id)
-                              : [...prev, carreta.id]
-                            );
-                          }}
-                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {isSelectedVehicleCavalo && filteredCarretas.length === 0 && (
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    O veículo selecionado é um Cavalo, mas não há carretas cadastradas para este parceiro.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={() => setShowLinkModal(false)}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveLink}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Importação CSV/Excel */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Importar Cargas
-              </h3>
-              <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportFile(null);
-                  setImportStatus('idle');
-                  setImportMessage('');
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Selecione um arquivo CSV ou Excel (.xlsx, .xls) para importar cargas:
-                </p>
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded mb-2">
-                  <strong>Colunas aceitas (flexível):</strong><br/>
-                  • CRT/Código/Número (opcional)<br/>
-                  • Origem* (obrigatório)<br/>
-                  • Destino* (obrigatório)<br/>
-                  • Data Coleta (formato: DD/MM/YYYY ou similar)<br/>
-                  • Data Entrega (formato: DD/MM/YYYY ou similar)<br/>
-                  • Valor (aceita R$ 1.234,56 ou 1234.56)<br/>
-                  • Peso (em kg)<br/>
-                  • Observações/Comentários
-                </div>
-                <div className="text-xs text-blue-600 dark:text-blue-400">
-                  💡 O sistema detecta automaticamente as colunas mesmo com nomes diferentes
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileSelect}
-                  className="block w-full text-sm text-gray-500 dark:text-gray-400
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-lg file:border-0
-                    file:text-sm file:font-medium
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100
-                    dark:file:bg-blue-900 dark:file:text-blue-300
-                    dark:hover:file:bg-blue-800"
-                />
-              </div>
-              
-              {importFile && (
-                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Arquivo selecionado: {importFile.name}
-                  </p>
-                </div>
-              )}
-              
-              {importMessage && (
-                <div className={`mb-4 p-3 rounded-lg max-h-40 overflow-y-auto ${
-                  importStatus === 'error' 
-                    ? 'bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-300'
-                    : importStatus === 'success'
-                    ? 'bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300'
-                    : 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                }`}>
-                  <pre className="text-sm whitespace-pre-wrap font-sans">{importMessage}</pre>
-                </div>
-              )}
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowImportModal(false);
-                    setImportFile(null);
-                    setImportStatus('idle');
-                    setImportMessage('');
-                  }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={processImport}
-                  disabled={!importFile || importStatus === 'processing'}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                >
-                  {importStatus === 'processing' ? 'Processando...' : 'Importar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Integrar Financeiro */}
-      {showIntegrateModal && integratingCarga && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Integrar Financeiro - Carga {integratingCarga.crt || integratingCarga.id}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowIntegrateModal(false);
-                  setIntegratingCarga(null);
-                  setIntegrateData({
-                    adiantamentoEnabled: false,
-                    adiantamentoPercentual: '70',
-                    dataVencimentoAdiantamento: '',
-                    dataVencimentoSaldo: '',
-                    dataVencimentoDespesa: '',
-                    despesasEnabled: false,
-                    valorARS: '',
-                    taxaConversao: '',
-                    valorBRL: '',
-                    valorBRLExtra: '',
-                    diariasEnabled: false,
-                    valorDiarias: '',
-                    somaOpcao: 'adiantamento'
-                  });
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="space-y-6">
-                {/* A. Adiantamento */}
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                  <div className="mb-4">
-                    <StandardCheckbox
-                      label="Adiantamento"
-                      checked={integrateData.adiantamentoEnabled}
-                      onChange={(checked) => setIntegrateData(prev => ({ ...prev, adiantamentoEnabled: checked }))}
-                      description="Habilitar cálculo de adiantamento sobre o valor total"
-                    />
-                  </div>
-                  
-                  {integrateData.adiantamentoEnabled && (
-                    <div className="space-y-4 ml-7">
-                      {/* Seleção de Percentual */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Percentual do Adiantamento
-                        </label>
-                        <select
-                          value={integrateData.adiantamentoPercentual}
-                          onChange={(e) => setIntegrateData(prev => ({ ...prev, adiantamentoPercentual: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        >
-                          <option value="70">70%</option>
-                          <option value="80">80%</option>
-                        </select>
-                      </div>
-                      
-                      {/* Cálculos Automáticos */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                        <div className="text-sm space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Valor Total da Carga:</span>
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {formatCurrency(typeof integratingCarga.valor === 'number' ? integratingCarga.valor : parseCurrency(integratingCarga.valor || '0'))}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Adiantamento ({integrateData.adiantamentoPercentual}%):</span>
-                            <span className="font-medium text-blue-600 dark:text-blue-400">
-                              {formatCurrency(calcularAdiantamento())}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Saldo ({100 - (parseFloat(integrateData.adiantamentoPercentual || '0'))}%):</span>
-                            <span className="font-medium text-green-600 dark:text-green-400">
-                              {formatCurrency(calcularSaldo())}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Datas de Vencimento */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Data de Vencimento do Adiantamento
-                          </label>
-                          <input
-                            type="date"
-                            value={integrateData.dataVencimentoAdiantamento}
-                            onChange={(e) => setIntegrateData(prev => ({ ...prev, dataVencimentoAdiantamento: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Data de Vencimento do Saldo
-                          </label>
-                          <input
-                            type="date"
-                            value={integrateData.dataVencimentoSaldo}
-                            onChange={(e) => setIntegrateData(prev => ({ ...prev, dataVencimentoSaldo: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* B. Despesas Adicionais */}
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                  <div className="mb-4">
-                    <StandardCheckbox
-                      label="Despesas Adicionais"
-                      checked={integrateData.despesasEnabled}
-                      onChange={(checked) => setIntegrateData(prev => ({ ...prev, despesasEnabled: checked }))}
-                      description="Incluir despesas em pesos argentinos com conversão automática"
-                    />
-                  </div>
-                  
-                  {integrateData.despesasEnabled && (
-                    <div className="space-y-4 ml-7">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Valor adicional em Reais (BRL)
-                          </label>
-                          <input
-                            type="text"
-                            value={integrateData.valorBRLExtra}
-                            onChange={(e) => {
-                              const formatted = formatCurrency(e.target.value);
-                              setIntegrateData(prev => ({ 
-                                ...prev, 
-                                valorBRLExtra: formatted
-                              }));
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="R$ 0,00"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Valor em Pesos Argentinos (ARS)
-                          </label>
-                          <input
-                            type="text"
-                            value={integrateData.valorARS}
-                            onChange={(e) => {
-                              const formatted = formatNumberBR(e.target.value);
-                              setIntegrateData(prev => ({ 
-                                ...prev, 
-                                valorARS: formatted
-                              }));
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="$ 0,00"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Taxa de Conversão
-                          </label>
-                          <input
-                            type="text"
-                            value={integrateData.taxaConversao}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[^\d.,]/g, '');
-                              setIntegrateData(prev => ({ 
-                                ...prev, 
-                                taxaConversao: value
-                              }));
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                            placeholder="0,00"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Valor em Reais (BRL) - Calculado Automaticamente
-                        </label>
-                        <input
-                          type="text"
-                          value={formatCurrency(calcularValorBRL())}
-                          readOnly
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
-                        />
-                      </div>
-                      
-                      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                        <div className="text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">Total das Despesas Adicionais em BRL: </span>
-                          <span className="font-medium text-green-600 dark:text-green-400">
-                            {formatCurrency(calcularValorBRL())}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* C. Diárias */}
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                  <div className="mb-4">
-                    <StandardCheckbox
-                      label="Diárias"
-                      checked={integrateData.diariasEnabled}
-                      onChange={(checked) => setIntegrateData(prev => ({ ...prev, diariasEnabled: checked }))}
-                      description="Incluir valor de diárias em reais"
-                    />
-                  </div>
-                  
-                  {integrateData.diariasEnabled && (
-                    <div className="ml-7">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Valor em Reais (BRL)
-                      </label>
-                      <input
-                        type="text"
-                        value={integrateData.valorDiarias}
-                        onChange={(e) => {
-                          const formatted = formatCurrency(e.target.value);
-                          setIntegrateData(prev => ({ ...prev, valorDiarias: formatted }));
-                        }}
-                        className="input-field"
-                        placeholder="R$ 0,00"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Vencimento da Despesa (sem adições) */}
-                {(!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) && (
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Data de Vencimento da Despesa
-                    </label>
-                    <input
-                      type="date"
-                      value={integrateData.dataVencimentoDespesa}
-                      onChange={(e) => setIntegrateData(prev => ({ ...prev, dataVencimentoDespesa: e.target.value }))}
-                      className="input-field"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Sem adições: será integrada como despesa no valor total da carga.
-                    </p>
-                  </div>
-                )}
-
-                {/* D. Opção de Soma */}
-                {(integrateData.adiantamentoEnabled || integrateData.despesasEnabled || integrateData.diariasEnabled) && (
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-                      Opção de Soma
-                    </label>
-                    <div className="space-y-3">
-                      {integrateData.adiantamentoEnabled && (
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="somaOpcao"
-                            value="adiantamento"
-                            checked={integrateData.somaOpcao === 'adiantamento'}
-                            onChange={(e) => setIntegrateData(prev => ({ ...prev, somaOpcao: e.target.value as 'adiantamento' | 'saldo' }))}
-                            className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                          />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Somar ao Adiantamento</span>
-                        </label>
-                      )}
-                      {integrateData.adiantamentoEnabled && (
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="somaOpcao"
-                            value="saldo"
-                            checked={integrateData.somaOpcao === 'saldo'}
-                            onChange={(e) => setIntegrateData(prev => ({ ...prev, somaOpcao: e.target.value as 'adiantamento' | 'saldo' }))}
-                            className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                          />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Somar ao Saldo</span>
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Total Final */}
-                {(integrateData.adiantamentoEnabled || integrateData.despesasEnabled || integrateData.diariasEnabled) && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-medium text-gray-700 dark:text-gray-300">Total Final:</span>
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(calcularTotalFinal())}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {integrateData.adiantamentoEnabled && integrateData.somaOpcao === 'adiantamento' && 
-                          `Adiantamento + Despesas + Diárias`}
-                        {integrateData.adiantamentoEnabled && integrateData.somaOpcao === 'saldo' && 
-                          `Saldo + Despesas + Diárias`}
-                        {!integrateData.adiantamentoEnabled && 
-                          `Valor da Carga + Despesas + Diárias`}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowIntegrateModal(false);
-                    setIntegratingCarga(null);
-                    setIntegrateData({
-                      adiantamentoEnabled: false,
-                      adiantamentoPercentual: '70',
-                      dataVencimentoAdiantamento: '',
-                      dataVencimentoSaldo: '',
-                      dataVencimentoDespesa: '',
-                      despesasEnabled: false,
-                      valorARS: '',
-                      taxaConversao: '',
-                      valorBRL: '',
-                      valorBRLExtra: '',
-                      diariasEnabled: false,
-                      valorDiarias: '',
-                      somaOpcao: 'adiantamento'
-                    });
-                  }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Cancelar
-              </button>
-                <button
-                  onClick={handleIntegrateSubmit}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Integrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmação para cancelar */}
-      {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-yellow-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Confirmar Cancelamento
-              </h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Você tem alterações não salvas. Tem certeza que deseja cancelar? Todas as alterações serão perdidas.
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowCancelConfirm(false)}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Continuar Editando
-              </button>
-              <button
-                onClick={performReset}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Descartar Alterações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CargaImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        createCarga={createCarga}
+        deleteCarga={deleteCarga}
+      />
 
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirm && deleteTarget && (
@@ -2440,6 +976,7 @@ const Cargas: React.FC = () => {
             </p>
             <div className="flex space-x-3">
               <button
+                type="button"
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeleteTarget(null);
@@ -2449,6 +986,7 @@ const Cargas: React.FC = () => {
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={confirmDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
