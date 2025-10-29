@@ -85,12 +85,13 @@ const Contratos: React.FC = () => {
     
     try {
       // 3.1. Carregar Carga + Cliente + Parceiro (INCLUINDO VALOR)
+      // Ajuste na sintaxe de select para garantir que os relacionamentos sejam resolvidos corretamente
       const { data: carga, error: cargaError } = await supabase
         .from('cargas')
         .select(`
           id, crt, origem, destino, peso, valor, descricao, data_coleta, data_entrega,
-          cliente:clientes (nome),
-          parceiro:parceiros (nome),
+          cliente:clientes(nome),
+          parceiro:parceiros(nome),
           motorista_id,
           veiculo_id,
           carretas_selecionadas
@@ -120,7 +121,7 @@ const Contratos: React.FC = () => {
           .select(`
             placa, placa_cavalo, placa_carreta, placa_carreta1, placa_carreta2, placa_dolly,
             modelo, ano, tipo, carroceria, possui_dolly,
-            parceiro:parceiros (nome)
+            parceiro:parceiros(nome)
           `)
           .eq('id', carga.veiculo_id)
           .single();
@@ -140,7 +141,7 @@ const Contratos: React.FC = () => {
       let VF = 0, AD = 0, PD = 0, OE1 = 0, D1 = 0, OU = 0;
 
       movimentos.forEach(m => {
-        // Usamos o valor absoluto, pois a classificação já define o tipo
+        // Usamos o valor absoluto, pois a classificação é feita pela categoria
         const valor = Math.abs(m.valor || 0); 
         
         switch (m.categoria) {
