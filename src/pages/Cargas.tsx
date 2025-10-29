@@ -528,7 +528,7 @@ const Cargas: React.FC = () => {
     setOriginalFormData(formDataToSet);
     setEditingCarga(carga);
     if (e) {
-      const rect = e.currentTarget.getBoundingClientRect();
+      // const rect = e.currentTarget.getBoundingClientRect(); // Removido para corrigir TS6133
       // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
       // const top = rect.bottom + window.scrollY + 8; // Removido
       // Removed setFormAnchor as it's not used for modal positioning anymore
@@ -1069,7 +1069,7 @@ const Cargas: React.FC = () => {
           </button>
           <button
             onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
+              // const rect = e.currentTarget.getBoundingClientRect(); // Removido para corrigir TS6133
               // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
               // const top = rect.bottom + window.scrollY + 8; // Removido
               // Removed setFormAnchor as it's not used for modal positioning anymore
@@ -1424,7 +1424,7 @@ const Cargas: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusConfig[carga.status as keyof typeof statusConfig].color}`}>
-                        {statusConfig[carga.status as keyof typeof statusConfig].label}
+                        {statusConfig[carga.status as keyof typeof statusConfig]?.label || 'Desconhecido'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

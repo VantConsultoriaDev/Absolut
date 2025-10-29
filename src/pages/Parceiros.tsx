@@ -742,7 +742,7 @@ export default function Parceiros() {
             <div className="flex items-center">
               <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="ml-3">
@@ -1509,8 +1509,10 @@ export default function Parceiros() {
           {/* Lista de veículos */}
           <div className="space-y-3">
             {veiculosParceiro.map((veiculo) => {
+              // Corrigido: Buscar o motorista vinculado ao veículo
               const motoristaVinculado = motoristasParceiro.find(m => 
-                m.id.endsWith('_as_driver') ? v.motoristaVinculado === motorista.parceiroId : v.motoristaVinculado === motorista.id
+                m.id === veiculo.motoristaVinculado || 
+                (veiculo.motoristaVinculado === veiculo.parceiroId && m.id === veiculo.parceiroId)
               );
               
               return (
@@ -1543,7 +1545,7 @@ export default function Parceiros() {
                           {veiculo.tipo === 'Truck' 
                             ? veiculo.placa 
                             : veiculo.tipo === 'Carreta' 
-                              ? (veiculo.placaCarreta || '') 
+                              ? (veiculo.placaCarreta || '-') 
                               : veiculo.placaCavalo}
                         </p>
                       </div>
@@ -1646,8 +1648,10 @@ export default function Parceiros() {
           {/* Lista de motoristas */}
           <div className="space-y-3">
             {motoristasParceiro.map((motorista) => {
+              // Corrigido: Buscar veículos vinculados ao motorista
               const veiculosDoMotorista = veiculosParceiro.filter(v => 
-                motorista.id.endsWith('_as_driver') ? v.motoristaVinculado === motorista.parceiroId : v.motoristaVinculado === motorista.id
+                v.motoristaVinculado === motorista.id || 
+                (motorista.id === motorista.parceiroId && v.motoristaVinculado === motorista.parceiroId)
               );
               const placas = veiculosDoMotorista
                 .map(v => v.tipo === 'Truck' ? (v.placa || '') : v.tipo === 'Carreta' ? (v.placaCarreta || '') : (v.placaCavalo || ''))
