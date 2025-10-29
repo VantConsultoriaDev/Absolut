@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, formatDocument } from '../utils/formatters';
 import { FileText, RefreshCw, Search, AlertTriangle, Download, Send, Mail } from 'lucide-react';
-// Removendo importações não utilizadas: Parceiro, Motorista, Carga
 import { PDFService, ContratoData } from '../services/pdfService';
 
 // Tipagem para os valores editáveis do frete
@@ -38,7 +37,6 @@ interface LoadedData {
 }
 
 const Contratos: React.FC = () => {
-  // Removendo localParceiros, pois não é usado
   const { cargas: localCargas, veiculos: localVeiculos } = useDatabase();
   
   const [selectedCargaId, setSelectedCargaId] = useState('');
@@ -73,10 +71,16 @@ const Contratos: React.FC = () => {
 
   // 3. Função para carregar dados (Simulando Queries Supabase)
   const loadDataFromCarga = useCallback(async () => {
-    if (!selectedCargaId || !supabase) {
+    if (!selectedCargaId) {
       setFreteValores(initialFreteValores);
       setLoadedData(null);
       setPdfUrl(null);
+      return;
+    }
+    
+    if (!supabase) {
+      alert('Erro: Cliente Supabase não inicializado. Verifique as variáveis de ambiente.');
+      setLoading(false);
       return;
     }
 
@@ -84,8 +88,7 @@ const Contratos: React.FC = () => {
     setPdfUrl(null);
     
     try {
-      // 3.1. Carregar Carga + Cliente + Parceiro (INCLUINDO VALOR)
-      // Ajuste na sintaxe de select para garantir que os relacionamentos sejam resolvidos corretamente
+      // 3.1. Carregar Carga + Cliente + Parceiro
       const { data: carga, error: cargaError } = await supabase
         .from('cargas')
         .select(`
@@ -144,7 +147,9 @@ const Contratos: React.FC = () => {
         // Usamos o valor absoluto, pois a classificação é feita pela categoria
         const valor = Math.abs(m.valor || 0); 
         
-        switch (m.categoria) {
+        // Nota: As categorias devem ser consistentes com o que é salvo no banco.
+        // Assumindo que as categorias são salvas em MAIÚSCULAS ou minúsculas.
+        switch (m.categoria?.toUpperCase()) {
           case 'FRETE': VF += valor; break;
           case 'ADIANTAMENTO': AD += valor; break;
           case 'PEDAGIO': PD += valor; break;
@@ -186,7 +191,7 @@ const Contratos: React.FC = () => {
 
     } catch (error) {
       console.error('Erro ao carregar dados do contrato:', error);
-      alert('Erro ao carregar dados do contrato. Verifique a conexão e tente novamente.');
+      alert(`Erro ao carregar dados do contrato. Detalhes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       setLoadedData(null);
       setFreteValores(initialFreteValores);
     } finally {
@@ -232,10 +237,20 @@ const Contratos: React.FC = () => {
       );
     }
 
+    // Ajuste para exibir valores de data corretamente
+    let finalValue = displayValue;
+    if (label.includes('Data') && typeof value === 'string' && value !== '-') {
+        try {
+            finalValue = format(new Date(value), 'dd/MM/yyyy', { locale: ptBR });
+        } catch {
+            finalValue = value;
+        }
+    }
+
     return (
       <div>
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayValue}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{finalValue}</p>
       </div>
     );
   };
@@ -399,8 +414,9 @@ const Contratos: React.FC = () => {
               <DataField label="Origem" value={loadedData.carga.origem} />
               <DataField label="Destino" value={loadedData.carga.destino} />
               <DataField label="Peso (kg)" value={loadedData.carga.peso} />
-              <DataField label="Data Coleta" value={loadedData.carga.data_coleta ? format(new Date(loadedData.carga.data_coleta), 'dd/MM/yyyy', { locale: ptBR }) : '-'} />
-              <DataField label="Data Entrega" value={loadedData.carga.data_entrega ? format(new Date(loadedData.carga.data_entrega), 'dd/MM/yyyy', { locale: ptBR }) : '-'} />
+              <DataField label="Data Coleta" value={loadedData.carga.data_coleta} />
+              <DataField label="Data Entrega" value={loadedData.carga.data_entrega} />
+              <DataField label="Valor Carga" value={loadedData.carga.valor} />
               <DataField label="Cliente" value={loadedData.carga.cliente?.nome || '-'} />
               <DataField label="Parceiro" value={loadedData.carga.parceiro?.nome || '-'} />
               <div className="col-span-2">
@@ -422,7 +438,7 @@ const Contratos: React.FC = () => {
                 <DataField label="CNH" value={getMotoristaDocumentos(loadedData.motorista).cnh} />
                 <DataField label="Telefone" value={loadedData.motorista.telefone} />
                 <DataField label="Categoria CNH" value={loadedData.motorista.categoria_cnh} />
-                <DataField label="Validade CNH" value={loadedData.motorista.validade_cnh ? format(new Date(loadedData.motorista.validade_cnh), 'dd/MM/yyyy', { locale: ptBR }) : '-'} />
+                <DataField label="Validade CNH" value={loadedData.motorista.validade_cnh} />
               </div>
             ) : (
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center">
