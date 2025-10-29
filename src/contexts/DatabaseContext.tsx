@@ -91,6 +91,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         estado: 'SP',
         cep: '04567-890',
         isActive: true,
+        isMotorista: true,
         createdAt: new Date('2024-01-20'),
         updatedAt: new Date('2024-01-20')
       }
@@ -111,19 +112,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         createdAt: new Date('2024-01-12'),
         updatedAt: new Date('2024-01-12')
       },
-      {
-        id: 'motorista-2',
-        parceiroId: 'parceiro-2',
-        nome: 'Carlos Oliveira',
-        cpf: '12345678901',
-        cnh: '98765432109',
-        categoriaCnh: 'C',
-        validadeCnh: new Date('2025-06-30'),
-        telefone: '(11) 9876-5432',
-        isActive: true,
-        createdAt: new Date('2024-01-20'),
-        updatedAt: new Date('2024-01-20')
-      }
+      // Carlos Oliveira (parceiro-2) é motorista, mas não está duplicado aqui
     ]
 
     // Demo veículos
@@ -216,6 +205,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         parceiroId: 'parceiro-1',
         motoristaId: 'motorista-1',
         veiculoId: 'veiculo-1',
+        crt: 'BR722',
         createdAt: new Date('2024-01-14'),
         updatedAt: new Date('2024-01-16')
       },
@@ -230,8 +220,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         dataEntrega: new Date('2024-01-22'),
         status: 'em_transito',
         parceiroId: 'parceiro-2',
-        motoristaId: 'motorista-2',
+        motoristaId: 'parceiro-2', // Parceiro PF que é motorista
         veiculoId: 'veiculo-2',
+        crt: 'BR723',
         createdAt: new Date('2024-01-21'),
         updatedAt: new Date('2024-01-22')
       }
@@ -291,7 +282,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         
         const parsedMotoristas = JSON.parse(savedMotoristas || '[]').map((motorista: any) => ({
           ...motorista,
-          validadeCnh: new Date(motorista.validadeCnh),
+          validadeCnh: motorista.validadeCnh ? new Date(motorista.validadeCnh) : undefined,
           createdAt: new Date(motorista.createdAt),
           updatedAt: new Date(motorista.updatedAt)
         }))
@@ -305,14 +296,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         const parsedMovimentacoes = JSON.parse(savedMovimentacoes || '[]').map((mov: any) => ({
           ...mov,
           data: new Date(mov.data),
+          dataPagamento: mov.dataPagamento ? new Date(mov.dataPagamento) : null,
           createdAt: new Date(mov.createdAt),
           updatedAt: new Date(mov.updatedAt)
         }))
         
         const parsedCargas = JSON.parse(savedCargas || '[]').map((carga: any) => ({
           ...carga,
-          dataColeta: new Date(carga.dataColeta),
-          dataEntrega: new Date(carga.dataEntrega),
+          dataColeta: carga.dataColeta ? new Date(carga.dataColeta) : undefined,
+          dataEntrega: carga.dataEntrega ? new Date(carga.dataEntrega) : undefined,
           createdAt: new Date(carga.createdAt),
           updatedAt: new Date(carga.updatedAt)
         }))
@@ -361,6 +353,76 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
   // Utility function to generate IDs
   const generateId = () => Math.random().toString(36).substr(2, 9)
+
+  // Utility functions for Cargas/Financeiro synchronization
+  const extrairUfECidade = (localCompleto: string) => {
+    if (localCompleto === 'Internacional') {
+      return { uf: 'internacional', cidade: '' };
+    }
+    const partes = localCompleto.split(' - ');
+    if (partes.length === 2) {
+      return { uf: partes[1], cidade: partes[0] };
+    } else {
+      return { uf: localCompleto, cidade: '' };
+    }
+  };
+
+  const getMotoristaName = (motoristaId: string | undefined): string => {
+    if (!motoristaId) return '';
+    
+    // 1. Tenta encontrar na lista de motoristas
+    const motorista = motoristas.find(m => m.id === motoristaId);
+    if (motorista) return motorista.nome;
+
+    // 2. Tenta encontrar como parceiro PF que é motorista
+    const parceiroMotorista = parceiros.find(p => p.id === motoristaId && p.tipo === 'PF' && p.isMotorista);
+    if (parceiroMotorista) return parceiroMotorista.nome || '';
+
+    return '';
+  };
+
+  const buildMovimentacaoDescription = (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete'): string => {
+    const destinoInfo = extrairUfECidade(carga.destino || '');
+    const cidadeDestino = destinoInfo.cidade || carga.destino || '';
+    const crtDisplay = carga.crt || carga.descricao || carga.id;
+    
+    const motoristaNome = getMotoristaName(carga.motoristaId);
+    const motoristaSufixo = motoristaNome ? ` - ${motoristaNome}` : '';
+
+    // Formato: "{Tipo} - {CRT} - {Cidade Destino} - {Motorista Vinculado}"
+    return `${prefix} - ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`;
+  };
+
+  const syncMovimentacoesForCarga = (cargaId: string) => {
+    const carga = cargas.find(c => c.id === cargaId);
+    if (!carga) return;
+
+    setMovimentacoes(prevMovimentacoes => {
+      return prevMovimentacoes.map(mov => {
+        if (mov.cargaId === cargaId) {
+          let prefix: 'Adto' | 'Saldo' | 'Frete';
+          
+          if (mov.descricao.startsWith('Adto')) {
+            prefix = 'Adto';
+          } else if (mov.descricao.startsWith('Saldo')) {
+            prefix = 'Saldo';
+          } else {
+            prefix = 'Frete';
+          }
+
+          const newDescription = buildMovimentacaoDescription(carga, prefix);
+          
+          // Atualiza apenas a descrição e o updatedAt
+          return {
+            ...mov,
+            descricao: newDescription,
+            updatedAt: new Date()
+          };
+        }
+        return mov;
+      });
+    });
+  };
 
   // Cliente operations
   const createCliente = (clienteData: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>): Cliente => {
@@ -444,7 +506,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         ? { ...parceiro, ...parceiroData, updatedAt: new Date() }
         : parceiro
     ))
-    return getParceiroById(id)
+    // Se o parceiro for um motorista (PF), precisamos sincronizar as cargas
+    const updatedParceiro = getParceiroById(id);
+    if (updatedParceiro?.tipo === 'PF' && updatedParceiro.isMotorista) {
+        syncMovimentacoesForCarga(id); // Sincroniza se o ID do parceiro for usado como motoristaId
+    }
+    return updatedParceiro;
   }
 
   const deleteParceiro = (id: string): boolean => {
@@ -477,6 +544,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         ? { ...motorista, ...motoristaData, updatedAt: new Date() }
         : motorista
     ))
+    // Sincroniza as cargas que usam este motorista
+    syncMovimentacoesForCarga(id);
     return motoristas.find(m => m.id === id) || null
   }
 
@@ -558,12 +627,22 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }
 
   const updateCarga = (id: string, cargaData: Partial<Carga>): Carga | null => {
-    setCargas(prev => prev.map(carga => 
-      carga.id === id 
-        ? { ...carga, ...cargaData, updatedAt: new Date() }
-        : carga
-    ))
-    return cargas.find(c => c.id === id) || null
+    let updatedCarga: Carga | null = null;
+    
+    setCargas(prev => prev.map(carga => {
+      if (carga.id === id) {
+        updatedCarga = { ...carga, ...cargaData, updatedAt: new Date() };
+        return updatedCarga;
+      }
+      return carga;
+    }));
+
+    // Se a carga foi atualizada e possui movimentações financeiras, sincroniza a descrição
+    if (updatedCarga) {
+      syncMovimentacoesForCarga(id);
+    }
+    
+    return updatedCarga;
   }
 
   const deleteCarga = (id: string): boolean => {
@@ -604,7 +683,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     deleteMovimentacao,
     createCarga,
     updateCarga,
-    deleteCarga
+    deleteCarga,
+    // Utility functions
+    getMotoristaName,
+    buildMovimentacaoDescription,
+    syncMovimentacoesForCarga
   }
 
   return (

@@ -201,4 +201,9 @@ export interface DatabaseContextType {
   createCarga: (carga: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>) => Carga
   updateCarga: (id: string, carga: Partial<Carga>) => Carga | null
   deleteCarga: (id: string) => boolean
+
+  // Utility functions for Cargas/Financeiro synchronization
+  getMotoristaName: (motoristaId: string | undefined) => string
+  buildMovimentacaoDescription: (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete') => string
+  syncMovimentacoesForCarga: (cargaId: string) => void
 }
