@@ -412,7 +412,7 @@ const Cargas: React.FC = () => {
         ? `${formData.cidadeOrigem} - ${formData.ufOrigemSelecionada}`
         : formData.ufOrigemSelecionada;
 
-    // Construir destino baseado na UF e cidade
+    // Construir destino baseada na UF e cidade
     const destinoCompleto = formData.ufDestinoSelecionada === 'internacional' 
       ? 'Internacional'
       : formData.cidadeDestino 
@@ -527,14 +527,6 @@ const Cargas: React.FC = () => {
     setFormData(formDataToSet);
     setOriginalFormData(formDataToSet);
     setEditingCarga(carga);
-    if (e) {
-      // const rect = e.currentTarget.getBoundingClientRect(); // Removido para corrigir TS6133
-      // const left = Math.min(rect.left + window.scrollX, window.scrollX + window.innerWidth - 520); // Removido
-      // const top = rect.bottom + window.scrollY + 8; // Removido
-      // Removed setFormAnchor as it's not used for modal positioning anymore
-    } else {
-      // Removed setFormAnchor as it's not used for modal positioning anymore
-    }
     setShowForm(true);
     setHasUnsavedChanges(false);
   };
@@ -593,11 +585,15 @@ const Cargas: React.FC = () => {
     if (linkingCarga) {
       const veiculoSelecionado = veiculos.find(v => v.id === selectedVeiculo);
       const isCavalo = veiculoSelecionado?.tipo === 'Cavalo';
+      
+      // Se o veículo não for Cavalo, limpa a seleção de carretas
+      const carretasParaSalvar = isCavalo ? selectedCarretas : undefined;
+
       updateCarga(linkingCarga.id, {
         parceiroId: selectedParceiro || undefined,
         motoristaId: selectedMotorista || undefined,
         veiculoId: selectedVeiculo || undefined,
-        carretasSelecionadas: isCavalo ? selectedCarretas : undefined
+        carretasSelecionadas: carretasParaSalvar
       });
       setShowLinkModal(false);
       setLinkingCarga(null);
@@ -726,7 +722,7 @@ const Cargas: React.FC = () => {
       valorARS: '',
       taxaConversao: '',
       valorBRL: '',
-      valorBRLExtra: '',
+      valorBRLExtra: '', // Added missing field
       
       // C. Diárias
       diariasEnabled: false,
@@ -1020,9 +1016,18 @@ const Cargas: React.FC = () => {
   }, [selectedParceiro, motoristas, parceiros]);
 
   const filteredVeiculos = useMemo(() => {
-    const base = selectedParceiro ? veiculos.filter(v => v.parceiroId === selectedParceiro) : veiculos;
-    // Excluir carretas do dropdown de veículo (somente Truck e Cavalo)
-    return base.filter(v => v.tipo !== 'Carreta');
+    // Filtra apenas Truck e Cavalo para a seleção principal de veículo
+    const base = selectedParceiro 
+      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo !== 'Carreta') 
+      : veiculos.filter(v => v.tipo !== 'Carreta');
+    return base;
+  }, [selectedParceiro, veiculos]);
+
+  const filteredCarretas = useMemo(() => {
+    // Filtra apenas Carretas para a seleção secundária
+    return selectedParceiro 
+      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta') 
+      : [];
   }, [selectedParceiro, veiculos]);
 
   // Seleção automática de veículo quando motorista é selecionado
@@ -1049,6 +1054,12 @@ const Cargas: React.FC = () => {
     }
   }, [selectedMotorista, filteredMotoristas, veiculos, motoristas]);
 
+  // Verifica se o veículo selecionado é um Cavalo
+  const isSelectedVehicleCavalo = useMemo(() => {
+    if (!selectedVeiculo) return false;
+    const veiculo = veiculos.find(v => v.id === selectedVeiculo);
+    return veiculo?.tipo === 'Cavalo';
+  }, [selectedVeiculo, veiculos]);
 
 
   return (
@@ -1409,11 +1420,16 @@ const Cargas: React.FC = () => {
                         (() => {
                           const veiculo = veiculos.find(v => v.id === carga.veiculoId);
                           if (!veiculo) return 'Veículo não encontrado';
-                          return veiculo.tipo === 'Truck' 
+                          
+                          let placaPrincipal = veiculo.tipo === 'Truck' 
                             ? veiculo.placa 
-                            : (veiculo.tipo === 'Carreta' 
-                                ? (veiculo.placaCarreta || '-') 
-                                : (veiculo.placaCavalo || veiculo.placa));
+                            : (veiculo.placaCavalo || veiculo.placa);
+                          
+                          if (carga.carretasSelecionadas && carga.carretasSelecionadas.length > 0) {
+                            placaPrincipal += ` + ${carga.carretasSelecionadas.length} Carreta(s)`;
+                          }
+                          
+                          return placaPrincipal;
                         })() 
                         : '-'
                       }
@@ -1843,56 +1859,62 @@ const Cargas: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Veículo
+                  Veículo (Truck ou Cavalo)
                 </label>
                 <select
                   value={selectedVeiculo}
-                  onChange={(e) => setSelectedVeiculo(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedVeiculo(e.target.value);
+                    setSelectedCarretas([]); // Limpa carretas ao mudar o veículo principal
+                  }}
                   disabled={!selectedParceiro}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
                 >
                   <option value="">Selecione um veículo</option>
                   {filteredVeiculos.map(veiculo => (
                     <option key={veiculo.id} value={veiculo.id}>
-                      {veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.placaCavalo || veiculo.placa)}
+                      {veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.placaCavalo || veiculo.placa)} ({veiculo.tipo})
                     </option>
                   ))}
                 </select>
               </div>
 
               {/* Seleção de Carretas quando o veículo for Cavalo */}
-              {selectedParceiro && selectedVeiculo && (() => {
-                const vSel = veiculos.find(v => v.id === selectedVeiculo);
-                if (vSel?.tipo !== 'Cavalo') return null;
-                const carretasDoParceiro = veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta');
-                return (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Carretas do Parceiro (selecione uma ou mais)
-                    </label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2">
-                      {carretasDoParceiro.length === 0 && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Nenhuma carreta cadastrada para este parceiro</p>
-                      )}
-                      {carretasDoParceiro.map(carreta => (
-                        <label key={carreta.id} className="flex items-center justify-between p-2 rounded">
-                          <span className="text-sm">{carreta.placaCarreta || '-'}</span>
-                          <input
-                            type="checkbox"
-                            checked={selectedCarretas.includes(carreta.id)}
-                            onChange={() => {
-                              setSelectedCarretas(prev => prev.includes(carreta.id)
-                                ? prev.filter(id => id !== carreta.id)
-                                : [...prev, carreta.id]
-                              );
-                            }}
-                          />
-                        </label>
-                      ))}
-                    </div>
+              {isSelectedVehicleCavalo && filteredCarretas.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Carretas do Parceiro (selecione uma ou mais)
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2">
+                    {filteredCarretas.map(carreta => (
+                      <label key={carreta.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {carreta.placaCarreta || carreta.placa || 'Carreta sem placa'}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={selectedCarretas.includes(carreta.id)}
+                          onChange={() => {
+                            setSelectedCarretas(prev => prev.includes(carreta.id)
+                              ? prev.filter(id => id !== carreta.id)
+                              : [...prev, carreta.id]
+                            );
+                          }}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                      </label>
+                    ))}
                   </div>
-                );
-              })()}
+                </div>
+              )}
+              
+              {isSelectedVehicleCavalo && filteredCarretas.length === 0 && (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    O veículo selecionado é um Cavalo, mas não há carretas cadastradas para este parceiro.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex space-x-3 mt-6">
@@ -2359,7 +2381,7 @@ const Cargas: React.FC = () => {
                   className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   Cancelar
-                </button>
+              </button>
                 <button
                   onClick={handleIntegrateSubmit}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
