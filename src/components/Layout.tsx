@@ -11,7 +11,6 @@ import {
   Moon,
   LogOut,
   ChevronRight,
-  Handshake, // Importando o novo ícone
   FileText // Novo ícone para Contratos
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -39,7 +38,7 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { name: 'Parceiros', href: '/parceiros', icon: Handshake, permission: 'parceiros' }, // Usando Handshake
+    { name: 'Parceiros', href: '/parceiros', icon: Users, permission: 'parceiros' }, // Usando Users
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ]
 
