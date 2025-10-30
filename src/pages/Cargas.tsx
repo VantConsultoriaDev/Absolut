@@ -90,7 +90,8 @@ const Cargas: React.FC = () => {
     clientes,
     createMovimentacao,
     movimentacoes,
-    buildMovimentacaoDescription, // Importado do contexto
+    buildMovimentacaoDescription,
+    generateContract, // NOVO: Função para gerar contrato
   } = useDatabase();
 
   const [showForm, setShowForm] = useState(false);
@@ -421,9 +422,12 @@ const Cargas: React.FC = () => {
     const diarias = integrateData.diariasEnabled ? parseCurrency(integrateData.valorDiarias || '') : 0;
     const extrasTotal = despesasAdicionais + diarias;
 
+    // Array para armazenar as novas movimentações criadas
+    const newMovs: string[] = [];
+
     // Case 1: No split, no extras
     if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
-      createMovimentacao({
+      const newMov = createMovimentacao({
         tipo: 'despesa',
         valor: valorTotal,
         descricao: buildMovimentacaoDescription(integratingCarga, 'Frete'), // Usando função do contexto
@@ -433,6 +437,7 @@ const Cargas: React.FC = () => {
         cargaId: integratingCarga.id,
         observacoes: `Integração sem adiantamento. Valor da carga: ${formatCurrency(valorTotal)}`
       });
+      newMovs.push(newMov.id);
     } 
     // Case 2: With split (Adiantamento/Saldo)
     else if (integrateData.adiantamentoEnabled) {
@@ -446,7 +451,7 @@ const Cargas: React.FC = () => {
       const dataAdiant = integrateData.dataVencimentoAdiantamento ? new Date(integrateData.dataVencimentoAdiantamento) : new Date();
       const dataSaldo = integrateData.dataVencimentoSaldo ? new Date(integrateData.dataVencimentoSaldo) : new Date();
 
-      createMovimentacao({
+      const movAdto = createMovimentacao({
         tipo: 'despesa',
         valor: valorAdiantamentoFinal,
         descricao: buildMovimentacaoDescription(integratingCarga, 'Adto'), // Usando função do contexto
@@ -456,8 +461,9 @@ const Cargas: React.FC = () => {
         cargaId: integratingCarga.id,
         observacoes: `Adiantamento ${integrateData.adiantamentoPercentual}%: ${formatCurrency(valorAdiantamento)}${extrasTotal > 0 && integrateData.somaOpcao === 'adiantamento' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
       });
+      newMovs.push(movAdto.id);
 
-      createMovimentacao({
+      const movSaldo = createMovimentacao({
         tipo: 'despesa',
         valor: valorSaldoFinal,
         descricao: buildMovimentacaoDescription(integratingCarga, 'Saldo'), // Usando função do contexto
@@ -467,11 +473,12 @@ const Cargas: React.FC = () => {
         cargaId: integratingCarga.id,
         observacoes: `Saldo ${100 - parseFloat(integrateData.adiantamentoPercentual)}%: ${formatCurrency(valorSaldo)}${extrasTotal > 0 && integrateData.somaOpcao === 'saldo' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
       });
+      newMovs.push(movSaldo.id);
     } 
     // Case 3: No split, but with extras
     else {
       const valorFinal = valorTotal + extrasTotal;
-      createMovimentacao({
+      const newMov = createMovimentacao({
         tipo: 'despesa',
         valor: valorFinal,
         descricao: buildMovimentacaoDescription(integratingCarga, 'Frete'), // Usando função do contexto
@@ -481,6 +488,16 @@ const Cargas: React.FC = () => {
         cargaId: integratingCarga.id,
         observacoes: `Valor da carga: ${formatCurrency(valorTotal)}${extrasTotal > 0 ? `, Extras: ${formatCurrency(extrasTotal)}` : ''}`
       });
+      newMovs.push(newMov.id);
+    }
+
+    // GATILHO AUTOMÁTICO DE CONTRATO
+    // A regra B (informações financeiras finalizadas) é considerada cumprida
+    // assim que a integração é realizada, pois os valores finais estão definidos.
+    if (integratingCarga.id) {
+      // Nota: A Edge Function só funcionará com IDs de carga que sejam UUIDs reais do Supabase.
+      // Para dados locais (IDs curtos), isso falhará, mas a lógica de chamada está correta.
+      generateContract(integratingCarga.id);
     }
 
     handleCloseIntegrateModal();

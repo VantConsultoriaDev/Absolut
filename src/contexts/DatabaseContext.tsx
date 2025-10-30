@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga } from '../types'
-
+import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete } from '../types'
+import { supabase } from '../lib/supabaseClient'
+import { useAuth } from './AuthContext' // Necessário para obter o userId
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
 
@@ -17,6 +18,8 @@ interface DatabaseProviderProps {
 }
 
 export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) => {
+  const { user } = useAuth() // Usar o usuário autenticado
+  
   // A lista de usuários será sempre vazia, pois a gestão é feita pelo Supabase
   const [users] = useState<User[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -25,6 +28,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [veiculos, setVeiculos] = useState<Veiculo[]>([])
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoFinanceira[]>([])
   const [cargas, setCargas] = useState<Carga[]>([])
+  const [contratos, setContratos] = useState<ContratoFrete[]>([]) // Novo estado para contratos
+
+  // Utility function to generate IDs
+  const generateId = () => Math.random().toString(36).substr(2, 9)
 
   // Initialize demo data (excluding users)
   const initializeDemoData = () => {
@@ -227,6 +234,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         updatedAt: new Date('2024-01-22')
       }
     ]
+    
+    // Demo contratos (vazio inicialmente)
+    const demoContratos: ContratoFrete[] = []
 
     return {
       clientes: demoClientes,
@@ -234,40 +244,35 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       motoristas: demoMotoristas,
       veiculos: demoVeiculos,
       movimentacoes: demoMovimentacoes,
-      cargas: demoCargas
+      cargas: demoCargas,
+      contratos: demoContratos
     }
   }
 
   // Load data from localStorage on mount
   useEffect(() => {
     const loadData = () => {
-      // const savedUsers = localStorage.getItem('absolut_users') // REMOVIDO
       const savedClientes = localStorage.getItem('absolut_clientes')
       const savedParceiros = localStorage.getItem('absolut_parceiros')
       const savedMotoristas = localStorage.getItem('absolut_motoristas')
       const savedVeiculos = localStorage.getItem('absolut_veiculos')
       const savedMovimentacoes = localStorage.getItem('absolut_movimentacoes')
       const savedCargas = localStorage.getItem('absolut_cargas')
+      const savedContratos = localStorage.getItem('absolut_contratos') // Novo
 
       // If no data exists, initialize with demo data
       if (!savedParceiros || !savedClientes) {
         const demoData = initializeDemoData()
-        // setUsers([]) // Usuários sempre vazios
         setClientes(demoData.clientes)
         setParceiros(demoData.parceiros)
         setMotoristas(demoData.motoristas)
         setVeiculos(demoData.veiculos)
         setMovimentacoes(demoData.movimentacoes)
         setCargas(demoData.cargas)
+        setContratos(demoData.contratos)
       } else {
         // Load existing data and convert date strings back to Date objects
         
-        // const parsedUsers = JSON.parse(savedUsers || '[]').map((user: any) => ({ // REMOVIDO
-        //   ...user,
-        //   createdAt: new Date(user.createdAt),
-        //   updatedAt: new Date(user.updatedAt)
-        // }))
-
         const parsedClientes = JSON.parse(savedClientes || '[]').map((cliente: any) => ({
           ...cliente,
           createdAt: new Date(cliente.createdAt),
@@ -309,24 +314,27 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           updatedAt: new Date(carga.updatedAt)
         }))
         
-        // setUsers(parsedUsers) // REMOVIDO
+        const parsedContratos = JSON.parse(savedContratos || '[]').map((contrato: any) => ({
+          ...contrato,
+          createdAt: new Date(contrato.createdAt),
+          updatedAt: new Date(contrato.updatedAt)
+        }))
+
         setClientes(parsedClientes)
         setParceiros(parsedParceiros)
         setMotoristas(parsedMotoristas)
         setVeiculos(parsedVeiculos)
         setMovimentacoes(parsedMovimentacoes)
         setCargas(parsedCargas)
+        setContratos(parsedContratos)
       }
     }
 
     loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Save data to localStorage whenever state changes
-  // useEffect(() => { // REMOVIDO
-  //   localStorage.setItem('absolut_users', JSON.stringify(users))
-  // }, [users])
-
   useEffect(() => {
     localStorage.setItem('absolut_clientes', JSON.stringify(clientes))
   }, [clientes])
@@ -350,9 +358,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   useEffect(() => {
     localStorage.setItem('absolut_cargas', JSON.stringify(cargas))
   }, [cargas])
-
-  // Utility function to generate IDs
-  const generateId = () => Math.random().toString(36).substr(2, 9)
+  
+  useEffect(() => {
+    localStorage.setItem('absolut_contratos', JSON.stringify(contratos))
+  }, [contratos])
 
   // Utility functions for Cargas/Financeiro synchronization
 
@@ -671,8 +680,85 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     
     // 2. Exclui a carga
     setCargas(prev => prev.filter(carga => carga.id !== id))
+    
+    // 3. Exclui o contrato associado (se existir)
+    setContratos(prev => prev.filter(contrato => contrato.cargaId !== id))
+    
     return true
   }
+
+  // Contrato Operations
+  const getContracts = useCallback(async (): Promise<ContratoFrete[]> => {
+    if (!supabase || !user) {
+      // Retorna dados mockados/locais se Supabase não estiver pronto
+      return contratos;
+    }
+    
+    // Em uma aplicação real, buscaríamos do Supabase
+    try {
+      const { data, error } = await supabase
+        .from('contratos_frete')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      // Mapeia datas de volta para objetos Date
+      const fetchedContratos: ContratoFrete[] = data.map(c => ({
+        ...c,
+        createdAt: new Date(c.created_at),
+        updatedAt: new Date(c.updated_at)
+      }));
+      
+      setContratos(fetchedContratos);
+      return fetchedContratos;
+      
+    } catch (error) {
+      console.error('Erro ao buscar contratos do Supabase:', error);
+      // Fallback para dados locais em caso de erro de API
+      return contratos;
+    }
+  }, [contratos, user]);
+
+  const generateContract = useCallback(async (cargaId: string) => {
+    if (!supabase || !user) {
+      alert('Erro: Supabase não está pronto ou usuário não autenticado.');
+      return;
+    }
+    
+    const projectRef = 'qoeocxprlioianbordjt'; // Supabase Project ID
+    const edgeFunctionUrl = `https://${projectRef}.supabase.co/functions/v1/generate-contract`;
+    
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cargaId, userId: user.id }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Falha ao gerar contrato na Edge Function.');
+      }
+      
+      // Após a geração bem-sucedida, atualiza a lista de contratos
+      await getContracts();
+      
+      alert(`Contrato gerado/regenerado com sucesso! URL: ${result.pdfUrl}`);
+      
+    } catch (error) {
+      console.error('Erro na geração do contrato:', error);
+      alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    }
+  }, [user, getContracts]);
+
 
   // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas/Parceiros mudarem
   useEffect(() => {
@@ -698,6 +784,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargas, motoristas, parceiros]); // Depende de cargas, motoristas e parceiros para capturar mudanças de nome/vínculo
 
+  // Efeito para carregar contratos na inicialização
+  useEffect(() => {
+    getContracts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Recarrega quando o usuário autentica
+
   const value: DatabaseContextType = {
     users,
     clientes,
@@ -706,6 +798,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     veiculos,
     movimentacoes,
     cargas,
+    contratos, // Novo
     createCliente,
     updateCliente,
     deleteCliente,
@@ -732,6 +825,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     createCarga,
     updateCarga,
     deleteCarga,
+    // Contrato functions
+    generateContract,
+    getContracts,
     // Utility functions
     getMotoristaName,
     buildMovimentacaoDescription,

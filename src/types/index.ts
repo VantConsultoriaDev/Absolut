@@ -129,6 +129,17 @@ export interface Carga {
   updatedAt: Date
 }
 
+export interface ContratoFrete {
+  id: string
+  cargaId: string
+  pdfUrl: string
+  motoristaNome?: string
+  parceiroNome?: string
+  crt?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<boolean>
@@ -150,6 +161,7 @@ export interface DatabaseContextType {
   veiculos: Veiculo[]
   movimentacoes: MovimentacaoFinanceira[]
   cargas: Carga[]
+  contratos: ContratoFrete[] // Novo
   
   // User operations (Removidas as funções CRUD)
   createUser: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => User
@@ -191,6 +203,10 @@ export interface DatabaseContextType {
   updateCarga: (id: string, carga: Partial<Carga>) => Carga | null
   deleteCarga: (id: string) => boolean
 
+  // Contrato operations (Novo)
+  generateContract: (cargaId: string) => Promise<void>
+  getContracts: () => Promise<ContratoFrete[]>
+  
   // Utility functions for Cargas/Financeiro synchronization
   getMotoristaName: (motoristaId: string | undefined) => string
   buildMovimentacaoDescription: (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete') => string
