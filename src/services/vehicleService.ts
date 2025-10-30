@@ -1,3 +1,8 @@
+import axios from 'axios';
+
+// O token deve ser lido das variáveis de ambiente
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+
 // Interface para resposta da API de consulta de placa
 export interface PlacaResponse {
   success: boolean;
@@ -22,7 +27,6 @@ export interface PlacaData {
 
 export class VehicleService {
   private static readonly API_URL = 'https://gateway.apibrasil.io/api/v2/vehicles/base/000/dados';
-  private static readonly BEARER_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ';
 
   // Consultar dados da placa usando nova API com Bearer token
   static async consultarPlaca(placa: string): Promise<PlacaData | null> {
@@ -34,23 +38,27 @@ export class VehicleService {
         throw new Error('Placa inválida');
       }
 
-      const response = await fetch(this.API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.BEARER_TOKEN}`
-        },
-        body: JSON.stringify({
-          placa: placaLimpa,
-          homolog: false
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao consultar placa: ${response.status}`);
+      if (!API_TOKEN) {
+        console.error('VehicleService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
+        throw new Error('Token de API não configurado.');
       }
 
-      const result = await response.json();
+      const response = await axios.post(
+        this.API_URL,
+        {
+          placa: placaLimpa,
+          homolog: false,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_TOKEN}`
+          },
+          timeout: 120000, // 120 segundos
+        }
+      );
+      
+      const result = response.data;
       
       // Verifica se a resposta contém dados válidos
       if (!result || result.error) {

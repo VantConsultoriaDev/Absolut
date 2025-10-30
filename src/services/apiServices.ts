@@ -1,6 +1,9 @@
 // Serviços para integração com APIs externas
 import axios from 'axios';
 
+// O token deve ser lido das variáveis de ambiente
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+
 // Interface para dados de CNPJ
 export interface CNPJData {
   cnpj: string;
@@ -51,11 +54,14 @@ export interface VehicleData {
 export class APIService {
   private static readonly CNPJ_API_URL = 'https://gateway.apibrasil.io/api/v2/dados/cnpj/credits';
   private static readonly VEHICLE_API_URL = 'https://gateway.apibrasil.io/api/v2/vehicles/base/000/dados';
-  private static readonly API_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ'; // substitua pelo seu token Bearer
   
   // Método para buscar dados do CNPJ
   static async fetchCNPJData(cnpj: string): Promise<CNPJData | null> {
     try {
+      if (!API_TOKEN) {
+        throw new Error('API Token não configurado.');
+      }
+      
       // Remove formatação do CNPJ (pontos, barras, hífens)
       const cleanCNPJ = cnpj.replace(/[^\d]/g, '');
       
@@ -72,7 +78,7 @@ export class APIService {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.API_TOKEN}`,
+            Authorization: `Bearer ${API_TOKEN}`,
           },
           timeout: 120000, // 120 segundos
         }
@@ -93,6 +99,10 @@ export class APIService {
   // Método para buscar dados do veículo
   static async fetchVehicleData(placa: string): Promise<VehicleData | null> {
     try {
+      if (!API_TOKEN) {
+        throw new Error('API Token não configurado.');
+      }
+      
       // Remove formatação da placa
       const cleanPlaca = placa.replace(/[^\w]/g, '').toUpperCase();
       
@@ -109,7 +119,7 @@ export class APIService {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.API_TOKEN}`,
+            Authorization: `Bearer ${API_TOKEN}`,
           },
           timeout: 120000, // 120 segundos
         }
@@ -241,10 +251,13 @@ export const useAPIService = () => {
 
 // Função separada para consulta de CNPJ conforme solicitado
 const API_URL_CNPJ = "https://gateway.apibrasil.io/api/v2/dados/cnpj/credits";
-const API_TOKEN_CNPJ = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ"; // substitua pelo seu token Bearer
 
 export async function consultarCnpj(cnpj: string) {
   try {
+    if (!API_TOKEN) {
+      throw new Error('API Token não configurado.');
+    }
+    
     const response = await axios.post(
       API_URL_CNPJ,
       {
@@ -254,7 +267,7 @@ export async function consultarCnpj(cnpj: string) {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN_CNPJ}`,
+          Authorization: `Bearer ${API_TOKEN}`,
         },
         timeout: 120000,
       }
@@ -273,10 +286,13 @@ export async function consultarCnpj(cnpj: string) {
 
 // Função separada para consulta de placa conforme solicitado
 const API_URL_PLACA = "https://gateway.apibrasil.io/api/v2/vehicles/base/000/dados";
-const API_TOKEN_PLACA = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ"; // substitua pelo seu token real
 
 export async function buscarDadosPlaca(placa: string) {
   try {
+    if (!API_TOKEN) {
+      throw new Error('API Token não configurado.');
+    }
+    
     const response = await axios.post(
       API_URL_PLACA,
       {
@@ -286,7 +302,7 @@ export async function buscarDadosPlaca(placa: string) {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN_PLACA}`,
+          Authorization: `Bearer ${API_TOKEN}`,
         },
         timeout: 120000, // 120 segundos
       }

@@ -1,4 +1,7 @@
-// Removido: interface CNPJResponse
+import axios from 'axios';
+
+// O token deve ser lido das variáveis de ambiente
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
 
 interface CNPJData {
   razaoSocial: string;
@@ -20,8 +23,6 @@ interface CNPJData {
 
 export class CNPJService {
   private static readonly API_URL = 'https://gateway.apibrasil.io/api/v2/dados/cnpj/credits';
-  // Token da API ativo
-  private static readonly BEARER_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NjY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ';
   private static readonly USE_SIMULATED_DATA = false; // Flag para usar API real
 
   static async consultarCNPJ(cnpj: string): Promise<CNPJData | null> {
@@ -38,57 +39,40 @@ export class CNPJService {
     const cnpjFormatado = cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
     console.log('CNPJService: CNPJ formatado:', cnpjFormatado);
 
-    // Se a flag de dados simulados estiver ativada, usar dados simulados diretamente
+    if (!API_TOKEN) {
+      console.error('CNPJService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
+      return this.gerarDadosSimulados(cnpjFormatado);
+    }
+
     if (this.USE_SIMULATED_DATA) {
       console.log('CNPJService: Usando dados simulados (API temporariamente desabilitada)');
       return this.gerarDadosSimulados(cnpjFormatado);
     }
     
-    // Configuração do AbortController com timeout de 120 segundos
-    const controller = new AbortController();
-    let timeoutId: number | undefined = setTimeout(() => controller.abort("Timeout excedido"), 120000) as unknown as number; // Explicitly cast to number
-    
     try {
-      console.log('CNPJService: Fazendo requisição para API...');
-      const response = await fetch(this.API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.BEARER_TOKEN}`
-        },
-        body: JSON.stringify({
+      console.log('CNPJService: Fazendo requisição para API com Axios...');
+      
+      const response = await axios.post(
+        this.API_URL,
+        {
           tipo: 'cnpj',
           cnpj: cnpjFormatado
-        }),
-        signal: controller.signal
-      });
-      
-      // Limpa o timeout se a requisição foi bem-sucedida
-      clearTimeout(timeoutId);
-      timeoutId = undefined;
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_TOKEN}`
+          },
+          timeout: 120000, // 120 segundos
+        }
+      );
       
       console.log('CNPJService: Status da resposta:', response.status);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('CNPJService: Erro HTTP:', response.status, errorText);
-        throw new Error(`Erro na consulta do CNPJ: ${response.status} - ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('CNPJService: Dados recebidos da API (brutos):', data);
+      const data = response.data;
       
       // Muitas respostas da ApiBrasil vêm embrulhadas em response.cnpj
       const payload: any = data?.response?.cnpj || data?.response?.data || data?.data || data;
-      console.log('CNPJService: Payload normalizado:', payload);
-      console.log('CNPJService: Tipo do payload:', typeof payload);
-      console.log('CNPJService: Payload é válido?', !!payload && !payload?.error);
-      console.log('CNPJService: Campos disponíveis no payload:', Object.keys(payload || {}));
-      console.log('CNPJService: razao_social:', payload?.razao_social);
-      console.log('CNPJService: nome_fantasia:', payload?.nome_fantasia);
-      console.log('CNPJService: municipio:', payload?.municipio);
-      console.log('CNPJService: uf:', payload?.uf);
-      console.log('CNPJService: cep:', payload?.cep);
 
       // Verifica se a resposta contém dados válidos
       if (!payload || payload.error) {
@@ -141,51 +125,14 @@ export class CNPJService {
       console.log('CNPJService: Dados processados:', resultado);
       return resultado;
       
-    } catch (error: unknown) { // Catch error as unknown
-      // Limpa o timeout em caso de erro
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Identifica o tipo de erro
-      let tipoErro = 'Erro desconhecido';
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        tipoErro = 'Erro de conectividade ou CORS';
-      } else if (error instanceof Error && error.name === 'AbortError') { // Check if error is an instance of Error
-        tipoErro = 'Timeout da requisição';
-      }
-      
-      console.error(`CNPJService: ${tipoErro}:`, error);
-      console.log('CNPJService: Usando dados simulados como fallback');
+    } catch (error: unknown) {
+      console.error(`CNPJService: Erro na requisição da API. Usando dados simulados como fallback:`, error);
       
       // Fallback para dados simulados em caso de erro
       const cnpjLimpo = cnpj.replace(/\D/g, '');
       const cnpjFormatado = cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
       
-      // Dados simulados seguindo a mesma estrutura da API real
-      const nomeFantasiaSimulado = `Empresa Simulada ${cnpjLimpo.slice(-4)} Ltda`;
-      const enderecoSimulado = 'Rua Exemplo, 123'; // Já montado no formato correto
-      
-      const dadosSimulados = {
-        razaoSocial: nomeFantasiaSimulado,                        // ✅ "nome_fantasia" → Nome Empresarial
-        nomeFantasia: nomeFantasiaSimulado,
-        cnpj: cnpjFormatado,
-        situacao: 'Ativa',
-        endereco: enderecoSimulado,                               // ✅ Endereço já montado
-        numero: '123',
-        complemento: '',
-        bairro: 'Centro',
-        cidade: 'São Paulo',                                      // ✅ "municipio" → Cidade
-        uf: 'SP',                                                 // ✅ "uf" → Estado
-        cep: '01000-000',                                         // ✅ "cep"→ CEP
-        telefone: '(11) 99999-9999',                              // ✅ Telefone → Contato
-        email: 'contato@empresa.com.br',
-        atividade: 'Atividades de consultoria em gestão empresarial',
-        simulado: true
-      };
-      
-      console.log('CNPJService: Retornando dados simulados:', dadosSimulados);
-      return dadosSimulados;
+      return this.gerarDadosSimulados(cnpjFormatado);
     }
   }
 
@@ -250,18 +197,18 @@ export class CNPJService {
     const enderecoSimulado = 'Rua Exemplo, 123';
     
     return {
-      razaoSocial: nomeFantasiaSimulado,                        // ✅ "nome_fantasia" → Nome Empresarial
+      razaoSocial: nomeFantasiaSimulado,
       nomeFantasia: nomeFantasiaSimulado,
       cnpj: cnpjFormatado,
       situacao: 'Ativa',
-      endereco: enderecoSimulado,                               // ✅ Endereço já montado
+      endereco: enderecoSimulado,
       numero: '123',
       complemento: '',
       bairro: 'Centro',
-      cidade: 'São Paulo',                                      // ✅ "municipio" → Cidade
-      uf: 'SP',                                                 // ✅ "uf" → Estado
-      cep: '01000-000',                                         // ✅ "cep"→ CEP
-      telefone: '(11) 99999-9999',                              // ✅ Telefone → Contato
+      cidade: 'São Paulo',
+      uf: 'SP',
+      cep: '01000-000',
+      telefone: '(11) 99999-9999',
       email: 'contato@empresa.com.br',
       atividade: 'Atividades de consultoria em gestão empresarial',
       simulado: true
