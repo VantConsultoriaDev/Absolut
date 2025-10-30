@@ -12,7 +12,7 @@ import {
   LogOut,
   ChevronRight,
   FileText,
-  Handshake // Importando o novo ícone
+  Users2 // Substituindo Handshake por Users2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -42,7 +42,7 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { name: 'Parceiros', href: '/parceiros', icon: Handshake, permission: 'parceiros' }, // Usando Handshake
+    { name: 'Parceiros', href: '/parceiros', icon: Users2, permission: 'parceiros' }, // Usando Users2
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ];
 
