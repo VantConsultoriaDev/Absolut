@@ -16,8 +16,8 @@ import UndoButton from './components/UndoButton'
 function App() {
   return (
     <ThemeProvider>
-      <DatabaseProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <DatabaseProvider>
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -33,8 +33,8 @@ function App() {
             </Routes>
             <UndoButton />
           </Router>
-        </AuthProvider>
-      </DatabaseProvider>
+        </DatabaseProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }
