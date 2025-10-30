@@ -36,6 +36,11 @@ interface LoadedData {
   placasCarretas: string;
 }
 
+// Regex simples para verificar se o ID se parece com um UUID (contém hífens e tem o comprimento correto)
+const isUUID = (id: string) => {
+  return id.length === 36 && id.includes('-');
+};
+
 const Contratos: React.FC = () => {
   const { cargas: localCargas, veiculos: localVeiculos } = useDatabase();
   
@@ -84,11 +89,8 @@ const Contratos: React.FC = () => {
       return;
     }
 
-    // Verifica se o ID é um ID de demonstração local (não UUID)
-    // IDs locais são curtos e não contêm hífens (ex: '4nnafwdsx', 'carga-1')
-    const isLocalDemoId = selectedCargaId.length < 15 && !selectedCargaId.includes('-');
-    
-    if (isLocalDemoId) {
+    // VERIFICAÇÃO DE UUID ROBUSTA
+    if (!isUUID(selectedCargaId)) {
         setLoading(false);
         setLoadedData(null);
         alert('Atenção: Esta funcionalidade de Contrato de Frete só funciona com cargas salvas no Supabase (UUIDs). A carga selecionada é um dado de demonstração local.');
