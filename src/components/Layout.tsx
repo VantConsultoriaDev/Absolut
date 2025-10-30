@@ -12,7 +12,8 @@ import {
   LogOut,
   ChevronRight,
   FileText,
-  Briefcase // Novo ícone para Parceiros
+  Briefcase, // Novo ícone para Parceiros
+  FileBadge // Ícone para CRT/MIC
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -42,6 +43,7 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
+    { name: 'CRT/MIC', href: '/crt-mic', icon: FileBadge, permission: 'cargas' }, // NOVO MÓDULO
     { name: 'Parceiros', href: '/parceiros', icon: Briefcase, permission: 'parceiros' }, // Usando Briefcase
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ];
@@ -72,7 +74,7 @@ const Layout: React.FC = () => {
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-lg">
+            <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
               <Truck className="h-6 w-6 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900 dark:text-white">ABSOLUT</span>
@@ -141,7 +143,7 @@ const Layout: React.FC = () => {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
             {filteredNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
+              const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
               const isCollapsed = sidebarCollapsed && !isHovering;
               const IconComponent = item.icon;
               

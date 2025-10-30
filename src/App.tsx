@@ -8,7 +8,8 @@ import Financeiro from './pages/Financeiro'
 import Cargas from './pages/Cargas'
 import Parceiros from './pages/Parceiros'
 import Clientes from './pages/Clientes'
-import Contratos from './pages/Contratos' // Importando a nova página
+import Contratos from './pages/Contratos'
+import CrtMic from './pages/CrtMic' // Importando o novo módulo
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import UndoButton from './components/UndoButton'
@@ -26,9 +27,10 @@ function App() {
               <Route path="inicio" element={<Dashboard />} />
               <Route path="financeiro" element={<Financeiro />} />
               <Route path="cargas" element={<Cargas />} />
+              <Route path="contratos" element={<Contratos />} />
+              <Route path="crt-mic" element={<CrtMic />} /> {/* Nova Rota */}
               <Route path="parceiros" element={<Parceiros />} />
               <Route path="clientes" element={<Clientes />} />
-              <Route path="contratos" element={<Contratos />} /> {/* Nova Rota */}
             </Route>
             </Routes>
             <UndoButton />
