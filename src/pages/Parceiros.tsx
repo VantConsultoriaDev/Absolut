@@ -371,6 +371,29 @@ export default function Parceiros() {
     setEditingMotorista(motorista);
     setShowMotoristaForm(true);
   };
+  
+  const handleEditVeiculo = (veiculo: any) => {
+    setVeiculoForm({
+      tipo: veiculo.tipo || 'Truck',
+      placa: veiculo.placa || '',
+      placaCavalo: veiculo.placaCavalo || '',
+      fabricante: veiculo.fabricante || '',
+      modelo: veiculo.modelo || '',
+      ano: veiculo.ano?.toString() || '',
+      chassis: veiculo.chassis || '',
+      carroceria: veiculo.carroceria || '',
+      quantidadeCarretas: veiculo.quantidadeCarretas || 1,
+      possuiDolly: veiculo.possuiDolly || false,
+      placaCarreta: veiculo.placaCarreta || '',
+      placaCarreta1: veiculo.placaCarreta1 || '',
+      placaCarreta2: veiculo.placaCarreta2 || '',
+      placaDolly: veiculo.placaDolly || '',
+      parceiroId: veiculo.parceiroId || '',
+      motoristaVinculado: veiculo.motoristaVinculado || ''
+    });
+    setEditingVeiculo(veiculo);
+    setShowVeiculoForm(true);
+  };
 
   const handleDeleteParceiro = (id: string) => {
     const parceiro = parceiros.find(p => p.id === id);
@@ -382,6 +405,15 @@ export default function Parceiros() {
       });
       setShowDeleteConfirm(true);
     }
+  };
+  
+  const handleDeleteVeiculo = (veiculo: any) => {
+    setDeleteTarget({
+      type: 'veiculo',
+      id: veiculo.id,
+      name: veiculo.placa || veiculo.placaCavalo || veiculo.placaCarreta || 'Veículo'
+    });
+    setShowDeleteConfirm(true);
   };
 
   const handleBlockParceiro = (parceiro: any) => {
@@ -1086,14 +1118,14 @@ export default function Parceiros() {
                             </button>
                         )}
                         <button
-                          onClick={() => setEditingVeiculo(v)}
+                          onClick={() => handleEditVeiculo(v)}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                           title="Editar Veículo"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteTarget({ type: 'veiculo', id: v.id, name: v.placa || v.placaCavalo || v.placaCarreta || 'Veículo' })}
+                          onClick={() => handleDeleteVeiculo(v)}
                           className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                           title="Excluir Veículo"
                         >
@@ -1539,7 +1571,7 @@ export default function Parceiros() {
                     />
                   </div>
 
-                  {/* CNH (Obrigatório para Brasileiro, Opcional para Estrangeiro) */}
+                  {/* CNH (Obrigatório para Brasileiro) */}
                   {motoristaForm.nacionalidade === 'Brasileiro' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
