@@ -129,12 +129,12 @@ const Layout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 overflow-y-auto"> {/* Removido space-y-1 */}
+          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto"> {/* Reintroduzindo space-y-1 */}
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href
               const isCollapsed = sidebarCollapsed && !isHovering
               
-              // Definindo classes de cor do ícone separadamente
+              // Classes de cor do ícone:
               const iconColorClasses = isActive 
                 ? 'text-red-700 dark:text-red-300' 
                 : 'text-slate-700 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-300';
@@ -144,7 +144,7 @@ const Layout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   title={isCollapsed ? item.name : undefined}
-                  className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 mb-1 ${ // Adicionado mb-1 para espaçamento manual
+                  className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${ // Removido mb-1
                     isActive
                       ? 'bg-red-50 dark:bg-red-900/30'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
