@@ -25,8 +25,6 @@ export default function Parceiros() {
     createVeiculo,
     updateVeiculo,
     deleteVeiculo,
-    getMotoristasByParceiro,
-    getVeiculosByParceiro
   } = useDatabase();
   
   const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
@@ -43,10 +41,6 @@ export default function Parceiros() {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   
-  // Filtros para veículos e motoristas
-  const [veiculoSearchTerm] = useState('');
-  const [motoristaSearchTerm] = useState('');
-
   // Estados para modais de confirmação de exclusão
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{type: 'veiculo' | 'motorista' | 'parceiro', id: string, name: string} | null>(null);
