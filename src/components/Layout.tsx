@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   DollarSign, 
@@ -11,48 +11,49 @@ import {
   Moon,
   LogOut,
   ChevronRight,
-  FileText // Novo ícone para Contratos
-} from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
+  FileText,
+  Handshake // Importando Handshake
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Layout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
-  const [isHovering, setIsHovering] = useState(false)
-  const { user, logout } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
-  const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isHovering) {
       const timer = setTimeout(() => {
-        setSidebarCollapsed(true)
-      }, 300)
-      return () => clearTimeout(timer)
+        setSidebarCollapsed(true);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [isHovering])
+  }, [isHovering]);
 
   const navigation = [
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { name: 'Parceiros', href: '/parceiros', icon: Users, permission: 'parceiros' }, // Usando Users
+    { name: 'Parceiros', href: '/parceiros', icon: Handshake, permission: 'parceiros' }, // Usando Handshake
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
-  ]
+  ];
 
   // Simplificando a verificação de permissão: se o usuário existe, ele tem acesso.
   // A lógica de permissões granulares (view/edit) foi removida com o módulo de usuários.
   const hasPermission = () => {
-    return !!user
-  }
+    return !!user;
+  };
 
-  const filteredNavigation = navigation.filter(() => hasPermission())
+  const filteredNavigation = navigation.filter(() => hasPermission());
 
   const handleLogout = () => {
-    logout()
-  }
+    logout();
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
@@ -82,7 +83,7 @@ const Layout: React.FC = () => {
         </div>
         <nav className="space-y-1 p-4">
           {filteredNavigation.map((item) => {
-            const isActive = location.pathname === item.href
+            const isActive = location.pathname === item.href;
             return (
               <Link
                 key={item.name}
@@ -98,7 +99,7 @@ const Layout: React.FC = () => {
                 <span>{item.name}</span>
                 {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
               </Link>
-            )
+            );
           })}
         </nav>
       </div>
@@ -107,11 +108,11 @@ const Layout: React.FC = () => {
       <div 
         className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed && !isHovering ? 'lg:w-20' : 'lg:w-72'} z-30`}
         onMouseEnter={() => {
-          setIsHovering(true)
-          setSidebarCollapsed(false)
+          setIsHovering(true);
+          setSidebarCollapsed(false);
         }}
         onMouseLeave={() => {
-          setIsHovering(false)
+          setIsHovering(false);
         }}
       >
         <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
@@ -128,10 +129,10 @@ const Layout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto"> {/* Reintroduzindo space-y-1 */}
+          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
             {filteredNavigation.map((item) => {
-              const isActive = location.pathname === item.href
-              const isCollapsed = sidebarCollapsed && !isHovering
+              const isActive = location.pathname === item.href;
+              const isCollapsed = sidebarCollapsed && !isHovering;
               
               // Classes de cor do ícone:
               const iconColorClasses = isActive 
@@ -143,7 +144,7 @@ const Layout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   title={isCollapsed ? item.name : undefined}
-                  className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${ // Removido mb-1
+                  className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-red-50 dark:bg-red-900/30'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -155,7 +156,7 @@ const Layout: React.FC = () => {
                   </span>
                   {!isCollapsed && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
                 </Link>
-              )
+              );
             })}
           </nav>
 
@@ -255,7 +256,7 @@ const Layout: React.FC = () => {
         </main>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;
