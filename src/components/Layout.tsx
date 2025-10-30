@@ -38,15 +38,15 @@ const Layout: React.FC = () => {
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
-    { name: 'Contratos de Frete', href: '/contratos', icon: FileText, permission: 'cargas' }, // Novo item
+    { name: 'Contratos de Frete', href: '/contratos', icon: FileText, permission: 'cargas' },
     { name: 'Parceiros', href: '/parceiros', icon: UserCheck, permission: 'parceiros' },
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ]
 
+  // Simplificando a verificação de permissão: se o usuário existe, ele tem acesso.
+  // A lógica de permissões granulares (view/edit) foi removida com o módulo de usuários.
   const hasPermission = (permission: string) => {
-    if (!user) return false
-    if (user.role === 'admin') return true
-    return user.permissions?.[permission as keyof typeof user.permissions] !== 'none'
+    return !!user
   }
 
   const filteredNavigation = navigation.filter(item => hasPermission(item.permission))
@@ -69,7 +69,7 @@ const Layout: React.FC = () => {
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
+            <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-lg">
               <Truck className="h-6 w-6 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900 dark:text-white">ABSOLUT</span>
@@ -158,8 +158,8 @@ const Layout: React.FC = () => {
           <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${sidebarCollapsed && !isHovering ? 'flex justify-center' : ''}`}>
             <div className={`${sidebarCollapsed && !isHovering ? 'flex justify-center' : 'space-y-3'}`}>
               {!sidebarCollapsed && <div className="px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs">
-                <p className="font-semibold text-slate-900 dark:text-white truncate">{user?.username}</p>
-                <p className="text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
+                <p className="font-semibold text-slate-900 dark:text-white truncate">{user?.email}</p>
+                <p className="text-slate-500 dark:text-slate-400 capitalize">Usuário Autenticado</p>
               </div>}
               <button
                 onClick={handleLogout}
@@ -214,10 +214,10 @@ const Layout: React.FC = () => {
             <div className="hidden sm:flex items-center gap-3">
               <div className="flex flex-col items-end text-right">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {user?.username}
+                  {user?.email}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                  {user?.role}
+                  Usuário Autenticado
                 </p>
               </div>
               <button

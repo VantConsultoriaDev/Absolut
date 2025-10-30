@@ -529,7 +529,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         ? { ...parceiro, ...parceiroData, updatedAt: new Date() }
         : parceiro
     ))
-    // Se o parceiro for um motorista (PF), precisamos sincronizar as cargas
     // Nota: A sincronização de cargas/movimentações será feita no useEffect abaixo
     return getParceiroById(id)
   }

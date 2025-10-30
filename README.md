@@ -32,12 +32,10 @@ Sistema completo de gestão para empresas de transporte, desenvolvido com React,
 - Controle de veículos por parceiro
 - Interface organizada por abas
 
-### 👥 Módulo de Usuários
-- Sistema hierárquico de permissões
-- Três níveis: Administrador Global, Master e Usuário Comum
-- Controle granular de acesso por funcionalidade
-- Gestão completa de usuários com validações
-- Interface segura com verificação de permissões
+### 👥 Módulo de Clientes
+- Gestão de clientes Pessoa Física, Pessoa Jurídica e Internacionais.
+- Cadastro completo com documentos (CPF/CNPJ).
+- Interface organizada e de fácil visualização.
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -66,7 +64,7 @@ src/
 │   ├── Financeiro.tsx  # Gestão financeira
 │   ├── Cargas.tsx      # Gestão de cargas
 │   ├── Parceiros.tsx   # Gestão de parceiros
-│   ├── Usuarios.tsx    # Gestão de usuários
+│   ├── Clientes.tsx    # Gestão de clientes
 │   └── Login.tsx       # Página de login
 └── App.tsx             # Componente raiz
 ```
@@ -80,9 +78,9 @@ src/
 - Mantém relacionamentos entre entidades
 
 #### AuthContext
-- Gerencia autenticação de usuários
-- Controla sessões e permissões
-- Fornece informações do usuário logado
+- Gerencia autenticação de usuários via Supabase
+- Controla sessões
+- Fornece informações básicas do usuário logado (email, ID)
 
 #### ThemeContext
 - Controla tema claro/escuro
@@ -105,24 +103,9 @@ src/
 - Tabelas responsivas
 - Modais e formulários
 
-## 🔐 Sistema de Permissões
+## 🔐 Autenticação
 
-### Níveis de Acesso
-
-#### Administrador Global
-- Acesso total ao sistema
-- Pode criar/editar/excluir qualquer usuário
-- Acesso a todas as funcionalidades
-
-#### Master
-- Acesso avançado com algumas restrições
-- Não pode gerenciar administradores
-- Pode criar usuários Master e Comum
-
-#### Usuário Comum
-- Acesso básico ao sistema
-- Pode editar apenas seu próprio perfil
-- Acesso limitado às funcionalidades
+O sistema utiliza a autenticação padrão do Supabase (email/senha). O acesso é binário: autenticado ou não autenticado.
 
 ## 📱 Responsividade
 
@@ -169,11 +152,6 @@ npm run dev
 
 O sistema inclui dados pré-carregados para demonstração:
 
-### Usuários
-- **admin** (Administrador Global)
-- **master** (Master)
-- **user** (Usuário Comum)
-
 ### Parceiros
 - Empresas de transporte fictícias
 - Motoristas associados
@@ -193,7 +171,6 @@ O sistema inclui dados pré-carregados para demonstração:
 
 ### Validações
 - Validação de formulários em tempo real
-- Verificação de permissões por ação
 - Sanitização de dados de entrada
 
 ### Performance

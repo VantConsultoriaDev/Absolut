@@ -15,7 +15,7 @@ O aplicativo MOBTAX é construído com as seguintes tecnologias principais:
 *   **date-fns**: Biblioteca modular para manipulação e formatação de datas, oferecendo uma alternativa leve ao Moment.js.
 *   **axios**: Cliente HTTP baseado em Promises para fazer requisições a APIs externas.
 *   **XLSX (SheetJS)**: Biblioteca para leitura e escrita de arquivos Excel e CSV, utilizada para funcionalidades de importação.
-*   **Supabase Client**: Cliente JavaScript para interagir com serviços Supabase (autenticação, banco de dados, etc.), embora o armazenamento principal de dados no momento seja via `localStorage`.
+*   **Supabase Client**: Cliente JavaScript para interagir com serviços Supabase (autenticação, banco de dados, etc.).
 *   **Context API (React)**: Utilizada para gerenciamento de estado global, como autenticação, tema e dados do "banco de dados" local.
 
 ## Regras de Uso de Bibliotecas e Ferramentas
@@ -48,7 +48,7 @@ Para garantir consistência, performance e manutenibilidade, siga as seguintes r
 
 8.  **Persistência de Dados**:
     *   **DatabaseContext (localStorage)**: Atualmente, o `DatabaseContext` simula um banco de dados utilizando `localStorage`. Todas as operações CRUD para entidades da aplicação devem ser realizadas através das funções fornecidas por este contexto.
-    *   **Supabase**: O cliente Supabase está configurado (`src/lib/supabaseClient.ts`) para futuras integrações com um backend real. Se a funcionalidade exigir um banco de dados ou autenticação real, o Supabase é a escolha preferencial, mas isso deve ser discutido e implementado de forma a substituir ou estender o `DatabaseContext`.
+    *   **Supabase**: O cliente Supabase está configurado (`src/lib/supabaseClient.ts`) para autenticação e futuras integrações com um backend real.
 
 9.  **Importação de Arquivos**:
     *   **XLSX (SheetJS)**: Para funcionalidades de importação de dados via arquivos CSV ou Excel, utilize a biblioteca `xlsx` conforme demonstrado em `src/services/importService.ts`.

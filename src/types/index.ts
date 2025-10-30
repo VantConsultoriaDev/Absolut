@@ -1,19 +1,7 @@
 export interface User {
   id: string
-  username: string
-  password?: string // Tornar a senha opcional, pois não é retornada pelo Supabase
-  email?: string
+  email: string
   name?: string
-  role: 'admin' | 'master' | 'comum'
-  isActive?: boolean
-  createdBy?: string
-  permissions?: {
-    inicio: 'none' | 'view' | 'edit'
-    financeiro: 'none' | 'view' | 'edit'
-    cargas: 'none' | 'view' | 'edit'
-    parceiros: 'none' | 'view' | 'edit'
-    usuarios: 'none' | 'view' | 'edit'
-  }
   createdAt: Date
   updatedAt: Date
 }
@@ -142,7 +130,7 @@ export interface Carga {
 
 export interface AuthContextType {
   user: User | null
-  login: (username: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   isAuthenticated: boolean
   isLoading: boolean // Adicionado
@@ -154,7 +142,7 @@ export interface ThemeContextType {
 }
 
 export interface DatabaseContextType {
-  users: User[]
+  users: User[] // Mantido como array vazio, mas sem operações CRUD
   clientes: Cliente[]
   parceiros: Parceiro[]
   motoristas: Motorista[]
@@ -162,7 +150,7 @@ export interface DatabaseContextType {
   movimentacoes: MovimentacaoFinanceira[]
   cargas: Carga[]
   
-  // User operations
+  // User operations (Removidas as funções CRUD)
   createUser: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => User
   updateUser: (id: string, user: Partial<User>) => User | null
   deleteUser: (id: string) => boolean

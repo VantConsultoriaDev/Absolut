@@ -16,109 +16,15 @@ interface AuthProviderProps {
   children: React.ReactNode
 }
 
-// Helper para obter permissões com base no role
-const getPermissionsByRole = (role: 'admin' | 'master' | 'comum'): User['permissions'] => {
-  switch (role) {
-    case 'admin':
-      return {
-        inicio: 'edit',
-        financeiro: 'edit',
-        cargas: 'edit',
-        parceiros: 'edit',
-        usuarios: 'edit'
-      };
-    case 'master':
-      return {
-        inicio: 'view',
-        financeiro: 'edit',
-        cargas: 'edit',
-        parceiros: 'edit',
-        usuarios: 'view'
-      };
-    case 'comum':
-    default:
-      return {
-        inicio: 'view',
-        financeiro: 'view',
-        cargas: 'view',
-        parceiros: 'view',
-        usuarios: 'none'
-      };
-  }
-};
-
-// Função para buscar ou criar o perfil do usuário
-const fetchOrCreateProfile = async (sessionUser: any): Promise<User | null> => {
-  if (!supabase) return null;
-
-  // 1. Tenta buscar o perfil existente
-  let { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, role, permissions')
-    .eq('id', sessionUser.id)
-    .single();
-
-  // 2. Se o perfil não existir (e não for um erro de RLS ou outro erro grave), cria um perfil padrão
-  if (profileError && profileError.code === 'PGRST116') { // PGRST116: Linha não encontrada (perfil não existe)
-    console.warn('Perfil não encontrado. Criando perfil padrão...');
-    
-    const defaultRole = (sessionUser.app_metadata?.role as 'admin' | 'master' | 'comum') || 'comum';
-    const defaultPermissions = getPermissionsByRole(defaultRole);
-
-    const newProfileData = {
-      id: sessionUser.id,
-      first_name: sessionUser.email?.split('@')[0] || 'Usuário',
-      last_name: '',
-      role: defaultRole,
-      permissions: defaultPermissions,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    const { data: newProfile, error: insertError } = await supabase
-      .from('profiles')
-      .insert([newProfileData])
-      .select('first_name, last_name, role, permissions')
-      .single();
-
-    if (insertError) {
-      console.error('Erro ao criar perfil padrão:', insertError);
-      // Se falhar ao inserir, retorna o perfil padrão sem tentar buscar novamente
-      profile = newProfileData;
-    } else {
-      profile = newProfile;
-    }
-  } else if (profileError) {
-    console.error('Erro ao buscar perfil do usuário:', profileError);
-    // Se for outro erro (ex: RLS), usa o fallback de dados do auth.users
-    const defaultRole = (sessionUser.app_metadata?.role as 'admin' | 'master' | 'comum') || 'comum';
-    profile = {
-      first_name: sessionUser.email?.split('@')[0] || 'Usuário',
-      last_name: '',
-      role: defaultRole,
-      permissions: getPermissionsByRole(defaultRole)
-    };
-  }
-
-  // 3. Monta o objeto User para o contexto
-  if (profile) {
-    const userRole = (profile.role as 'admin' | 'master' | 'comum') || 'comum';
-    return {
-      id: sessionUser.id,
-      username: profile.first_name || sessionUser.email || 'unknown',
-      email: sessionUser.email || undefined,
-      name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || sessionUser.email || 'Unknown User',
-      role: userRole,
-      isActive: true,
-      // Type assertion para garantir que 'permissions' está no formato correto
-      permissions: (profile.permissions as User['permissions']) || getPermissionsByRole(userRole),
-      createdAt: new Date(sessionUser.created_at!),
-      updatedAt: new Date(sessionUser.updated_at!),
-      password: ''
-    };
-  }
-
-  return null;
+// Função para mapear o usuário da sessão Supabase para a interface User simplificada
+const mapSupabaseUserToAppUser = (sessionUser: any): User => {
+  return {
+    id: sessionUser.id,
+    email: sessionUser.email || 'N/A',
+    name: sessionUser.email || 'Usuário Autenticado',
+    createdAt: new Date(sessionUser.created_at!),
+    updatedAt: new Date(sessionUser.updated_at!),
+  };
 };
 
 
@@ -136,19 +42,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        const authenticatedUser = await fetchOrCreateProfile(session.user);
+        const authenticatedUser = mapSupabaseUserToAppUser(session.user);
         
-        if (authenticatedUser) {
-          setUser(authenticatedUser);
-          setIsAuthenticated(true);
-        } else {
-          // Se falhar ao buscar/criar o perfil, desloga por segurança
-          if (supabase) {
-            await supabase.auth.signOut();
-          }
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+        setUser(authenticatedUser);
+        setIsAuthenticated(true);
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -159,7 +56,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Verificação da sessão inicial (para garantir que o estado inicial seja definido)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        const authenticatedUser = await fetchOrCreateProfile(session.user);
+        const authenticatedUser = mapSupabaseUserToAppUser(session.user);
         if (authenticatedUser) {
           setUser(authenticatedUser);
           setIsAuthenticated(true);
