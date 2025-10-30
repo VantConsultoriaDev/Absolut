@@ -528,8 +528,9 @@ export default function Parceiros() {
     }
   };
 
-  // --- RENDERIZAÇÃO PRINCIPAL (LISTA) ---
+  // --- RENDERIZAÇÃO PRINCIPAL ---
 
+  // Se nenhum parceiro estiver selecionado, mostra a lista
   if (!selectedParceiro) {
     return (
       <div className="space-y-6">
