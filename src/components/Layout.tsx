@@ -45,11 +45,11 @@ const Layout: React.FC = () => {
 
   // Simplificando a verificação de permissão: se o usuário existe, ele tem acesso.
   // A lógica de permissões granulares (view/edit) foi removida com o módulo de usuários.
-  const hasPermission = (permission: string) => {
+  const hasPermission = () => {
     return !!user
   }
 
-  const filteredNavigation = navigation.filter(item => hasPermission(item.permission))
+  const filteredNavigation = navigation.filter(item => hasPermission())
 
   const handleLogout = () => {
     logout()

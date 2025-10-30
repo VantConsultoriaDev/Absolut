@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle, X, Search, Plus, Edit, Trash2, Mail, Phone, MapPin, ChevronRight } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, X, Plus } from 'lucide-react';
 import { format } from 'date-fns'; // Adicionado
 import { 
   formatDocument, 
@@ -31,7 +31,6 @@ export default function Parceiros() {
   } = useDatabase();
   
   const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'veiculos' | 'motoristas'>('veiculos');
   const [showParceiroForm, setShowParceiroForm] = useState(false);
   const [showMotoristaForm, setShowMotoristaForm] = useState(false);
   const [showVeiculoForm, setShowVeiculoForm] = useState(false);
@@ -46,8 +45,8 @@ export default function Parceiros() {
   const [filterStatus, setFilterStatus] = useState('');
   
   // Filtros para veículos e motoristas
-  const [veiculoSearchTerm, setVeiculoSearchTerm] = useState('');
-  const [motoristaSearchTerm, setMotoristaSearchTerm] = useState('');
+  const [veiculoSearchTerm] = useState('');
+  const [motoristaSearchTerm] = useState('');
 
   // Estados para modais de confirmação de exclusão
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -443,30 +442,6 @@ export default function Parceiros() {
     resetMotoristaForm();
   };
 
-  const handleEditMotorista = (motorista: any) => {
-    setMotoristaForm({
-      nome: motorista.nome || '',
-      cpf: motorista.cpf || '',
-      cnh: motorista.cnh || '',
-      parceiroId: motorista.parceiroId || '',
-      veiculoVinculado: motorista.veiculoVinculado || ''
-    });
-    setEditingMotorista(motorista);
-    setShowMotoristaForm(true);
-  };
-
-  const handleDeleteMotorista = (id: string) => {
-    const motorista = motoristasParceiro.find(m => m.id === id);
-    if (motorista) {
-      setDeleteTarget({
-        type: 'motorista',
-        id: id,
-        name: motorista.nome
-      });
-      setShowDeleteConfirm(true);
-    }
-  };
-
   // Handlers para veículos
   const handleVeiculoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -523,41 +498,6 @@ export default function Parceiros() {
     }
 
     resetVeiculoForm();
-  };
-
-  const handleEditVeiculo = (veiculo: any) => {
-    setVeiculoForm({
-      tipo: (veiculo.tipo === 'Conjunto' ? 'Cavalo' : (veiculo.tipo || 'Truck')),
-      placa: veiculo.placa || '',
-      placaCavalo: veiculo.placaCavalo || '',
-      fabricante: veiculo.fabricante || '',
-      modelo: veiculo.modelo || '',
-      ano: veiculo.ano || '',
-      chassis: veiculo.chassis || '',
-      carroceria: veiculo.carroceria || '',
-      quantidadeCarretas: veiculo.quantidadeCarretas || 1,
-      possuiDolly: veiculo.possuiDolly || false,
-      placaCarreta: veiculo.placaCarreta || '',
-      placaCarreta1: veiculo.placaCarreta1 || '',
-      placaCarreta2: veiculo.placaCarreta2 || '',
-      placaDolly: veiculo.placaDolly || '',
-      parceiroId: veiculo.parceiroId || '',
-      motoristaVinculado: veiculo.motoristaVinculado || ''
-    });
-    setEditingVeiculo(veiculo);
-    setShowVeiculoForm(true);
-  };
-
-  const handleDeleteVeiculo = (id: string) => {
-    const veiculo = veiculosParceiro.find(v => v.id === id);
-    if (veiculo) {
-      setDeleteTarget({
-        type: 'veiculo',
-        id: id,
-        name: `${veiculo.fabricante} ${veiculo.modelo} - ${veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.tipo === 'Carreta' ? veiculo.placaCarreta : veiculo.placaCavalo)}`
-      });
-      setShowDeleteConfirm(true);
-    }
   };
 
   // Handler para confirmar exclusão
