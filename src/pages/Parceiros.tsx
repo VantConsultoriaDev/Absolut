@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
 import { XCircle, CheckCircle, AlertTriangle, X, Plus } from 'lucide-react';
-import { format } from 'date-fns'; // Adicionado
 import { 
   formatDocument, 
   formatPlaca
@@ -189,28 +188,22 @@ export default function Parceiros() {
     }).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   }, [parceiros, searchTerm, filterTipo, filterStatus]);
 
-  // Motoristas e veículos do parceiro selecionado
-  const motoristasParceiro = useMemo(() => {
-    if (!selectedParceiro) return [];
-    const motoristasRegistrados = getMotoristasByParceiro(selectedParceiro.id);
+  // Motoristas e veículos do parceiro selecionado (Mantidos para uso futuro, mas sem o useMemo)
+  const getMotoristasParceiro = (parceiroId: string) => {
+    const motoristasRegistrados = getMotoristasByParceiro(parceiroId);
     
-    // Retorna apenas os motoristas registrados, sem incluir o próprio parceiro
-    // mesmo que ele seja marcado como motorista (isMotorista: true)
     let todosMotoristas = [...motoristasRegistrados];
     
-    // Filtrar por nome do motorista
     if (!motoristaSearchTerm) return todosMotoristas;
     
     return todosMotoristas.filter(motorista => 
       motorista.nome?.toLowerCase().includes(motoristaSearchTerm.toLowerCase())
     );
-  }, [selectedParceiro, getMotoristasByParceiro, motoristaSearchTerm]);
+  };
 
-  const veiculosParceiro = useMemo(() => {
-    if (!selectedParceiro) return [];
-    const veiculos = getVeiculosByParceiro(selectedParceiro.id);
+  const getVeiculosParceiro = (parceiroId: string) => {
+    const veiculos = getVeiculosByParceiro(parceiroId);
     
-    // Filtrar por placa do veículo
     if (!veiculoSearchTerm) return veiculos;
     
     return veiculos.filter(veiculo => {
@@ -232,7 +225,7 @@ export default function Parceiros() {
              placaCarreta2?.toLowerCase().includes(searchLower) ||
              placaDolly?.toLowerCase().includes(searchLower);
     });
-  }, [selectedParceiro, getVeiculosByParceiro, veiculoSearchTerm]);
+  };
 
   // Estatísticas
   const stats = useMemo(() => {

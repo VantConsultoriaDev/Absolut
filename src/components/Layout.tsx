@@ -49,7 +49,7 @@ const Layout: React.FC = () => {
     return !!user
   }
 
-  const filteredNavigation = navigation.filter(item => hasPermission())
+  const filteredNavigation = navigation.filter(() => hasPermission())
 
   const handleLogout = () => {
     logout()
