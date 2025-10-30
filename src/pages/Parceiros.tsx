@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, ChevronRight } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, ChevronRight, FileText } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca,
@@ -14,6 +14,16 @@ import { VehicleService } from '../services/vehicleService';
 import { undoService } from '../services/undoService'; 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import PermissoModal from '../components/parceiros/PermissoModal'; // Importando o novo modal
+import { PermissoInternacional } from '../types';
+
+// Define PermissoData localmente para tipagem do estado
+interface PermissoData {
+  razaoSocial: string;
+  cnpj: string;
+  enderecoCompleto: string;
+  simulado?: boolean;
+}
 
 export default function Parceiros() {
   const { 
@@ -29,6 +39,9 @@ export default function Parceiros() {
     createVeiculo,
     updateVeiculo,
     deleteVeiculo,
+    createPermisso, // NOVO
+    updatePermisso, // NOVO
+    getPermissoByVeiculoId, // NOVO
   } = useDatabase();
   
   const [selectedParceiro, setSelectedParceiro] = useState<any>(null);
@@ -36,11 +49,13 @@ export default function Parceiros() {
   const [showParceiroForm, setShowParceiroForm] = useState(false);
   const [showMotoristaForm, setShowMotoristaForm] = useState(false);
   const [showVeiculoForm, setShowVeiculoForm] = useState(false);
-
+  const [showPermissoModal, setShowPermissoModal] = useState(false); // NOVO
   
   const [editingParceiro, setEditingParceiro] = useState<any>(null);
   const [editingMotorista, setEditingMotorista] = useState<any>(null);
   const [editingVeiculo, setEditingVeiculo] = useState<any>(null);
+  const [permissoTargetVeiculo, setPermissoTargetVeiculo] = useState<any>(null); // NOVO
+  const [existingPermisso, setExistingPermisso] = useState<PermissoData | null>(null); // NOVO
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -470,6 +485,48 @@ export default function Parceiros() {
 
     resetVeiculoForm();
   };
+  
+  // Handlers para Permisso (NOVO)
+  const handleOpenPermissoModal = (veiculo: any) => {
+    setPermissoTargetVeiculo(veiculo);
+    const existing = getPermissoByVeiculoId(veiculo.id);
+    
+    if (existing) {
+        setExistingPermisso({
+            razaoSocial: existing.razaoSocial,
+            cnpj: formatDocument(existing.cnpj, 'PJ'), // Formata CNPJ para exibição
+            enderecoCompleto: existing.enderecoCompleto || '',
+            simulado: existing.simulado
+        });
+    } else {
+        setExistingPermisso(null);
+    }
+    setShowPermissoModal(true);
+  };
+
+  const handleSavePermisso = (veiculoId: string, data: PermissoData) => {
+    const permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'> = {
+        veiculoId: veiculoId,
+        razaoSocial: data.razaoSocial,
+        cnpj: parseDocument(data.cnpj), // Salva limpo
+        enderecoCompleto: data.enderecoCompleto,
+        simulado: data.simulado
+    };
+    
+    const existing = getPermissoByVeiculoId(veiculoId);
+    
+    if (existing) {
+        updatePermisso(existing.id, permissoData);
+    } else {
+        createPermisso(permissoData, veiculoId);
+    }
+    
+    // Atualiza o estado do veículo para refletir o novo permisso
+    const updatedPermisso = getPermissoByVeiculoId(veiculoId);
+    if (updatedPermisso) {
+        updateVeiculo(veiculoId, { permisso: updatedPermisso });
+    }
+  };
 
   // Handler para confirmar exclusão
   const confirmDelete = () => {
@@ -528,7 +585,7 @@ export default function Parceiros() {
     }
   };
 
-  // --- RENDERIZAÇÃO CONDICIONAL ---
+  // --- RENDERIZAÇÃO PRINCIPAL ---
 
   let mainContent;
 
@@ -1001,6 +1058,11 @@ export default function Parceiros() {
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {v.fabricante} / {v.modelo} ({v.ano})
                         </p>
+                        {v.permisso && (
+                            <p className={`text-xs font-medium flex items-center gap-1 ${v.permisso.simulado ? 'text-yellow-600' : 'text-green-600'}`}>
+                                <FileText className="h-3 w-3" /> Permisso: {v.permisso.razaoSocial}
+                            </p>
+                        )}
                         {v.chassis && (
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             Chassi: {v.chassis}
@@ -1013,6 +1075,16 @@ export default function Parceiros() {
                         )}
                       </div>
                       <div className="flex space-x-2 flex-shrink-0">
+                        {/* Botão Permisso - Apenas para Truck e Cavalo */}
+                        {(v.tipo === 'Truck' || v.tipo === 'Cavalo') && (
+                            <button
+                                onClick={() => handleOpenPermissoModal(v)}
+                                className="text-purple-600 hover:text-purple-800 dark:text-purple-400 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                                title="Gerenciar Permisso Internacional"
+                            >
+                                <FileText className="w-4 h-4" />
+                            </button>
+                        )}
                         <button
                           onClick={() => setEditingVeiculo(v)}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -1680,9 +1752,20 @@ export default function Parceiros() {
                           />
                         </div>
                       )}
-
-                      {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
-                          Para Carreta, usamos apenas a placa principal acima. */}
+                      
+                      {/* Botão Permisso - Apenas para edição e tipos Truck/Cavalo */}
+                      {editingVeiculo && (editingVeiculo.tipo === 'Truck' || editingVeiculo.tipo === 'Cavalo') && (
+                        <div className="md:col-span-2">
+                            <button
+                                type="button"
+                                onClick={() => handleOpenPermissoModal(editingVeiculo)}
+                                className="btn-secondary w-full justify-center text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                            >
+                                <FileText className="h-5 w-5" />
+                                Gerenciar Permisso Internacional
+                            </button>
+                        </div>
+                      )}
 
                       <div className="flex space-x-4 pt-4">
                         <button
@@ -1704,6 +1787,17 @@ export default function Parceiros() {
                 </div>
               </div>
             )}
+
+          {/* Modal de Permisso Internacional (NOVO) */}
+          {showPermissoModal && permissoTargetVeiculo && (
+            <PermissoModal
+                isOpen={showPermissoModal}
+                veiculo={permissoTargetVeiculo}
+                onClose={() => setShowPermissoModal(false)}
+                onSave={handleSavePermisso}
+                existingPermisso={existingPermisso}
+            />
+          )}
 
           {/* Modal de confirmação de exclusão */}
           {showDeleteConfirm && deleteTarget && (

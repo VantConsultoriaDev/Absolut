@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete } from '../types'
+import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional } from '../types'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext' // Necessário para obter o userId
 
@@ -29,6 +29,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoFinanceira[]>([])
   const [cargas, setCargas] = useState<Carga[]>([])
   const [contratos, setContratos] = useState<ContratoFrete[]>([]) // Novo estado para contratos
+  const [permissoes, setPermissoes] = useState<PermissoInternacional[]>([]) // NOVO: Estado para Permisso
 
   // Utility function to generate IDs
   const generateId = () => Math.random().toString(36).substr(2, 9)
@@ -116,11 +117,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         validadeCnh: new Date('2025-12-31'),
         telefone: '(11) 9999-8888',
         isActive: true,
+        nacionalidade: 'Brasileiro',
         createdAt: new Date('2024-01-12'),
         updatedAt: new Date('2024-01-12')
       },
       // Carlos Oliveira (parceiro-2) é motorista, mas não está duplicado aqui
     ]
+    
+    // Demo permisso (vazio inicialmente)
+    const demoPermissoes: PermissoInternacional[] = [];
 
     // Demo veículos
     const demoVeiculos: Veiculo[] = [
@@ -245,7 +250,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       veiculos: demoVeiculos,
       movimentacoes: demoMovimentacoes,
       cargas: demoCargas,
-      contratos: demoContratos
+      contratos: demoContratos,
+      permissoes: demoPermissoes
     }
   }
 
@@ -258,7 +264,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       const savedVeiculos = localStorage.getItem('absolut_veiculos')
       const savedMovimentacoes = localStorage.getItem('absolut_movimentacoes')
       const savedCargas = localStorage.getItem('absolut_cargas')
-      const savedContratos = localStorage.getItem('absolut_contratos') // Novo
+      const savedContratos = localStorage.getItem('absolut_contratos')
+      const savedPermissoes = localStorage.getItem('absolut_permissoes') // NOVO
 
       // If no data exists, initialize with demo data
       if (!savedParceiros || !savedClientes) {
@@ -270,6 +277,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         setMovimentacoes(demoData.movimentacoes)
         setCargas(demoData.cargas)
         setContratos(demoData.contratos)
+        setPermissoes(demoData.permissoes) // NOVO
       } else {
         // Load existing data and convert date strings back to Date objects
         
@@ -319,14 +327,28 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           createdAt: new Date(contrato.createdAt),
           updatedAt: new Date(contrato.updatedAt)
         }))
+        
+        const parsedPermissoes = JSON.parse(savedPermissoes || '[]').map((permisso: any) => ({
+          ...permisso,
+          dataConsulta: new Date(permisso.dataConsulta),
+          createdAt: new Date(permisso.createdAt),
+          updatedAt: new Date(permisso.updatedAt)
+        }))
 
         setClientes(parsedClientes)
         setParceiros(parsedParceiros)
         setMotoristas(parsedMotoristas)
-        setVeiculos(parsedVeiculos)
         setMovimentacoes(parsedMovimentacoes)
         setCargas(parsedCargas)
         setContratos(parsedContratos)
+        setPermissoes(parsedPermissoes) // NOVO
+        
+        // Atualiza veículos com permisso
+        const veiculosWithPermisso = parsedVeiculos.map((v: Veiculo) => ({
+            ...v,
+            permisso: parsedPermissoes.find((p: PermissoInternacional) => p.veiculoId === v.id)
+        }));
+        setVeiculos(veiculosWithPermisso);
       }
     }
 
@@ -348,7 +370,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [motoristas])
 
   useEffect(() => {
-    localStorage.setItem('absolut_veiculos', JSON.stringify(veiculos))
+    // Salva veículos sem o objeto permisso aninhado para evitar duplicação
+    const veiculosToSave = veiculos.map(v => {
+        const { permisso, ...rest } = v;
+        return rest;
+    });
+    localStorage.setItem('absolut_veiculos', JSON.stringify(veiculosToSave))
   }, [veiculos])
 
   useEffect(() => {
@@ -362,6 +389,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   useEffect(() => {
     localStorage.setItem('absolut_contratos', JSON.stringify(contratos))
   }, [contratos])
+  
+  useEffect(() => {
+    localStorage.setItem('absolut_permissoes', JSON.stringify(permissoes))
+    
+    // Sincroniza permisso com veículos
+    setVeiculos(prevVeiculos => prevVeiculos.map(v => ({
+        ...v,
+        permisso: permissoes.find(p => p.veiculoId === v.id)
+    })));
+  }, [permissoes])
 
   // Utility functions for Cargas/Financeiro synchronization
 
@@ -598,21 +635,55 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }
 
   const updateVeiculo = (id: string, veiculoData: Partial<Veiculo>): Veiculo | null => {
-    setVeiculos(prev => prev.map(veiculo => 
-      veiculo.id === id 
-        ? { ...veiculo, ...veiculoData, updatedAt: new Date() }
-        : veiculo
-    ))
-    return veiculos.find(v => v.id === id) || null
+    let updatedVeiculo: Veiculo | null = null;
+    setVeiculos(prev => prev.map(veiculo => {
+      if (veiculo.id === id) {
+        updatedVeiculo = { ...veiculo, ...veiculoData, updatedAt: new Date() };
+        return updatedVeiculo;
+      }
+      return veiculo;
+    }));
+    return updatedVeiculo;
   }
 
   const deleteVeiculo = (id: string): boolean => {
     setVeiculos(prev => prev.filter(veiculo => veiculo.id !== id))
+    setPermissoes(prev => prev.filter(permisso => permisso.veiculoId !== id)) // Deleta permisso associado
     return true
   }
 
   const getVeiculosByParceiro = (parceiroId: string): Veiculo[] => {
     return veiculos.filter(veiculo => veiculo.parceiroId === parceiroId)
+  }
+  
+  // Permisso Operations (NOVO)
+  const createPermisso = (permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'>, veiculoId: string): PermissoInternacional => {
+    const newPermisso: PermissoInternacional = {
+      ...permissoData,
+      id: generateId(),
+      veiculoId: veiculoId,
+      dataConsulta: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    setPermissoes(prev => [...prev, newPermisso])
+    return newPermisso
+  }
+
+  const updatePermisso = (id: string, permissoData: Partial<PermissoInternacional>): PermissoInternacional | null => {
+    let updatedPermisso: PermissoInternacional | null = null;
+    setPermissoes(prev => prev.map(permisso => {
+      if (permisso.id === id) {
+        updatedPermisso = { ...permisso, ...permissoData, updatedAt: new Date(), dataConsulta: new Date() };
+        return updatedPermisso;
+      }
+      return permisso;
+    }));
+    return updatedPermisso;
+  }
+  
+  const getPermissoByVeiculoId = (veiculoId: string): PermissoInternacional | null => {
+    return permissoes.find(p => p.veiculoId === veiculoId) || null;
   }
 
   // Movimentacao operations
@@ -819,6 +890,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     updateVeiculo,
     deleteVeiculo,
     getVeiculosByParceiro,
+    createPermisso, // NOVO
+    updatePermisso, // NOVO
+    getPermissoByVeiculoId, // NOVO
     createMovimentacao,
     updateMovimentacao,
     deleteMovimentacao,

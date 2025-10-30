@@ -67,6 +67,18 @@ export interface Motorista {
   updatedAt: Date
 }
 
+export interface PermissoInternacional {
+  id: string
+  veiculoId: string
+  razaoSocial: string
+  cnpj: string
+  enderecoCompleto?: string
+  dataConsulta: Date
+  simulado?: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Veiculo {
   id: string
   parceiroId: string
@@ -88,6 +100,7 @@ export interface Veiculo {
   motoristaVinculado?: string
   carretasVinculadas?: string[]
   isActive?: boolean
+  permisso?: PermissoInternacional // Adicionado o permisso
   createdAt: Date
   updatedAt: Date
 }
@@ -194,6 +207,11 @@ export interface DatabaseContextType {
   deleteVeiculo: (id: string) => boolean
   getVeiculosByParceiro: (parceiroId: string) => Veiculo[]
   
+  // Permisso operations (Novo)
+  createPermisso: (permisso: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'>, veiculoId: string) => PermissoInternacional
+  updatePermisso: (id: string, permisso: Partial<PermissoInternacional>) => PermissoInternacional | null
+  getPermissoByVeiculoId: (veiculoId: string) => PermissoInternacional | null
+
   // Movimentacao operations
   createMovimentacao: (movimentacao: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'>) => MovimentacaoFinanceira
   updateMovimentacao: (id: string, movimentacao: Partial<MovimentacaoFinanceira>) => MovimentacaoFinanceira | null
