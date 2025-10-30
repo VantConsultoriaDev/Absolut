@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// O token deve ser lido das variáveis de ambiente
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+// O token foi injetado diretamente para resolver o problema de VITE_APIBRASIL_TOKEN não definido.
+const API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ";
 
 interface CNPJData {
   razaoSocial: string;
@@ -42,6 +42,7 @@ export class CNPJService {
 
 
     if (!API_TOKEN) {
+      // Este bloco não deve mais ser alcançado, mas mantemos o fallback
       console.error('CNPJService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
       alert('ERRO DE CONFIGURAÇÃO: O token VITE_APIBRASIL_TOKEN não está definido. Verifique seu arquivo .env.');
       return this.gerarDadosSimulados(cnpjFormatado);

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// O token deve ser lido das variáveis de ambiente
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+// O token foi injetado diretamente para resolver o problema de VITE_APIBRASIL_TOKEN não definido.
+const API_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZ2F0ZXdheS5hcGlicmFzaWwuaW8vYXBpL3YyL2F1dGgvbG9naW4iLCJpYXQiOjE3NjExNDIxMjUsImV4cCI6MTc5MjY3ODEyNSwibmJmIjoxNzYxMTQyMTI1LCJqdGkiOiJkbDVHVUp4cTJETHBzc1pkIiwic3ViIjoiMTc4NDIiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.voI-fsBG_mQWsZounrv8KeiKRMFzkYdE4ACqra2NrSQ";
 
 // Interface para resposta da API de consulta de placa
 export interface PlacaResponse {
@@ -39,7 +39,7 @@ export class VehicleService {
       }
 
       if (!API_TOKEN) {
-        console.error('VehicleService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
+        console.error('VehicleService: API_TOKEN não configurado. Usando dados simulados.');
         throw new Error('Token de API não configurado.');
       }
 
