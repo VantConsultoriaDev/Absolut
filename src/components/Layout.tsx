@@ -15,6 +15,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import ApertoDeMaoIcon from '../assets/aperto-de-mao.png'; // Importando a imagem
+
+// Componente auxiliar para renderizar a imagem como ícone
+const ImageIcon: React.FC<{ src: string, alt: string, className: string }> = ({ src, alt, className }) => (
+  <img src={src} alt={alt} className={className} />
+);
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,7 +44,7 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { name: 'Parceiros', href: '/parceiros', icon: Users, permission: 'parceiros' }, // Revertido para Users
+    { name: 'Parceiros', href: '/parceiros', icon: (props: any) => <ImageIcon src={ApertoDeMaoIcon} alt="Parceiros" className={`${props.className} filter invert dark:filter-none`} />, permission: 'parceiros' }, // Usando a imagem
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ];
 
@@ -83,6 +89,13 @@ const Layout: React.FC = () => {
         <nav className="space-y-1 p-4">
           {filteredNavigation.map((item) => {
             const isActive = location.pathname === item.href;
+            const IconComponent = item.icon;
+            
+            // Classes de cor do ícone:
+            const iconColorClasses = isActive 
+              ? 'text-red-700 dark:text-red-300' 
+              : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300';
+
             return (
               <Link
                 key={item.name}
@@ -94,7 +107,7 @@ const Layout: React.FC = () => {
                     : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <IconComponent className="h-5 w-5 flex-shrink-0" />
                 <span>{item.name}</span>
                 {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
               </Link>
@@ -132,6 +145,7 @@ const Layout: React.FC = () => {
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href;
               const isCollapsed = sidebarCollapsed && !isHovering;
+              const IconComponent = item.icon;
               
               // Classes de cor do ícone:
               const iconColorClasses = isActive 
@@ -149,7 +163,7 @@ const Layout: React.FC = () => {
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                   } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
-                  <item.icon className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
+                  <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
                   <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                     {item.name}
                   </span>
