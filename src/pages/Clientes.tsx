@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { formatDocument } from '../utils/formatters'
-import { Plus, Edit, Trash2, Search, Building2, User, Globe, Mail, Phone } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Building2, User, Globe, Mail, Phone, Image, X as CloseIcon } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { useModal } from '../hooks/useModal' // Importando useModal
 
@@ -11,6 +11,8 @@ const Clientes: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null) // Arquivo temporário
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null) // Preview da imagem
 
   const [form, setForm] = useState({
     tipo: 'PJ' as 'PF' | 'PJ' | 'INTERNACIONAL',
@@ -23,7 +25,8 @@ const Clientes: React.FC = () => {
     estado: '',
     cep: '',
     observacoes: '',
-    isActive: true as boolean
+    isActive: true as boolean,
+    avatarUrl: '' // Adicionado ao estado do formulário
   })
 
   // Estados para consulta de CNPJ (apenas para PJ)
@@ -60,11 +63,14 @@ const Clientes: React.FC = () => {
       estado: '',
       cep: '',
       observacoes: '',
-      isActive: true
+      isActive: true,
+      avatarUrl: ''
     })
     setEditingId(null)
     setConsultandoCNPJ(false)
     setCnpjConsultado(false)
+    setAvatarFile(null)
+    setAvatarPreview(null)
   }
 
   const startEdit = (id: string) => {
@@ -81,27 +87,62 @@ const Clientes: React.FC = () => {
       estado: c.estado || '',
       cep: c.cep || '',
       observacoes: c.observacoes || '',
-      isActive: c.isActive ?? true
+      isActive: c.isActive ?? true,
+      avatarUrl: c.avatarUrl || ''
     })
+    setAvatarPreview(c.avatarUrl || null)
     setEditingId(c.id)
     setShowForm(true)
   }
+  
+  // Handler para upload de imagem (converte para Base64)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+  
+  const handleRemoveImage = () => {
+    setAvatarFile(null)
+    setAvatarPreview(null)
+    setForm(prev => ({ ...prev, avatarUrl: '' }))
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.nome.trim()) {
       alert('Informe o nome/razão social do cliente')
       return
     }
+    
+    let finalAvatarUrl = form.avatarUrl;
+    
+    // Se houver um novo arquivo, use o preview (Base64)
+    if (avatarFile && avatarPreview) {
+        finalAvatarUrl = avatarPreview;
+    } else if (!avatarFile && !avatarPreview) {
+        // Se o usuário removeu a imagem
+        finalAvatarUrl = '';
+    }
+    
     const payload = {
       ...form,
       documento: form.documento,
+      avatarUrl: finalAvatarUrl,
     }
+    
     if (editingId) {
       updateCliente(editingId, payload)
     } else {
       createCliente(payload)
     }
+    
     setShowForm(false)
     resetForm()
   }
@@ -185,15 +226,23 @@ const Clientes: React.FC = () => {
               <div className="p-5 flex-grow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      c.tipo === 'PJ' ? 'bg-blue-100 dark:bg-blue-900/50' : 
-                      c.tipo === 'PF' ? 'bg-green-100 dark:bg-green-900/50' : 
-                      'bg-purple-100 dark:bg-purple-900/50'
-                    }`}>
-                      {c.tipo === 'PJ' ? <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" /> :
-                       c.tipo === 'PF' ? <User className="h-5 w-5 text-green-600 dark:text-green-400" /> :
-                       <Globe className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
-                    </div>
+                    {c.avatarUrl ? (
+                      <img 
+                        src={c.avatarUrl} 
+                        alt={c.nome} 
+                        className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${
+                        c.tipo === 'PJ' ? 'bg-blue-100 dark:bg-blue-900/50' : 
+                        c.tipo === 'PF' ? 'bg-green-100 dark:bg-green-900/50' : 
+                        'bg-purple-100 dark:bg-purple-900/50'
+                      }`}>
+                        {c.tipo === 'PJ' ? <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" /> :
+                         c.tipo === 'PF' ? <User className="h-5 w-5 text-green-600 dark:text-green-400" /> :
+                         <Globe className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{c.nome}</h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">{
@@ -251,9 +300,60 @@ const Clientes: React.FC = () => {
           <div ref={modalRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-              <button onClick={() => { setShowForm(false); resetForm() }} className="text-gray-400 hover:text-gray-600">×</button>
+              <button onClick={() => { setShowForm(false); resetForm() }} className="text-gray-400 hover:text-gray-600">
+                <CloseIcon className="h-5 w-5" />
+              </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Seção de Imagem */}
+              <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Imagem do Cliente (Opcional)
+                </label>
+                <div className="flex items-center space-x-4">
+                  <div className="relative h-16 w-16 flex-shrink-0">
+                    {avatarPreview ? (
+                      <img 
+                        src={avatarPreview} 
+                        alt="Preview" 
+                        className="h-16 w-16 rounded-full object-cover border-2 border-blue-500"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+                        <Image className="h-6 w-6" />
+                      </div>
+                    )}
+                    {(avatarPreview || form.avatarUrl) && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        title="Remover imagem"
+                      >
+                        <CloseIcon className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="block w-full text-sm text-gray-500 dark:text-gray-400
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0
+                      file:text-sm file:font-medium
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      dark:file:bg-blue-900 dark:file:text-blue-300
+                      dark:hover:file:bg-blue-800"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  A imagem será salva localmente (Base64) e exibida no card.
+                </p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>

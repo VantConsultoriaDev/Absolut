@@ -27,6 +27,7 @@ export interface Cliente {
   cep?: string
   observacoes?: string
   isActive?: boolean
+  avatarUrl?: string // Novo campo para a imagem
   createdAt: Date
   updatedAt: Date
 }
