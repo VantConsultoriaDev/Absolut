@@ -138,11 +138,11 @@ const Layout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                       : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3'}`}
+                  } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
                   <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
