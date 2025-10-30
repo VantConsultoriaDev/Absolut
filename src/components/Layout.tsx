@@ -53,10 +53,11 @@ const Layout: React.FC = () => {
         const baseClasses = 'h-5 w-5 flex-shrink-0 transition-all duration-200';
         
         // Classes para simular o estado inativo (grayscale e opacidade)
+        // Usamos um filtro para tentar simular a cor vermelha quando ativo
         const inactiveClasses = 'grayscale opacity-60 group-hover:opacity-100 group-hover:grayscale-0';
         
-        // Classes para o estado ativo (cor total)
-        const activeClasses = 'opacity-100';
+        // Classes para o estado ativo (cor total + filtro para cor vermelha)
+        const activeClasses = 'opacity-100 filter sepia hue-rotate-330 brightness-110'; // Tenta simular o vermelho
 
         return (
           <ImageIcon 
@@ -131,7 +132,11 @@ const Layout: React.FC = () => {
                 }`}
               >
                 {/* Renderiza o componente de ícone (que pode ser a imagem ou o Lucide) */}
-                <IconComponent className="h-5 w-5 flex-shrink-0" />
+                {item.name === 'Parceiros' ? (
+                    <IconComponent />
+                ) : (
+                    <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
+                )}
                 <span>{item.name}</span>
                 {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
               </Link>
