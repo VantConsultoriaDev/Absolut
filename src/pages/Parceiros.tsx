@@ -528,13 +528,14 @@ export default function Parceiros() {
     }
   };
 
-  // --- RENDERIZAÇÃO PRINCIPAL ---
+  // --- RENDERIZAÇÃO CONDICIONAL ---
 
-  // Se nenhum parceiro estiver selecionado, mostra a lista
+  let mainContent;
+
   if (!selectedParceiro) {
-    return (
+    // --- LIST VIEW ---
+    mainContent = (
       <div className="space-y-6">
-        {/* ... (Conteúdo da lista de parceiros, estatísticas e filtros - mantido) ... */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Parceiros</h1>
@@ -817,9 +818,234 @@ export default function Parceiros() {
             </table>
           </div>
         </div>
-        
-        {/* Modals (Parceiro, Motorista, Veículo e Confirmação de Exclusão - mantidos) */}
-        {showParceiroForm && (
+      </div>
+    );
+  } else {
+    // --- DETAIL VIEW ---
+    const parceiroMotoristas = motoristas.filter(m => m.parceiroId === selectedParceiro.id);
+    const parceiroVeiculos = veiculos.filter(v => v.parceiroId === selectedParceiro.id);
+
+    mainContent = (
+      <div className="space-y-6">
+        {/* Header e Botão Voltar */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedParceiro.nome}</h1>
+          <button onClick={() => setSelectedParceiro(null)} className="btn-secondary">
+            Voltar à Lista
+          </button>
+        </div>
+
+        {/* Informações Principais do Parceiro (Card Estilizado) */}
+        <div className="card p-6 bg-white dark:bg-slate-900/50 border-l-4 border-blue-600 dark:border-blue-400 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+              <Briefcase className="h-6 w-6" />
+              Detalhes do Parceiro
+            </h2>
+            <button
+              onClick={() => handleEditParceiro(selectedParceiro)}
+              className="btn-ghost p-2 text-gray-500 hover:text-blue-600"
+              title="Editar Parceiro"
+            >
+              <Edit className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipo / Documento</p>
+              <p className="font-medium text-gray-900 dark:text-white">
+                {selectedParceiro.tipo === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+              </p>
+              <p className="text-gray-700 dark:text-gray-300 font-mono">{formatDocument(selectedParceiro.documento || '', selectedParceiro.tipo)}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Contato</p>
+              <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                <Mail className="h-4 w-4 text-blue-500" /> {selectedParceiro.email || 'N/A'}
+              </p>
+              <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                <Phone className="h-4 w-4 text-blue-500" /> {selectedParceiro.telefone || 'N/A'}
+              </p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Localização</p>
+              <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                <MapPin className="h-4 w-4 text-blue-500" /> {selectedParceiro.cidade || 'N/A'} - {selectedParceiro.estado || 'N/A'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {selectedParceiro.endereco || 'Endereço não cadastrado'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Abas de Navegação */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setActiveTab('motoristas')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'motoristas'
+                ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            } flex items-center gap-2`}
+          >
+            <User className="h-5 w-5" />
+            Motoristas ({parceiroMotoristas.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('veiculos')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'veiculos'
+                ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            } flex items-center gap-2`}
+          >
+            <Truck className="h-5 w-5" />
+            Veículos ({parceiroVeiculos.length})
+          </button>
+        </div>
+
+        {/* Conteúdo das Abas */}
+        <div className="pt-4">
+          {activeTab === 'motoristas' && (
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  resetMotoristaForm();
+                  setShowMotoristaForm(true);
+                }}
+                className="btn-primary"
+              >
+                <Plus className="h-5 w-5" />
+                Novo Motorista
+              </button>
+              
+              {parceiroMotoristas.length === 0 ? (
+                <div className="p-6 card text-center text-gray-500 dark:text-gray-400">
+                  Nenhum motorista vinculado a este parceiro.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {parceiroMotoristas.map(m => (
+                    <div key={m.id} className="card p-4 flex justify-between items-start hover:shadow-md transition-shadow">
+                      <div className="flex-1 space-y-1">
+                        <p className="font-bold text-gray-900 dark:text-white">{m.nome}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {m.nacionalidade === 'Brasileiro' ? 'CPF' : 'Documento'}: {formatDocument(m.cpf, 'PF')} | CNH: {m.cnh || 'N/A'}
+                        </p>
+                        {m.telefone && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {m.telefone}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          Nacionalidade: {m.nacionalidade}
+                        </p>
+                        {m.validadeCnh && (
+                          <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" /> Validade CNH: {format(new Date(m.validadeCnh), 'dd/MM/yyyy', { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex space-x-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleEditMotorista(m)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title="Editar Motorista"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ type: 'motorista', id: m.id, name: m.nome })}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Excluir Motorista"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'veiculos' && (
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  resetVeiculoForm();
+                  setShowVeiculoForm(true);
+                }}
+                className="btn-primary"
+              >
+                <Plus className="h-5 w-5" />
+                Novo Veículo
+              </button>
+              
+              {parceiroVeiculos.length === 0 ? (
+                <div className="p-6 card text-center text-gray-500 dark:text-gray-400">
+                  Nenhum veículo vinculado a este parceiro.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {parceiroVeiculos.map(v => (
+                    <div key={v.id} className="card p-4 flex justify-between items-start hover:shadow-md transition-shadow">
+                      <div className="flex-1 space-y-1">
+                        <p className="font-bold text-gray-900 dark:text-white">
+                          {v.tipo} - {v.placa || v.placaCavalo || v.placaCarreta}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {v.fabricante} / {v.modelo} ({v.ano})
+                        </p>
+                        {v.chassis && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Chassi: {v.chassis}
+                          </p>
+                        )}
+                        {v.carroceria && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Carroceria: {v.carroceria}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex space-x-2 flex-shrink-0">
+                        <button
+                          onClick={() => setEditingVeiculo(v)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title="Editar Veículo"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ type: 'veiculo', id: v.id, name: v.placa || v.placaCavalo || v.placaCarreta || 'Veículo' })}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Excluir Veículo"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDERIZAÇÃO FINAL (Conteúdo Principal + Modais) ---
+  return (
+    <>
+      {mainContent}
+      
+      {/* Modal de Parceiro */}
+      {showParceiroForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div ref={parceiroModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
@@ -1163,6 +1389,7 @@ export default function Parceiros() {
           </div>
         )}
 
+        {/* Modal de Motorista */}
         {showMotoristaForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div ref={motoristaModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -1292,6 +1519,7 @@ export default function Parceiros() {
           </div>
         )}
 
+        {/* Modal de Veículo */}
         {showVeiculoForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div ref={veiculoModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1530,6 +1758,6 @@ export default function Parceiros() {
               </div>
             </div>
           )}
-    </div>
+    </>
   );
 }
