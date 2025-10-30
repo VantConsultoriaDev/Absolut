@@ -1464,4 +1464,21 @@ export default function Parceiros() {
           )}
     </div>
   );
+  }
+
+  // Se um parceiro estiver selecionado, mostra o painel de detalhes (placeholder)
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedParceiro.nome}</h1>
+        <button onClick={() => setSelectedParceiro(null)} className="btn-secondary">
+          Voltar à Lista
+        </button>
+      </div>
+      <div className="p-6 card">
+        <h2 className="text-xl font-semibold">Detalhes do Parceiro</h2>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">Implementação do painel de detalhes do parceiro, motoristas e veículos.</p>
+      </div>
+    </div>
+  );
 }
