@@ -105,7 +105,8 @@ const Clientes: React.FC = () => {
 
     setConsultandoCNPJ(true)
     try {
-      const dados = await CNPJService.consultarCNPJ(cnpj)
+      // Passa o CNPJ formatado para o serviço, que fará a limpeza/formatação final
+      const dados = await CNPJService.consultarCNPJ(cnpj) 
       if (dados) {
         setForm(prev => ({
           ...prev,
@@ -117,7 +118,7 @@ const Clientes: React.FC = () => {
           cep: dados.cep || prev.cep
         }))
         setCnpjConsultado(true)
-        if ((dados as any).simulado) {
+        if (dados.simulado) {
           alert('Não foi possível conectar com a API de CNPJ. Usando dados simulados para demonstração.')
         }
       }
@@ -195,7 +196,7 @@ const Clientes: React.FC = () => {
                 </div>
 
                 <div className="mt-4 space-y-2 text-sm">
-                  <p className="text-gray-600 dark:text-gray-300 font-mono tracking-tight bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{c.documento || 'Não informado'}</p>
+                  <p className="text-gray-600 dark:text-gray-300 font-mono tracking-tight bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-md">{formatDocument(c.documento || '', c.tipo)}</p>
                   
                   {c.email && (
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">

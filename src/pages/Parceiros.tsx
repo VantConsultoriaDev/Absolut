@@ -165,10 +165,6 @@ export default function Parceiros() {
     }
   });
 
-  // Removido: modal de vinculação motorista↔veículo
-
-
-
   // Filtrar parceiros
   const filteredParceiros = useMemo(() => {
     return parceiros.filter(parceiro => {
@@ -249,10 +245,6 @@ export default function Parceiros() {
     };
   }, [parceiros, motoristas, veiculos]);
 
-  // Removido: estados de vinculação Cavalo → Carretas
-
-
-
   // Handlers para parceiros
   const handleParceiroSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,85 +291,30 @@ export default function Parceiros() {
 
   // Função para consultar CNPJ automaticamente
   const handleCNPJConsultation = async (cnpj: string) => {
-    console.log('Iniciando consulta CNPJ:', cnpj);
-    console.log('Tipo do parceiro:', parceiroForm.tipo);
-    console.log('CNPJ já consultado:', cnpjConsultado);
-    
     // Só consulta se for PJ
     if (parceiroForm.tipo !== 'PJ') {
-      console.log('Não é PJ, cancelando consulta');
       return;
     }
 
     // Verifica se o CNPJ tem 14 dígitos (validação básica)
     const cnpjLimpo = cnpj.replace(/\D/g, '');
     if (cnpjLimpo.length !== 14) {
-      console.log('CNPJ não tem 14 dígitos:', cnpjLimpo.length);
       return;
     }
 
     // Evita consultas repetidas apenas se estiver consultando no momento
     if (consultandoCNPJ) {
-      console.log('Já está consultando CNPJ, cancelando');
       return;
     }
 
     setConsultandoCNPJ(true);
     
     try {
-      console.log('Chamando serviço de consulta CNPJ...');
       const dadosCNPJ = await CNPJService.consultarCNPJ(cnpj);
       
-      console.log('Resposta do serviço:', dadosCNPJ);
-      
       if (dadosCNPJ) {
-        console.log('Dados do CNPJ recebidos:', dadosCNPJ);
-        
         // Preenche automaticamente os campos com os dados da consulta
-        // Mapeamento conforme especificado:
-        // ✅ "nome_fantasia" → Nome Empresarial (campo: nome)
-        // ✅ Telefone → Contato (campo: telefone) 
-        // ✅ "tipo_logradouro"+"logradouro"+"numero"→ Endereço (campo: endereco)
-        // ✅ "municipio" → Cidade (campo: cidade)
-        // ✅ "uf" → Estado (campo: estado)
-        // ✅ "cep"→ CEP (campo: cep)
-        const novosDados = {
-          ...parceiroForm,
-          nome: dadosCNPJ.razaoSocial || parceiroForm.nome,        // ✅ Nome Fantasia → Nome Empresarial
-          telefone: dadosCNPJ.telefone || parceiroForm.telefone,  // ✅ Telefone → Contato
-          endereco: dadosCNPJ.endereco || parceiroForm.endereco,  // ✅ Endereço já montado no serviço
-          cidade: dadosCNPJ.cidade || parceiroForm.cidade,        // ✅ Município → Cidade
-          estado: dadosCNPJ.uf || parceiroForm.estado,            // ✅ UF → Estado
-          cep: dadosCNPJ.cep || parceiroForm.cep                  // ✅ CEP → CEP
-        };
-        
-        console.log('Dados atuais do formulário:', parceiroForm);
-        console.log('Novos dados que serão aplicados:', novosDados);
-        
-        // Verificar se há diferenças nos dados
-        const diferencas: { [key: string]: { antes: any; depois: any } } = {};
-        Object.keys(novosDados).forEach(key => {
-          if ((novosDados as any)[key] !== (parceiroForm as any)[key]) {
-            diferencas[key] = { antes: (parceiroForm as any)[key], depois: (novosDados as any)[key] };
-          }
-        });
-        console.log('Diferenças detectadas:', diferencas);
-        
-        // Força a atualização do formulário
-        console.log('Atualizando formulário com novos dados...');
-        console.log('Dados CNPJ disponíveis:', {
-          razaoSocial: dadosCNPJ.razaoSocial,
-          telefone: dadosCNPJ.telefone,
-          endereco: dadosCNPJ.endereco,
-          numero: dadosCNPJ.numero,
-          cidade: dadosCNPJ.cidade,
-          uf: dadosCNPJ.uf,
-          cep: dadosCNPJ.cep
-        });
-        
-        setParceiroForm(prevForm => {
-          console.log('Estado anterior do formulário:', prevForm);
-          const formAtualizado = {
+        setParceiroForm(prevForm => ({
             ...prevForm,
             nome: dadosCNPJ.razaoSocial || prevForm.nome,
             telefone: dadosCNPJ.telefone || prevForm.telefone,
@@ -385,27 +322,14 @@ export default function Parceiros() {
             cidade: dadosCNPJ.cidade || prevForm.cidade,
             estado: dadosCNPJ.uf || prevForm.estado,
             cep: dadosCNPJ.cep || prevForm.cep
-          };
-          console.log('Formulário que será aplicado:', formAtualizado);
-          console.log('Comparação campo por campo:');
-          console.log('- nome:', prevForm.nome, '->', formAtualizado.nome);
-          console.log('- telefone:', prevForm.telefone, '->', formAtualizado.telefone);
-          console.log('- endereco:', prevForm.endereco, '->', formAtualizado.endereco);
-          console.log('- cidade:', prevForm.cidade, '->', formAtualizado.cidade);
-          console.log('- estado:', prevForm.estado, '->', formAtualizado.estado);
-          console.log('- cep:', prevForm.cep, '->', formAtualizado.cep);
-          return formAtualizado;
-        });
+        }));
         
         setCnpjConsultado(true);
-        console.log('Consulta CNPJ marcada como concluída');
         
         // Verifica se os dados são simulados e informa o usuário
         if (dadosCNPJ.simulado) {
           alert('Não foi possível conectar com a API de CNPJ (erro de conectividade). Usando dados simulados para demonstração.');
         }
-      } else {
-        console.log('Nenhum dado retornado pelo serviço');
       }
     } catch (error) {
       console.error('Erro ao consultar CNPJ:', error);
@@ -417,20 +341,23 @@ export default function Parceiros() {
 
   // Função para consultar placa automaticamente
   const handlePlacaConsultation = async (placa: string) => {
-    // Só consulta se a placa for válida
-    if (!VehicleService.validarPlaca(placa)) {
+    // Remove formatação para validação
+    const placaLimpa = placa.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // Só consulta se a placa for válida (7 caracteres)
+    if (!VehicleService.validarPlaca(placaLimpa)) {
       return;
     }
 
     // Evita consultas repetidas
-    if (placaConsultada === placa) {
+    if (placaConsultada === placaLimpa) {
       return;
     }
 
     setConsultandoPlaca(true);
     
     try {
-      const dadosPlaca = await VehicleService.consultarPlaca(placa);
+      const dadosPlaca = await VehicleService.consultarPlaca(placaLimpa);
       
       if (dadosPlaca) {
         // Preenche automaticamente os campos com os dados da consulta
@@ -441,7 +368,7 @@ export default function Parceiros() {
           ano: dadosPlaca.ano || prev.ano
         }));
         
-        setPlacaConsultada(placa);
+        setPlacaConsultada(placaLimpa);
       }
     } catch (error) {
       console.error('Erro ao consultar placa:', error);
@@ -576,6 +503,8 @@ export default function Parceiros() {
     if (veiculoForm.tipo === 'Cavalo') {
       veiculoData = {
         ...veiculoData,
+        placa: veiculoForm.placaCavalo, // Usa placaCavalo como placa principal
+        placaCavalo: veiculoForm.placaCavalo,
         quantidadeCarretas: undefined,
         possuiDolly: false,
         placaCarreta: '',
@@ -586,7 +515,26 @@ export default function Parceiros() {
     } else if (veiculoForm.tipo === 'Carreta') {
       veiculoData = {
         ...veiculoData,
-        placaCavalo: ''
+        placa: veiculoForm.placaCarreta, // Usa placaCarreta como placa principal
+        placaCavalo: '',
+        quantidadeCarretas: undefined,
+        possuiDolly: false,
+        placaCarreta: veiculoForm.placaCarreta,
+        placaCarreta1: '',
+        placaCarreta2: '',
+        placaDolly: ''
+      };
+    } else if (veiculoForm.tipo === 'Truck') {
+      veiculoData = {
+        ...veiculoData,
+        placa: veiculoForm.placa, // Usa placa como placa principal
+        placaCavalo: '',
+        quantidadeCarretas: undefined,
+        possuiDolly: false,
+        placaCarreta: '',
+        placaCarreta1: '',
+        placaCarreta2: '',
+        placaDolly: ''
       };
     }
 
@@ -714,8 +662,6 @@ export default function Parceiros() {
       setDeleteTarget(null);
     }
   };
-
-  // Removido: handlers de vinculação e desvinculação motorista↔veículo
 
   if (!selectedParceiro) {
     return (
@@ -1867,7 +1813,7 @@ export default function Parceiros() {
                         ? 'Placa *' 
                         : veiculoForm.tipo === 'Carreta' 
                           ? 'Placa da Carreta *' 
-                          : 'Placa *'}
+                          : 'Placa do Cavalo *'}
                       {consultandoPlaca && (
                         <span className="ml-2 text-blue-500 text-xs">
                           Consultando...
@@ -1883,6 +1829,7 @@ export default function Parceiros() {
                           : veiculoForm.placaCavalo}
                       onChange={(e) => {
                         const formatted = formatPlaca(e.target.value);
+                        
                         if (veiculoForm.tipo === 'Truck') {
                           setVeiculoForm({ ...veiculoForm, placa: formatted });
                         } else if (veiculoForm.tipo === 'Carreta') {
@@ -1891,18 +1838,21 @@ export default function Parceiros() {
                           setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
                         }
                         
+                        // Remove formatação para validação
+                        const placaLimpa = formatted.replace(/[^A-Z0-9]/g, '').toUpperCase();
+
                         // Reset flag de consulta quando a placa muda
-                        if (placaConsultada) {
+                        if (placaConsultada && placaConsultada !== placaLimpa) {
                           setPlacaConsultada('');
                         }
                         
                         // Consulta placa automaticamente se for válida
-                        if (VehicleService.validarPlaca(formatted)) {
-                          handlePlacaConsultation(formatted);
+                        if (VehicleService.validarPlaca(placaLimpa)) {
+                          handlePlacaConsultation(placaLimpa);
                         }
                       }}
                       className={`input-field ${consultandoPlaca ? 'opacity-50' : ''}`}
-                      placeholder="ABC-1234"
+                      placeholder="ABC1234 ou ABC1D23"
                       disabled={consultandoPlaca}
                       required
                     />

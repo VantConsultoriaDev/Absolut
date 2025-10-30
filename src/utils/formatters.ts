@@ -77,24 +77,15 @@ export const formatCurrency = (value: string | number): string => {
 
 // Formatação de placa: ABC5H26 ou ABR5326 (Mercosul e antiga)
 export const formatPlaca = (value: string): string => {
-  // Remove espaços e converte para maiúscula
-  const clean = value.replace(/\s/g, '').toUpperCase();
+  // Remove caracteres não alfanuméricos, força maiúsculas e limita a 7 caracteres
+  const alphanumeric = value.replace(/[^A-Z0-9]/gi, '').toUpperCase().substring(0, 7);
   
-  // Remove caracteres especiais, mantendo apenas letras e números
-  const alphanumeric = clean.replace(/[^A-Z0-9]/g, '');
-  
-  if (alphanumeric.length <= 7) {
-    // Formato Mercosul: ABC1D23
-    if (alphanumeric.length >= 4 && /^[A-Z]{3}[0-9][A-Z0-9]/.test(alphanumeric)) {
-      return alphanumeric.replace(/^([A-Z]{3})([0-9])([A-Z0-9])([0-9]{0,2})/, '$1$2$3$4');
-    }
-    // Formato antigo: ABC1234
-    else if (alphanumeric.length >= 3) {
-      return alphanumeric.replace(/^([A-Z]{0,3})([0-9]{0,4})/, '$1$2');
-    }
+  // Adiciona o hífen apenas para visualização se for formato antigo (AAA-0000)
+  if (alphanumeric.length === 7 && /^[A-Z]{3}[0-9]{4}$/.test(alphanumeric)) {
+    return alphanumeric.replace(/^([A-Z]{3})([0-9]{4})$/, '$1-$2');
   }
   
-  return alphanumeric.substring(0, 7);
+  return alphanumeric;
 };
 
 // Função para converter valor monetário formatado para número
