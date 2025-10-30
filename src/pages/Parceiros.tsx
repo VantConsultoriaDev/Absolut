@@ -1531,5 +1531,937 @@ export default function Parceiros() {
             </div>
           )}
     </div>
+    );
+  }
+
+  // --- RENDERIZAÇÃO DO PAINEL DE DETALHES DO PARCEIRO (TECNOLÓGICO) ---
+  
+  const parceiroMotoristas = motoristas.filter(m => m.parceiroId === selectedParceiro.id);
+  const parceiroVeiculos = veiculos.filter(v => v.parceiroId === selectedParceiro.id);
+
+  return (
+    <div className="space-y-6">
+      {/* Header e Botão Voltar */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{selectedParceiro.nome}</h1>
+        <button onClick={() => setSelectedParceiro(null)} className="btn-secondary">
+          Voltar à Lista
+        </button>
+      </div>
+
+      {/* Informações Principais do Parceiro (Card Estilizado) */}
+      <div className="card p-6 bg-white dark:bg-slate-900/50 border-l-4 border-blue-600 dark:border-blue-400 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+            <Briefcase className="h-6 w-6" />
+            Detalhes do Parceiro
+          </h2>
+          <button
+            onClick={() => handleEditParceiro(selectedParceiro)}
+            className="btn-ghost p-2 text-gray-500 hover:text-blue-600"
+            title="Editar Parceiro"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipo / Documento</p>
+            <p className="font-medium text-gray-900 dark:text-white">
+              {selectedParceiro.tipo === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+            </p>
+            <p className="text-gray-700 dark:text-gray-300 font-mono">{formatDocument(selectedParceiro.documento || '', selectedParceiro.tipo)}</p>
+          </div>
+          
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Contato</p>
+            <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Mail className="h-4 w-4 text-blue-500" /> {selectedParceiro.email || 'N/A'}
+            </p>
+            <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Phone className="h-4 w-4 text-blue-500" /> {selectedParceiro.telefone || 'N/A'}
+            </p>
+          </div>
+          
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Localização</p>
+            <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <MapPin className="h-4 w-4 text-blue-500" /> {selectedParceiro.cidade || 'N/A'} - {selectedParceiro.estado || 'N/A'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {selectedParceiro.endereco || 'Endereço não cadastrado'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Abas de Navegação */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab('motoristas')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'motoristas'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+          } flex items-center gap-2`}
+        >
+          <User className="h-5 w-5" />
+          Motoristas ({parceiroMotoristas.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('veiculos')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'veiculos'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+          } flex items-center gap-2`}
+        >
+          <Truck className="h-5 w-5" />
+          Veículos ({parceiroVeiculos.length})
+        </button>
+      </div>
+
+      {/* Conteúdo das Abas */}
+      <div className="pt-4">
+        {activeTab === 'motoristas' && (
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                resetMotoristaForm();
+                setShowMotoristaForm(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus className="h-5 w-5" />
+              Novo Motorista
+            </button>
+            
+            {parceiroMotoristas.length === 0 ? (
+              <div className="p-6 card text-center text-gray-500 dark:text-gray-400">
+                Nenhum motorista vinculado a este parceiro.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {parceiroMotoristas.map(m => (
+                  <div key={m.id} className="card p-4 flex justify-between items-start hover:shadow-md transition-shadow">
+                    <div className="flex-1 space-y-1">
+                      <p className="font-bold text-gray-900 dark:text-white">{m.nome}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {m.nacionalidade === 'Brasileiro' ? 'CPF' : 'Documento'}: {formatDocument(m.cpf, 'PF')} | CNH: {m.cnh || 'N/A'}
+                      </p>
+                      {m.telefone && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> {m.telefone}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        Nacionalidade: {m.nacionalidade}
+                      </p>
+                      {m.validadeCnh && (
+                        <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> Validade CNH: {format(new Date(m.validadeCnh), 'dd/MM/yyyy', { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleEditMotorista(m)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        title="Editar Motorista"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget({ type: 'motorista', id: m.id, name: m.nome })}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Excluir Motorista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'veiculos' && (
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                resetVeiculoForm();
+                setShowVeiculoForm(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus className="h-5 w-5" />
+              Novo Veículo
+            </button>
+            
+            {parceiroVeiculos.length === 0 ? (
+              <div className="p-6 card text-center text-gray-500 dark:text-gray-400">
+                Nenhum veículo vinculado a este parceiro.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {parceiroVeiculos.map(v => (
+                  <div key={v.id} className="card p-4 flex justify-between items-start hover:shadow-md transition-shadow">
+                    <div className="flex-1 space-y-1">
+                      <p className="font-bold text-gray-900 dark:text-white">
+                        {v.tipo} - {v.placa || v.placaCavalo || v.placaCarreta}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {v.fabricante} / {v.modelo} ({v.ano})
+                      </p>
+                      {v.chassis && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Chassi: {v.chassis}
+                        </p>
+                      )}
+                      {v.carroceria && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Carroceria: {v.carroceria}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2 flex-shrink-0">
+                      <button
+                        onClick={() => setEditingVeiculo(v)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        title="Editar Veículo"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget({ type: 'veiculo', id: v.id, name: v.placa || v.placaCavalo || v.placaCarreta || 'Veículo' })}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Excluir Veículo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {/* Modals (Parceiro, Motorista, Veículo e Confirmação de Exclusão - mantidos) */}
+      {showParceiroForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div ref={parceiroModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingParceiro ? 'Editar Parceiro' : 'Novo Parceiro'}
+                  </h3>
+                  <button
+                    onClick={resetParceiroForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleParceiroSubmit} className="space-y-4">
+                  {/* Tipo - Primeiro campo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Tipo *
+                    </label>
+                    <select
+                      value={parceiroForm.tipo}
+                      onChange={(e) => setParceiroForm({ ...parceiroForm, tipo: e.target.value as 'PF' | 'PJ' })}
+                      className="input-field"
+                      required
+                    >
+                      <option value="PF">Pessoa Física</option>
+                      <option value="PJ">Pessoa Jurídica</option>
+                    </select>
+                  </div>
+
+                  {/* Switch "É Motorista" apenas para Pessoa Física - logo após o campo Tipo */}
+                  {parceiroForm.tipo === 'PF' && (
+                    <StandardCheckbox
+                      label="É Motorista"
+                      checked={parceiroForm.isMotorista}
+                      onChange={(checked) => setParceiroForm({ ...parceiroForm, isMotorista: checked })}
+                      description="Marque se esta pessoa física atua como motorista"
+                    />
+                  )}
+
+                  {/* Campos específicos por tipo */}
+                  {parceiroForm.tipo === 'PF' ? (
+                    <>
+                      {/* Pessoa Física: Nome, CPF, CNH (se motorista), Contato, Endereço, Cidade, Estado, CEP, Observações */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Nome *
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.nome}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, nome: e.target.value })}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {parceiroForm.tipo === 'PF' ? 'CPF *' : 'CNPJ *'}
+                          {consultandoCNPJ && (
+                            <span className="ml-2 text-blue-500 text-xs">
+                              Consultando...
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.documento}
+                          onChange={(e) => {
+                            const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
+                            setParceiroForm({ ...parceiroForm, documento: formatted });
+                            
+                            // Reset flag de consulta quando o documento muda
+                            if (cnpjConsultado) {
+                              setCnpjConsultado(false);
+                            }
+                            
+                            // Consulta CNPJ automaticamente se for PJ e tiver 14 dígitos
+                            if (parceiroForm.tipo === 'PJ' && formatted.replace(/\D/g, '').length === 14) {
+                              handleCNPJConsultation(formatted);
+                            }
+                          }}
+                          className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
+                          placeholder={parceiroForm.tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'}
+                          disabled={consultandoCNPJ}
+                          required
+                        />
+                        {cnpjConsultado && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ Dados consultados automaticamente
+                          </p>
+                        )}
+                      </div>
+
+                      {/* CNH - apenas se for motorista */}
+                      {parceiroForm.isMotorista && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            CNH *
+                          </label>
+                          <input
+                            type="text"
+                            value={parceiroForm.cnh}
+                            onChange={(e) => setParceiroForm({ ...parceiroForm, cnh: e.target.value })}
+                            className="input-field"
+                            placeholder="00000000000"
+                            required={parceiroForm.isMotorista}
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Contato
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.telefone}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: e.target.value })}
+                          className="input-field"
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Endereço
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.endereco}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, endereco: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Cidade
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.cidade}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, cidade: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Estado
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.estado}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, estado: e.target.value })}
+                          className="input-field"
+                          placeholder="SP"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CEP
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.cep}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, cep: e.target.value })}
+                          className="input-field"
+                          placeholder="00000-000"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Observações
+                        </label>
+                        <textarea
+                          value={parceiroForm.observacoes}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, observacoes: e.target.value })}
+                          className="input-field"
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Pessoa Jurídica: CNPJ, Razão Social, Contato, Endereço, Cidade, Estado, CEP, Observações */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CNPJ *
+                          {consultandoCNPJ && (
+                            <span className="ml-2 text-blue-500 text-xs">
+                              Consultando...
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.documento}
+                          onChange={(e) => {
+                            const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
+                            const cnpjLimpo = formatted.replace(/\D/g, '');
+                            
+                            setParceiroForm({ ...parceiroForm, documento: formatted });
+                            
+                            // Reset flag de consulta apenas se o CNPJ mudou significativamente
+                            if (cnpjConsultado) {
+                              setCnpjConsultado(false);
+                            }
+                            
+                            // Consulta CNPJ automaticamente se tiver 14 dígitos
+                            if (cnpjLimpo.length === 14) {
+                              handleCNPJConsultation(formatted);
+                            }
+                          }}
+                          className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
+                          placeholder="00.000.000/0000-00"
+                          disabled={consultandoCNPJ}
+                          required
+                        />
+                        {cnpjConsultado && (
+                          <p className="text-green-600 text-xs mt-1">
+                            ✓ Dados consultados automaticamente
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Razão Social *
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.nome}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, nome: e.target.value })}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Contato
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.telefone}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: e.target.value })}
+                          className="input-field"
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Endereço
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.endereco}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, endereco: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Cidade
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.cidade}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, cidade: e.target.value })}
+                          className="input-field"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Estado
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.estado}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, estado: e.target.value })}
+                          className="input-field"
+                          placeholder="SP"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CEP
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroForm.cep}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, cep: e.target.value })}
+                          className="input-field"
+                          placeholder="00000-000"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Observações
+                        </label>
+                        <textarea
+                          value={parceiroForm.observacoes}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, observacoes: e.target.value })}
+                          className="input-field"
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex space-x-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={resetParceiroForm}
+                      className="btn-secondary flex-1"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary flex-1"
+                    >
+                      {editingParceiro ? 'Atualizar' : 'Criar'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showMotoristaForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div ref={motoristaModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
+                  </h3>
+                  <button
+                    onClick={resetMotoristaForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleMotoristaSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.nome}
+                      onChange={(e) => setMotoristaForm({ ...motoristaForm, nome: e.target.value })}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nacionalidade *
+                    </label>
+                    <select
+                      value={motoristaForm.nacionalidade}
+                      onChange={(e) => {
+                        // Limpa o campo de documento ao mudar a nacionalidade
+                        setMotoristaForm({ 
+                          ...motoristaForm, 
+                          nacionalidade: e.target.value as 'Brasileiro' | 'Estrangeiro',
+                          cpf: '', // CPF é o campo que armazena o documento
+                          cnh: '' // CNH é opcional para estrangeiros, melhor limpar
+                        });
+                      }}
+                      className="input-field"
+                      required
+                    >
+                      <option value="Brasileiro">Brasileiro</option>
+                      <option value="Estrangeiro">Estrangeiro</option>
+                    </select>
+                  </div>
+
+                  {/* Campo de Documento (CPF ou Documento Estrangeiro) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {motoristaForm.nacionalidade === 'Brasileiro' ? 'CPF *' : 'Documento *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.cpf}
+                      onChange={(e) => {
+                        let formatted = e.target.value;
+                        if (motoristaForm.nacionalidade === 'Brasileiro') {
+                          formatted = formatDocument(e.target.value, 'PF');
+                        } else {
+                          // Para estrangeiro, usa formatação de CUIT como exemplo, mas permite qualquer texto
+                          formatted = formatCUIT(e.target.value);
+                        }
+                        setMotoristaForm({ ...motoristaForm, cpf: formatted });
+                      }}
+                      className="input-field"
+                      placeholder={motoristaForm.nacionalidade === 'Brasileiro' ? '000.000.000-00' : 'Ex: Passaporte, CUIT, etc.'}
+                      required
+                    />
+                  </div>
+
+                  {/* CNH (Obrigatório para Brasileiro, Opcional para Estrangeiro) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      CNH {motoristaForm.nacionalidade === 'Brasileiro' ? '*' : '(Opcional)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.cnh}
+                      onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
+                      className="input-field"
+                      required={motoristaForm.nacionalidade === 'Brasileiro'}
+                    />
+                  </div>
+                  
+                  {/* Telefone/Contato */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Telefone/Contato (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.telefone}
+                      onChange={(e) => {
+                        const formatted = formatContact(e.target.value);
+                        setMotoristaForm({ ...motoristaForm, telefone: formatted });
+                      }}
+                      className="input-field"
+                      placeholder="Ex: (11) 99999-9999 ou +55 11 9 9999-9999"
+                    />
+                  </div>
+
+                  <div className="flex space-x-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={resetMotoristaForm}
+                      className="btn-secondary flex-1"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary flex-1"
+                    >
+                      {editingMotorista ? 'Atualizar' : 'Criar'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showVeiculoForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div ref={veiculoModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingVeiculo ? 'Editar Veículo' : 'Novo Veículo'}
+                  </h3>
+                  <button
+                    onClick={resetVeiculoForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleVeiculoSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tipo de Veículo
+                      </label>
+                      <select
+                        value={veiculoForm.tipo}
+                        onChange={(e) => setVeiculoForm({ ...veiculoForm, tipo: e.target.value })}
+                        className="input-field"
+                      >
+                        <option value="Truck">Truck</option>
+                        <option value="Cavalo">Cavalo</option>
+                        <option value="Carreta">Carreta</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {veiculoForm.tipo === 'Truck' 
+                          ? 'Placa *' 
+                          : veiculoForm.tipo === 'Carreta' 
+                            ? 'Placa da Carreta *' 
+                            : 'Placa do Cavalo *'}
+                        {consultandoPlaca && (
+                          <span className="ml-2 text-blue-500 text-xs">
+                            Consultando...
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={veiculoForm.tipo === 'Truck' 
+                          ? veiculoForm.placa 
+                          : veiculoForm.tipo === 'Carreta' 
+                            ? veiculoForm.placaCarreta 
+                            : veiculoForm.placaCavalo}
+                        onChange={(e) => {
+                          const formatted = formatPlaca(e.target.value);
+                          
+                          if (veiculoForm.tipo === 'Truck') {
+                            setVeiculoForm({ ...veiculoForm, placa: formatted });
+                          } else if (veiculoForm.tipo === 'Carreta') {
+                            setVeiculoForm({ ...veiculoForm, placaCarreta: formatted });
+                          } else {
+                            setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
+                          }
+                          
+                          // Remove formatação para validação
+                          const placaLimpa = formatted.replace(/[^A-Z0-9]/g, '').toUpperCase();
+
+                          // Reset flag de consulta quando a placa muda
+                          if (placaConsultada && placaConsultada !== placaLimpa) {
+                            setPlacaConsultada('');
+                          }
+                          
+                          // Consulta placa automaticamente se for válida
+                          if (VehicleService.validarPlaca(placaLimpa)) {
+                            handlePlacaConsultation(placaLimpa);
+                          }
+                        }}
+                        className={`input-field ${consultandoPlaca ? 'opacity-50' : ''}`}
+                        placeholder="ABC1234 ou ABC1D23"
+                        disabled={consultandoPlaca}
+                        required
+                      />
+                      {placaConsultada && (
+                        <p className="text-green-600 text-xs mt-1">
+                          ✓ Dados da placa consultados automaticamente
+                        </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Fabricante
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.fabricante}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, fabricante: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+
+                        {veiculoForm.tipo !== 'Carreta' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Modelo
+                            </label>
+                            <input
+                              type="text"
+                              value={veiculoForm.modelo}
+                              onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
+                              className="input-field"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Ano
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.ano}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, ano: e.target.value })}
+                            className="input-field"
+                            placeholder="2023"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Chassi
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.chassis}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, chassis: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+                      </div>
+
+                      {veiculoForm.tipo === 'Truck' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Carroceria
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.carroceria}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, carroceria: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+                      )}
+
+                      {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
+                          Para Carreta, usamos apenas a placa principal acima. */}
+
+                      <div className="flex space-x-4 pt-4">
+                        <button
+                          type="button"
+                          onClick={resetVeiculoForm}
+                          className="btn-secondary flex-1"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn-primary flex-1"
+                        >
+                          {editingVeiculo ? 'Atualizar' : 'Criar'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          {/* Modal de confirmação de exclusão */}
+          {showDeleteConfirm && deleteTarget && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                <div className="flex items-center mb-4">
+                  <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Confirmar Exclusão
+                  </h3>
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Tem certeza que deseja excluir {
+                    deleteTarget.type === 'veiculo' ? 'o veículo' : 
+                    deleteTarget.type === 'motorista' ? 'o motorista' : 
+                    'o parceiro'
+                  }{' '}
+                  <span className="font-semibold">{deleteTarget?.name}</span>?
+                  {deleteTarget.type === 'veiculo' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação também removerá qualquer vinculação com motoristas.
+                    </span>
+                  )}
+                  {deleteTarget.type === 'motorista' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação também removerá qualquer vinculação com veículos.
+                    </span >
+                  )}
+                  {deleteTarget.type === 'parceiro' && (
+                    <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                      Esta ação removerá o parceiro e todos os seus motoristas e veículos associados.
+                    </span>
+                  )}
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteTarget(null);
+                    }}
+                    className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+    </div>
   );
 }
