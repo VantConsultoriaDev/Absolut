@@ -74,7 +74,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!supabase) {
       console.error('Supabase client is not initialized. Cannot log in.');
-      return false;
+      // Retorna false imediatamente se o cliente não estiver pronto
+      return false; 
     }
     
     // Define loading como true durante a tentativa de login
