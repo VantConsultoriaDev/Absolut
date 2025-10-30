@@ -6,7 +6,8 @@ import {
   formatDocument, 
   formatPlaca,
   formatContact,
-  formatCUIT // Importado para formatação de documentos estrangeiros (ex: CUIT)
+  formatCUIT, // Importado para formatação de documentos estrangeiros (ex: CUIT)
+  parseDocument // CORREÇÃO: Importando parseDocument
 } from '../utils/formatters';
 import StandardCheckbox from '../components/StandardCheckbox';
 import { CNPJService } from '../services/cnpjService';
