@@ -129,7 +129,7 @@ const Layout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto"> {/* Mantendo space-y-1 para o modo expandido */}
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href
               const isCollapsed = sidebarCollapsed && !isHovering
