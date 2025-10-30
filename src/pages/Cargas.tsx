@@ -152,17 +152,33 @@ const Cargas: React.FC = () => {
     }
   }, [location.state]);
 
-  // Função auxiliar para extrair UF e cidade de uma string
+  // Função auxiliar para extrair UF e cidade de uma string (Corrigida)
   const extrairUfECidade = (localCompleto: string) => {
-    if (localCompleto === 'Internacional') {
+    if (localCompleto.toLowerCase() === 'internacional') {
       return { uf: 'internacional', cidade: '' };
     }
-    const partes = localCompleto.split(' - ');
-    if (partes.length === 2) {
-      return { uf: partes[1], cidade: partes[0] };
-    } else {
+    
+    // Tenta encontrar o formato "Cidade - UF"
+    const match = localCompleto.match(/(.*)\s-\s([A-Z]{2})$/);
+    
+    if (match) {
+      const cidade = match[1].trim();
+      const uf = match[2].trim();
+      return { uf, cidade };
+    } 
+    
+    // Se for apenas a UF (ou um nome de cidade sem UF)
+    const ufOption = UFS_ORDENADAS.find(u => u.value === localCompleto);
+    if (ufOption) {
       return { uf: localCompleto, cidade: '' };
     }
+
+    // Se for um nome de cidade/país internacional que foi salvo como origem/destino
+    if (localCompleto.length > 0) {
+      return { uf: 'internacional', cidade: localCompleto };
+    }
+
+    return { uf: '', cidade: '' };
   };
 
   // Handlers de Formulário
@@ -203,7 +219,7 @@ const Cargas: React.FC = () => {
     const destinoInfo = extrairUfECidade(carga.destino);
     
     const formDataToSet: CargaFormData = {
-      crt: carga.crt || carga.descricao || '',
+      crt: carga.crt || '', // CRT não obrigatório
       origem: carga.origem,
       destino: carga.destino,
       clienteId: carga.clienteId || '',
@@ -238,18 +254,30 @@ const Cargas: React.FC = () => {
       alert('Selecione a UF de origem e destino');
       return;
     }
-
-    const origemCompleta = formData.ufOrigemSelecionada === 'internacional' 
-      ? 'Internacional'
-      : formData.cidadeOrigem 
-        ? `${formData.cidadeOrigem} - ${formData.ufOrigemSelecionada}`
+    
+    // 1. Construção da Origem Completa
+    let origemCompleta: string;
+    if (formData.ufOrigemSelecionada.toLowerCase() === 'internacional') {
+      // Se for internacional, a origem é a cidade/país digitado, ou 'Internacional' se vazio
+      origemCompleta = formData.cidadeOrigem.trim() || 'Internacional';
+    } else {
+      // Se for nacional, usa Cidade - UF, ou apenas UF se a cidade estiver vazia
+      origemCompleta = formData.cidadeOrigem.trim() 
+        ? `${formData.cidadeOrigem.trim()} - ${formData.ufOrigemSelecionada}`
         : formData.ufOrigemSelecionada;
+    }
 
-    const destinoCompleta = formData.ufDestinoSelecionada === 'internacional' 
-      ? 'Internacional'
-      : formData.cidadeDestino 
-        ? `${formData.cidadeDestino} - ${formData.ufDestinoSelecionada}`
+    // 2. Construção do Destino Completo
+    let destinoCompleta: string;
+    if (formData.ufDestinoSelecionada.toLowerCase() === 'internacional') {
+      // Se for internacional, o destino é a cidade/país digitado, ou 'Internacional' se vazio
+      destinoCompleta = formData.cidadeDestino.trim() || 'Internacional';
+    } else {
+      // Se for nacional, usa Cidade - UF, ou apenas UF se a cidade estiver vazia
+      destinoCompleta = formData.cidadeDestino.trim() 
+        ? `${formData.cidadeDestino.trim()} - ${formData.ufDestinoSelecionada}`
         : formData.ufDestinoSelecionada;
+    }
     
     const cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'> = {
       descricao: formData.crt || 'Carga sem descrição',
@@ -260,7 +288,7 @@ const Cargas: React.FC = () => {
       dataColeta: new Date(formData.dataColeta),
       dataEntrega: new Date(formData.dataEntrega),
       status: formData.status,
-      crt: formData.crt,
+      crt: formData.crt || undefined, // CRT pode ser undefined
       clienteId: formData.clienteId || undefined
     };
 
@@ -511,6 +539,15 @@ const Cargas: React.FC = () => {
     
     return { total, aColetar, emTransito, armazenadas, entregues, valorTotal };
   }, [cargas]);
+
+  // Função para obter o nome da cidade/país para exibição na tabela
+  const getLocalDisplay = (localCompleto: string) => {
+    const info = extrairUfECidade(localCompleto);
+    if (info.uf.toLowerCase() === 'internacional') {
+      return info.cidade || 'Internacional';
+    }
+    return localCompleto;
+  };
 
   return (
     <div className="space-y-6">
@@ -775,10 +812,10 @@ const Cargas: React.FC = () => {
                       {carga.crt || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                      {carga.origem}
+                      {getLocalDisplay(carga.origem)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                      {carga.destino}
+                      {getLocalDisplay(carga.destino)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       {carga.dataColeta ? format(new Date(carga.dataColeta), 'dd/MM/yyyy', { locale: ptBR }) : '-'}

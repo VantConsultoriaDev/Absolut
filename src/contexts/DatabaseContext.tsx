@@ -356,15 +356,31 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
   // Utility functions for Cargas/Financeiro synchronization
   const extrairUfECidade = (localCompleto: string) => {
-    if (localCompleto === 'Internacional') {
+    if (localCompleto.toLowerCase() === 'internacional') {
       return { uf: 'internacional', cidade: '' };
     }
-    const partes = localCompleto.split(' - ');
-    if (partes.length === 2) {
-      return { uf: partes[1], cidade: partes[0] };
-    } else {
+    
+    // Tenta encontrar o formato "Cidade - UF"
+    const match = localCompleto.match(/(.*)\s-\s([A-Z]{2})$/);
+    
+    if (match) {
+      const cidade = match[1].trim();
+      const uf = match[2].trim();
+      return { uf, cidade };
+    } 
+    
+    // Se for apenas a UF (ou um nome de cidade sem UF)
+    // Nota: Não temos acesso a UFS_ORDENADAS aqui, então confiamos no formato.
+    if (localCompleto.length === 2 && localCompleto === localCompleto.toUpperCase()) {
       return { uf: localCompleto, cidade: '' };
     }
+
+    // Se for um nome de cidade/país internacional que foi salvo sem a UF 'Internacional'
+    if (localCompleto.length > 0) {
+      return { uf: 'internacional', cidade: localCompleto };
+    }
+
+    return { uf: '', cidade: '' };
   };
 
   const getMotoristaName = (motoristaId: string | undefined): string => {
@@ -382,15 +398,19 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   };
 
   const buildMovimentacaoDescription = (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete'): string => {
-    const destinoInfo = extrairUfECidade(carga.destino || '');
-    const cidadeDestino = destinoInfo.cidade || carga.destino || '';
+    const localDisplay = carga.destino.toLowerCase() === 'internacional' 
+      ? carga.destino 
+      : carga.destino.includes(' - ') 
+        ? carga.destino.split(' - ')[0] // Apenas a cidade
+        : carga.destino; // Se for apenas a UF ou cidade/país
+
     const crtDisplay = carga.crt || carga.descricao || carga.id;
     
     const motoristaNome = getMotoristaName(carga.motoristaId);
     const motoristaSufixo = motoristaNome ? ` - ${motoristaNome}` : '';
 
     // Formato: "{Tipo} - {CRT} - {Cidade Destino} - {Motorista Vinculado}"
-    return `${prefix} - ${crtDisplay} - ${cidadeDestino}${motoristaSufixo}`;
+    return `${prefix} - ${crtDisplay} - ${localDisplay}${motoristaSufixo}`;
   };
 
   // Função de sincronização refatorada para usar o estado atualizado
@@ -416,17 +436,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           
           // Lógica de Recálculo de Valor (Se for Adiantamento ou Saldo)
           if (prefix === 'Adto' || prefix === 'Saldo') {
-            // Encontra a movimentação original para calcular a proporção
-            // const originalMov = currentMovimentacoes.find(m => m.id === mov.id); // Removido: Variável não utilizada
-            
-            // Tenta encontrar o valor original da carga ANTES da atualização (se disponível)
-            // Como não temos histórico, usamos o valor da movimentação atual para calcular a proporção
-            // em relação ao valor da carga atual. Isso é um risco, mas é o melhor que podemos fazer
-            // sem um histórico de transações.
-            
-            // Para simplificar e garantir que o valor seja atualizado, vamos usar uma abordagem mais simples:
-            // Se a descrição for Adto ou Saldo, assumimos que o valor da movimentação é uma proporção
-            // do valor total da carga. Se o valor total da carga mudar, a proporção deve ser mantida.
             
             const relatedMovs = currentMovimentacoes.filter(m => m.cargaId === cargaId);
             const totalRelatedValue = relatedMovs.reduce((sum, m) => sum + m.valor, 0);

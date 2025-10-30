@@ -95,6 +95,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     placeholder="Ex: BR722"
                     className="input-field"
                     maxLength={10}
+                    // CRT não é mais obrigatório
                   />
                   <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres</p>
                 </div>
@@ -147,9 +148,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                       value={formData.ufOrigemSelecionada}
                       onChange={(e) => {
                         onFormChange('ufOrigemSelecionada', e.target.value);
-                        if (formData.cidadeOrigem) {
-                          onFormChange('cidadeOrigem', '');
-                        }
+                        // Não limpa cidadeOrigem automaticamente, pois pode ser um valor internacional
                       }}
                       className="input-field"
                       required
@@ -163,7 +162,22 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     </select>
                   </div>
                   
-                  {formData.ufOrigemSelecionada && (
+                  {(formData.ufOrigemSelecionada && formData.ufOrigemSelecionada.toLowerCase() === 'internacional') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Cidade/País Origem
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.cidadeOrigem}
+                        onChange={(e) => onFormChange('cidadeOrigem', e.target.value)}
+                        placeholder="Digite a cidade/país de origem"
+                        className="input-field"
+                      />
+                    </div>
+                  )}
+                  
+                  {(formData.ufOrigemSelecionada && formData.ufOrigemSelecionada.toLowerCase() !== 'internacional') && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Cidade Origem
@@ -172,7 +186,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         type="text"
                         value={formData.cidadeOrigem}
                         onChange={(e) => onFormChange('cidadeOrigem', e.target.value)}
-                        placeholder={formData.ufOrigemSelecionada === 'internacional' ? "Digite a cidade/país de origem" : "Digite a cidade de origem"}
+                        placeholder="Digite a cidade de origem"
                         className="input-field"
                       />
                     </div>
@@ -189,9 +203,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                       value={formData.ufDestinoSelecionada}
                       onChange={(e) => {
                         onFormChange('ufDestinoSelecionada', e.target.value);
-                        if (formData.cidadeDestino) {
-                          onFormChange('cidadeDestino', '');
-                        }
+                        // Não limpa cidadeDestino automaticamente
                       }}
                       className="input-field"
                       required
@@ -205,7 +217,22 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     </select>
                   </div>
                   
-                  {formData.ufDestinoSelecionada && (
+                  {(formData.ufDestinoSelecionada && formData.ufDestinoSelecionada.toLowerCase() === 'internacional') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Cidade/País Destino
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.cidadeDestino}
+                        onChange={(e) => onFormChange('cidadeDestino', e.target.value)}
+                        placeholder="Digite a cidade/país de destino"
+                        className="input-field"
+                      />
+                    </div>
+                  )}
+                  
+                  {(formData.ufDestinoSelecionada && formData.ufDestinoSelecionada.toLowerCase() !== 'internacional') && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Cidade Destino
@@ -214,7 +241,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         type="text"
                         value={formData.cidadeDestino}
                         onChange={(e) => onFormChange('cidadeDestino', e.target.value)}
-                        placeholder={formData.ufDestinoSelecionada === 'internacional' ? "Digite a cidade/país de destino" : "Digite a cidade de destino"}
+                        placeholder="Digite a cidade de destino"
                         className="input-field"
                       />
                     </div>
