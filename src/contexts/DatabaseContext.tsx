@@ -355,33 +355,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const generateId = () => Math.random().toString(36).substr(2, 9)
 
   // Utility functions for Cargas/Financeiro synchronization
-  const extrairUfECidade = (localCompleto: string) => {
-    if (localCompleto.toLowerCase() === 'internacional') {
-      return { uf: 'internacional', cidade: '' };
-    }
-    
-    // Tenta encontrar o formato "Cidade - UF"
-    const match = localCompleto.match(/(.*)\s-\s([A-Z]{2})$/);
-    
-    if (match) {
-      const cidade = match[1].trim();
-      const uf = match[2].trim();
-      return { uf, cidade };
-    } 
-    
-    // Se for apenas a UF (ou um nome de cidade sem UF)
-    // Nota: Não temos acesso a UFS_ORDENADAS aqui, então confiamos no formato.
-    if (localCompleto.length === 2 && localCompleto === localCompleto.toUpperCase()) {
-      return { uf: localCompleto, cidade: '' };
-    }
-
-    // Se for um nome de cidade/país internacional que foi salvo sem a UF 'Internacional'
-    if (localCompleto.length > 0) {
-      return { uf: 'internacional', cidade: localCompleto };
-    }
-
-    return { uf: '', cidade: '' };
-  };
 
   const getMotoristaName = (motoristaId: string | undefined): string => {
     if (!motoristaId) return '';
