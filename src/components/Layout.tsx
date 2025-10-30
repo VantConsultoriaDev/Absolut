@@ -38,7 +38,7 @@ const Layout: React.FC = () => {
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
-    { name: 'Contratos de Frete', href: '/contratos', icon: FileText, permission: 'cargas' },
+    { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
     { name: 'Parceiros', href: '/parceiros', icon: UserCheck, permission: 'parceiros' },
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ]

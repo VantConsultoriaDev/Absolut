@@ -366,7 +366,7 @@ const Contratos: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gerar Contrato de Frete</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contratos</h1>
           <p className="text-gray-600 dark:text-gray-400">Selecione uma carga para gerar o contrato e calcular o saldo.</p>
         </div>
       </div>
