@@ -1540,18 +1540,20 @@ export default function Parceiros() {
                   </div>
 
                   {/* CNH (Obrigatório para Brasileiro, Opcional para Estrangeiro) */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      CNH {motoristaForm.nacionalidade === 'Brasileiro' ? '*' : '(Opcional)'}
-                    </label>
-                    <input
-                      type="text"
-                      value={motoristaForm.cnh}
-                      onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
-                      className="input-field"
-                      required={motoristaForm.nacionalidade === 'Brasileiro'}
-                    />
-                  </div>
+                  {motoristaForm.nacionalidade === 'Brasileiro' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        CNH *
+                      </label>
+                      <input
+                        type="text"
+                        value={motoristaForm.cnh}
+                        onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
+                        className="input-field"
+                        required
+                      />
+                    </div>
+                  )}
                   
                   {/* Telefone/Contato */}
                   <div>
