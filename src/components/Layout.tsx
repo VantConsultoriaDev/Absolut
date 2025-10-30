@@ -129,26 +129,32 @@ const Layout: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto"> {/* Mantendo space-y-1 para o modo expandido */}
+          <nav className="flex-1 px-3 py-4 overflow-y-auto"> {/* Removido space-y-1 */}
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href
               const isCollapsed = sidebarCollapsed && !isHovering
+              
+              // Definindo classes de cor do ícone separadamente
+              const iconColorClasses = isActive 
+                ? 'text-red-700 dark:text-red-300' 
+                : 'text-slate-700 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-300';
+
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   title={isCollapsed ? item.name : undefined}
-                  className={`flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 mb-1 ${ // Adicionado mb-1 para espaçamento manual
                     isActive
-                      ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                      : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-red-50 dark:bg-red-900/30'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                   } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <item.icon className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
                   <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                     {item.name}
                   </span>
-                  {!isCollapsed && isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
+                  {!isCollapsed && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
                 </Link>
               )
             })}
