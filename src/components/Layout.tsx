@@ -19,7 +19,7 @@ import { useTheme } from '../contexts/ThemeContext'
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarOpen] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isHovering, setIsHovering] = useState(false)
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
