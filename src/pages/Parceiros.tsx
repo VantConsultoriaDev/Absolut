@@ -21,6 +21,7 @@ import { PermissoInternacional } from '../types';
 // Define PermissoData localmente para tipagem do estado
 interface PermissoData {
   razaoSocial: string;
+  nomeFantasia?: string; // NOVO
   cnpj: string;
   enderecoCompleto: string;
   simulado?: boolean;
@@ -527,6 +528,7 @@ export default function Parceiros() {
     if (existing) {
         setExistingPermisso({
             razaoSocial: existing.razaoSocial,
+            nomeFantasia: existing.nomeFantasia, // NOVO: Carrega nome fantasia
             cnpj: formatDocument(existing.cnpj, 'PJ'), // Formata CNPJ para exibição
             enderecoCompleto: existing.enderecoCompleto || '',
             simulado: existing.simulado
@@ -541,6 +543,7 @@ export default function Parceiros() {
     const permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'> = {
         veiculoId: veiculoId,
         razaoSocial: data.razaoSocial,
+        nomeFantasia: data.nomeFantasia, // NOVO: Salva nome fantasia
         cnpj: parseDocument(data.cnpj), // Salva limpo
         enderecoCompleto: data.enderecoCompleto,
         simulado: data.simulado

@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface PermissoData {
   razaoSocial: string;
+  nomeFantasia?: string; // NOVO
   cnpj: string;
   enderecoCompleto: string;
   simulado?: boolean;
@@ -25,6 +26,7 @@ const PermissoModal: React.FC<PermissoModalProps> = ({ isOpen, veiculo, onClose,
   const { user } = useAuth();
   const [formData, setFormData] = useState<PermissoData>({
     razaoSocial: '',
+    nomeFantasia: '', // NOVO
     cnpj: '',
     enderecoCompleto: '',
   });
@@ -37,11 +39,17 @@ const PermissoModal: React.FC<PermissoModalProps> = ({ isOpen, veiculo, onClose,
   useEffect(() => {
     if (isOpen) {
       if (existingPermisso) {
-        setFormData(existingPermisso);
+        setFormData({
+          razaoSocial: existingPermisso.razaoSocial || '',
+          nomeFantasia: existingPermisso.nomeFantasia || '', // NOVO
+          cnpj: existingPermisso.cnpj || '',
+          enderecoCompleto: existingPermisso.enderecoCompleto || '',
+        });
         setIsSimulated(existingPermisso.simulado || false);
       } else {
         setFormData({
           razaoSocial: '',
+          nomeFantasia: '', // NOVO
           cnpj: '',
           enderecoCompleto: '',
         });
@@ -93,6 +101,7 @@ const PermissoModal: React.FC<PermissoModalProps> = ({ isOpen, veiculo, onClose,
       if (data) {
         setFormData({
           razaoSocial: data.razaoSocial || '',
+          nomeFantasia: data.nomeFantasia || '', // NOVO: Preenche nome fantasia se vier da API
           cnpj: formatCNPJ(parseDocument(data.cnpj || '')),
           enderecoCompleto: data.enderecoCompleto || '',
         });
@@ -200,6 +209,20 @@ const PermissoModal: React.FC<PermissoModalProps> = ({ isOpen, veiculo, onClose,
                   required
                 />
               </div>
+              
+              {/* NOVO CAMPO: Nome Fantasia */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nome Fantasia (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.nomeFantasia}
+                  onChange={(e) => setFormData({ ...formData, nomeFantasia: e.target.value })}
+                  className="input-field"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   CNPJ *

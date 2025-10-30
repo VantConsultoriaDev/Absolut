@@ -71,6 +71,7 @@ export interface PermissoInternacional {
   id: string
   veiculoId: string
   razaoSocial: string
+  nomeFantasia?: string // NOVO CAMPO
   cnpj: string
   enderecoCompleto?: string
   dataConsulta: Date

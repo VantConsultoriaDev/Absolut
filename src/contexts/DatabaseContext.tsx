@@ -674,7 +674,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     let updatedPermisso: PermissoInternacional | null = null;
     setPermissoes(prev => prev.map(permisso => {
       if (permisso.id === id) {
-        updatedPermisso = { ...permisso, ...permissoData, updatedAt: new Date(), dataConsulta: new Date() };
+        updatedPermisso = { 
+          ...permisso, 
+          ...permissoData, 
+          updatedAt: new Date(), 
+          dataConsulta: new Date() 
+        };
         return updatedPermisso;
       }
       return permisso;
