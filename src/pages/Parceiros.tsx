@@ -188,45 +188,6 @@ export default function Parceiros() {
     }).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
   }, [parceiros, searchTerm, filterTipo, filterStatus]);
 
-  // Motoristas e veículos do parceiro selecionado (Mantidos para uso futuro, mas sem o useMemo)
-  const getMotoristasParceiro = (parceiroId: string) => {
-    const motoristasRegistrados = getMotoristasByParceiro(parceiroId);
-    
-    let todosMotoristas = [...motoristasRegistrados];
-    
-    if (!motoristaSearchTerm) return todosMotoristas;
-    
-    return todosMotoristas.filter(motorista => 
-      motorista.nome?.toLowerCase().includes(motoristaSearchTerm.toLowerCase())
-    );
-  };
-
-  const getVeiculosParceiro = (parceiroId: string) => {
-    const veiculos = getVeiculosByParceiro(parceiroId);
-    
-    if (!veiculoSearchTerm) return veiculos;
-    
-    return veiculos.filter(veiculo => {
-      const placaPrincipal = veiculo.tipo === 'Truck' 
-        ? veiculo.placa 
-        : veiculo.tipo === 'Carreta' 
-          ? veiculo.placaCarreta 
-          : veiculo.placaCavalo;
-      const placaCarreta = veiculo.placaCarreta || '';
-      const placaCarreta1 = veiculo.placaCarreta1 || '';
-      const placaCarreta2 = veiculo.placaCarreta2 || '';
-      const placaDolly = veiculo.placaDolly || '';
-      
-      const searchLower = veiculoSearchTerm.toLowerCase();
-      
-      return placaPrincipal?.toLowerCase().includes(searchLower) ||
-             placaCarreta?.toLowerCase().includes(searchLower) ||
-             placaCarreta1?.toLowerCase().includes(searchLower) ||
-             placaCarreta2?.toLowerCase().includes(searchLower) ||
-             placaDolly?.toLowerCase().includes(searchLower);
-    });
-  };
-
   // Estatísticas
   const stats = useMemo(() => {
     const totalParceiros = parceiros.length;
