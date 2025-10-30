@@ -3,6 +3,7 @@ import { useDatabase } from '../contexts/DatabaseContext'
 import { formatDocument } from '../utils/formatters'
 import { Plus, Edit, Trash2, Search, Building2, User, Globe, Mail, Phone } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
+import { useModal } from '../hooks/useModal' // Importando useModal
 
 const Clientes: React.FC = () => {
   const { clientes, createCliente, updateCliente, deleteCliente } = useDatabase()
@@ -28,6 +29,15 @@ const Clientes: React.FC = () => {
   // Estados para consulta de CNPJ (apenas para PJ)
   const [consultandoCNPJ, setConsultandoCNPJ] = useState(false)
   const [cnpjConsultado, setCnpjConsultado] = useState(false)
+
+  // Hook useModal
+  const { modalRef } = useModal({
+    isOpen: showForm,
+    onClose: () => {
+      setShowForm(false)
+      resetForm()
+    }
+  })
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -238,7 +248,7 @@ const Clientes: React.FC = () => {
       {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4">
+          <div ref={modalRef} className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
               <button onClick={() => { setShowForm(false); resetForm() }} className="text-gray-400 hover:text-gray-600">×</button>
@@ -408,7 +418,7 @@ const Clientes: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" className="btn-ghost" onClick={() => { setShowForm(false); resetForm() }}>Cancelar</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); resetForm() }}>Cancelar</button>
                 <button type="submit" className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
                   {editingId ? 'Salvar alterações' : 'Adicionar cliente'}
                 </button>

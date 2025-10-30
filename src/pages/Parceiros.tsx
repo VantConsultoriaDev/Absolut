@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca
@@ -103,66 +103,74 @@ export default function Parceiros() {
   });
 
   // Hooks para gerenciar fechamento dos modais
+  const resetParceiroForm = () => {
+    setParceiroForm({
+      nome: '',
+      tipo: 'PF',
+      documento: '',
+      cnh: '',
+      telefone: '',
+      endereco: '',
+      cidade: '',
+      estado: '',
+      cep: '',
+      observacoes: '',
+      isMotorista: false
+    });
+    setEditingParceiro(null);
+    setShowParceiroForm(false);
+    setCnpjConsultado(false);
+  };
+  
+  const resetMotoristaForm = () => {
+    setMotoristaForm({
+      nome: '',
+      cpf: '',
+      cnh: '',
+      parceiroId: '',
+      veiculoVinculado: ''
+    });
+    setEditingMotorista(null);
+    setShowMotoristaForm(false);
+  };
+  
+  const resetVeiculoForm = () => {
+    setVeiculoForm({
+      tipo: 'Truck',
+      placa: '',
+      placaCavalo: '',
+      fabricante: '',
+      modelo: '',
+      ano: '',
+      chassis: '',
+      carroceria: '',
+      quantidadeCarretas: 1,
+      possuiDolly: false,
+      placaCarreta: '',
+      placaCarreta1: '',
+      placaCarreta2: '',
+      placaDolly: '',
+      parceiroId: '',
+      motoristaVinculado: ''
+    });
+    setEditingVeiculo(null);
+    setShowVeiculoForm(false);
+    setPlacaConsultada('');
+  };
+
   const { modalRef: parceiroModalRef } = useModal({
     isOpen: showParceiroForm,
-    onClose: () => {
-      setShowParceiroForm(false);
-      setEditingParceiro(null);
-      setParceiroForm({
-        nome: '',
-        tipo: 'PF',
-        documento: '',
-        cnh: '',
-        telefone: '',
-        endereco: '',
-        cidade: '',
-        estado: '',
-        cep: '',
-        observacoes: '',
-        isMotorista: false
-      });
-    }
+    onClose: resetParceiroForm
   });
 
   const { modalRef: motoristaModalRef } = useModal({
     isOpen: showMotoristaForm,
-    onClose: () => {
-      setShowMotoristaForm(false);
-      setEditingMotorista(null);
-      setMotoristaForm({
-        nome: '',
-        cpf: '',
-        cnh: '',
-        parceiroId: '',
-        veiculoVinculado: ''
-      });
-    }
+    onClose: resetMotoristaForm
   });
 
   const { modalRef: veiculoModalRef } = useModal({
     isOpen: showVeiculoForm,
-    onClose: () => {
-      setShowVeiculoForm(false);
-      setEditingVeiculo(null);
-      setVeiculoForm({
-        tipo: 'Truck',
-        placa: '',
-        placaCavalo: '',
-        fabricante: '',
-        modelo: '',
-        ano: '',
-        chassis: '',
-        carroceria: '',
-        quantidadeCarretas: 1,
-        possuiDolly: false,
-        placaCarreta: '',
-        placaCarreta1: '',
-        placaCarreta2: '',
-        placaDolly: '',
-        parceiroId: '',
-        motoristaVinculado: ''
-      });
-    }
+    onClose: resetVeiculoForm
   });
 
   // Filtrar parceiros
@@ -268,25 +276,6 @@ export default function Parceiros() {
     }
 
     resetParceiroForm();
-  };
-
-  const resetParceiroForm = () => {
-    setParceiroForm({
-      nome: '',
-      tipo: 'PF',
-      documento: '',
-      cnh: '',
-      telefone: '',
-      endereco: '',
-      cidade: '',
-      estado: '',
-      cep: '',
-      observacoes: '',
-      isMotorista: false
-    });
-    setEditingParceiro(null);
-    setShowParceiroForm(false);
-    setCnpjConsultado(false);
   };
 
   // Função para consultar CNPJ automaticamente
@@ -453,18 +442,6 @@ export default function Parceiros() {
     resetMotoristaForm();
   };
 
-  const resetMotoristaForm = () => {
-    setMotoristaForm({
-      nome: '',
-      cpf: '',
-      cnh: '',
-      parceiroId: '',
-      veiculoVinculado: ''
-    });
-    setEditingMotorista(null);
-    setShowMotoristaForm(false);
-  };
-
   const handleEditMotorista = (motorista: any) => {
     setMotoristaForm({
       nome: motorista.nome || '',
@@ -545,30 +522,6 @@ export default function Parceiros() {
     }
 
     resetVeiculoForm();
-  };
-
-  const resetVeiculoForm = () => {
-    setVeiculoForm({
-      tipo: 'Truck',
-      placa: '',
-      placaCavalo: '',
-      fabricante: '',
-      modelo: '',
-      ano: '',
-      chassis: '',
-      carroceria: '',
-      quantidadeCarretas: 1,
-      possuiDolly: false,
-      placaCarreta: '',
-      placaCarreta1: '',
-      placaCarreta2: '',
-      placaDolly: '',
-      parceiroId: '',
-      motoristaVinculado: ''
-    });
-    setEditingVeiculo(null);
-    setShowVeiculoForm(false);
-    setPlacaConsultada('');
   };
 
   const handleEditVeiculo = (veiculo: any) => {
@@ -964,9 +917,7 @@ export default function Parceiros() {
                     onClick={resetParceiroForm}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <X className="w-6 h-6" />
                   </button>
                 </div>
 
@@ -1298,666 +1249,273 @@ export default function Parceiros() {
           </div>
         )}
 
-        {/* Modal de confirmação de exclusão (lista de Parceiros) */}
-        {showDeleteConfirm && deleteTarget && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-              <div className="flex items-center mb-4">
-                <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Confirmar Exclusão
-                </h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Tem certeza que deseja excluir {
-                  deleteTarget.type === 'veiculo' ? 'o veículo' : 
-                  deleteTarget.type === 'motorista' ? 'o motorista' : 
-                  'o parceiro'
-                }{' '}
-                <span className="font-semibold">{deleteTarget?.name}</span>?
-                {deleteTarget.type === 'veiculo' && (
-                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                    Esta ação também removerá qualquer vinculação com motoristas.
-                  </span>
-                )}
-                {deleteTarget.type === 'motorista' && (
-                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                    Esta ação também removerá qualquer vinculação com veículos.
-                  </span>
-                )}
-                {deleteTarget.type === 'parceiro' && (
-                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                    Esta ação removerá o parceiro e todos os seus motoristas e veículos associados.
-                  </span>
-                )}
-              </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    setDeleteTarget(null);
-                  }}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Excluir
-                </button>
+        {/* Modal do Formulário de Motorista */}
+        {showMotoristaForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div ref={motoristaModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
+                  </h3>
+                  <button
+                    onClick={resetMotoristaForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleMotoristaSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.nome}
+                      onChange={(e) => setMotoristaForm({ ...motoristaForm, nome: e.target.value })}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      CPF *
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.cpf}
+                      onChange={(e) => {
+                        const formatted = formatDocument(e.target.value, 'PF');
+                        setMotoristaForm({ ...motoristaForm, cpf: formatted });
+                      }}
+                      className="input-field"
+                      placeholder="000.000.000-00"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      CNH *
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.cnh}
+                      onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
+                      className="input-field"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex space-x-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={resetMotoristaForm}
+                      className="btn-secondary flex-1"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary flex-1"
+                    >
+                      {editingMotorista ? 'Atualizar' : 'Criar'}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
         )}
-      </div>
-    );
-  }
 
-  // Painel do Parceiro Selecionado
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setSelectedParceiro(null)}
-            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {selectedParceiro.nome}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {selectedParceiro.tipo === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'} • {formatDocument(selectedParceiro.documento, selectedParceiro.tipo)}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => handleEditParceiro(selectedParceiro)}
-          className="btn-secondary"
-        >
-          Editar Parceiro
-        </button>
-      </div>
+        {/* Modal do Formulário de Veículo */}
+        {showVeiculoForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div ref={veiculoModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {editingVeiculo ? 'Editar Veículo' : 'Novo Veículo'}
+                  </h3>
+                  <button
+                    onClick={resetVeiculoForm}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
-      {/* Abas */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('veiculos')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'veiculos'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            🚗 Veículos ({veiculosParceiro.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('motoristas')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'motoristas'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            👤 Motoristas ({motoristasParceiro.length})
-          </button>
-        </nav>
-      </div>
+                <form onSubmit={handleVeiculoSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tipo de Veículo
+                      </label>
+                      <select
+                        value={veiculoForm.tipo}
+                        onChange={(e) => setVeiculoForm({ ...veiculoForm, tipo: e.target.value })}
+                        className="input-field"
+                      >
+                        <option value="Truck">Truck</option>
+                        <option value="Cavalo">Cavalo</option>
+                        <option value="Carreta">Carreta</option>
+                      </select>
+                    </div>
 
-      {/* Conteúdo das Abas */}
-      {activeTab === 'veiculos' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Veículos</h2>
-            <button
-              onClick={() => setShowVeiculoForm(true)}
-              className="btn-primary"
-            >
-              Novo Veículo
-            </button>
-          </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {veiculoForm.tipo === 'Truck' 
+                          ? 'Placa *' 
+                          : veiculoForm.tipo === 'Carreta' 
+                            ? 'Placa da Carreta *' 
+                            : 'Placa do Cavalo *'}
+                        {consultandoPlaca && (
+                          <span className="ml-2 text-blue-500 text-xs">
+                            Consultando...
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={veiculoForm.tipo === 'Truck' 
+                          ? veiculoForm.placa 
+                          : veiculoForm.tipo === 'Carreta' 
+                            ? veiculoForm.placaCarreta 
+                            : veiculoForm.placaCavalo}
+                        onChange={(e) => {
+                          const formatted = formatPlaca(e.target.value);
+                          
+                          if (veiculoForm.tipo === 'Truck') {
+                            setVeiculoForm({ ...veiculoForm, placa: formatted });
+                          } else if (veiculoForm.tipo === 'Carreta') {
+                            setVeiculoForm({ ...veiculoForm, placaCarreta: formatted });
+                          } else {
+                            setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
+                          }
+                          
+                          // Remove formatação para validação
+                          const placaLimpa = formatted.replace(/[^A-Z0-9]/g, '').toUpperCase();
 
-          {/* Campo de busca por placa */}
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Buscar por placa..."
-                value={veiculoSearchTerm}
-                onChange={(e) => setVeiculoSearchTerm(e.target.value)}
-                className="input-field pl-10"
-              />
-            </div>
-            {veiculoSearchTerm && (
-              <button
-                onClick={() => setVeiculoSearchTerm('')}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Lista de veículos */}
-          <div className="space-y-3">
-            {veiculosParceiro.map((veiculo) => {
-              // Corrigido: Buscar o motorista vinculado ao veículo
-              const motoristaVinculado = motoristasParceiro.find(m => 
-                m.id === veiculo.motoristaVinculado || 
-                (veiculo.motoristaVinculado === veiculo.parceiroId && m.id === veiculo.parceiroId)
-              );
-              
-              return (
-                <div key={veiculo.id} className="card p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    {/* Informações principais */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                      {/* Veículo */}
-                      <div className="flex items-center space-x-3">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          veiculo.tipo === 'Truck' 
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                        }`}>
-                          {veiculo.tipo === 'Conjunto' ? 'Cavalo' : veiculo.tipo}
-                        </span>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {veiculo.fabricante} {veiculo.modelo}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {veiculo.ano}
-                          </p>
+                          // Reset flag de consulta quando a placa muda
+                          if (placaConsultada && placaConsultada !== placaLimpa) {
+                            setPlacaConsultada('');
+                          }
+                          
+                          // Consulta placa automaticamente se for válida
+                          if (VehicleService.validarPlaca(placaLimpa)) {
+                            handlePlacaConsultation(placaLimpa);
+                          }
+                        }}
+                        className={`input-field ${consultandoPlaca ? 'opacity-50' : ''}`}
+                        placeholder="ABC1234 ou ABC1D23"
+                        disabled={consultandoPlaca}
+                        required
+                      />
+                      {placaConsultada && (
+                        <p className="text-green-600 text-xs mt-1">
+                          ✓ Dados da placa consultados automaticamente
+                        </p>
+                          )}
                         </div>
                       </div>
 
-                      {/* Placas */}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {veiculo.tipo === 'Truck' 
-                            ? veiculo.placa 
-                            : veiculo.tipo === 'Carreta' 
-                              ? (veiculo.placaCarreta || '-') 
-                              : veiculo.placaCavalo}
-                        </p>
-                      </div>
+                      {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
 
-                      {/* Motorista (somente leitura) */}
-                      <div>
-                        {motoristaVinculado && (
-                          <div>
-                            <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                              {motoristaVinculado.nome}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Vinculado</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Chassi */}
-                      <div className="hidden lg:block">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Chassi: {veiculo.chassis}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Ações */}
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => handleEditVeiculo(veiculo)}
-                        className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        title="Editar veículo"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteVeiculo(veiculo.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        title="Excluir veículo"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {veiculosParceiro.length === 0 && (
-              <div className="col-span-full text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">Nenhum veículo cadastrado</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'motoristas' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Motoristas</h2>
-            <button
-              onClick={() => setShowMotoristaForm(true)}
-              className="btn-primary"
-            >
-              Novo Motorista
-            </button>
-          </div>
-
-          {/* Campo de busca por nome */}
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Buscar por nome..."
-                value={motoristaSearchTerm}
-                onChange={(e) => setMotoristaSearchTerm(e.target.value)}
-                className="input-field pl-10"
-              />
-            </div>
-            {motoristaSearchTerm && (
-              <button
-                onClick={() => setMotoristaSearchTerm('')}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Lista de motoristas */}
-          <div className="space-y-3">
-            {motoristasParceiro.map((motorista) => {
-              // Corrigido: Buscar veículos vinculados ao motorista
-              const veiculosDoMotorista = veiculosParceiro.filter(v => 
-                v.motoristaVinculado === motorista.id || 
-                (motorista.id === motorista.parceiroId && v.motoristaVinculado === motorista.parceiroId)
-              );
-              const placas = veiculosDoMotorista
-                .map(v => v.tipo === 'Truck' ? (v.placa || '') : v.tipo === 'Carreta' ? (v.placaCarreta || '') : (v.placaCavalo || ''))
-                .filter(Boolean);
-              
-              return (
-                <div key={motorista.id} className="card p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    {/* Informações principais */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                      {/* Nome */}
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {motorista.nome}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Motorista
-                        </p>
-                      </div>
-
-                      {/* CNH */}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          CNH: {motorista.cnh}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          CPF: {formatDocument(motorista.cpf, 'PF')}
-                        </p>
-                      </div>
-
-                      {/* Veículos vinculados (somente leitura) */}
-                      <div>
-                        {placas.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                              {placas.join(', ')}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Vinculado</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Status */}
-                      <div className="hidden lg:block">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          placas.length > 0 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                        }`}>
-                          {placas.length > 0 ? 'Vinculado' : 'Disponível'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Ações */}
-                    <div className="flex items-center space-x-2 ml-4">
-                      <button
-                        onClick={() => handleEditMotorista(motorista)}
-                        className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        title="Editar motorista"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMotorista(motorista.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        title="Excluir motorista"
-                      >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {motoristasParceiro.length === 0 && (
-              <div className="col-span-full text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400">Nenhum motorista cadastrado</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal do Formulário de Motorista */}
-      {showMotoristaForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div ref={motoristaModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {editingMotorista ? 'Editar Motorista' : 'Novo Motorista'}
-                </h3>
-                <button
-                  onClick={resetMotoristaForm}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleMotoristaSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nome Completo *
-                  </label>
-                  <input
-                    type="text"
-                    value={motoristaForm.nome}
-                    onChange={(e) => setMotoristaForm({ ...motoristaForm, nome: e.target.value })}
-                    className="input-field"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    CPF *
-                  </label>
-                  <input
-                    type="text"
-                    value={motoristaForm.cpf}
-                    onChange={(e) => {
-                      const formatted = formatDocument(e.target.value, 'PF');
-                      setMotoristaForm({ ...motoristaForm, cpf: formatted });
-                    }}
-                    className="input-field"
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    CNH *
-                  </label>
-                  <input
-                    type="text"
-                    value={motoristaForm.cnh}
-                    onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
-                    className="input-field"
-                    required
-                  />
-                </div>
-
-                <div className="flex space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={resetMotoristaForm}
-                    className="btn-secondary flex-1"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary flex-1"
-                  >
-                    {editingMotorista ? 'Atualizar' : 'Criar'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal do Formulário de Veículo */}
-      {showVeiculoForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div ref={veiculoModalRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {editingVeiculo ? 'Editar Veículo' : 'Novo Veículo'}
-                </h3>
-                <button
-                  onClick={resetVeiculoForm}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleVeiculoSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Tipo de Veículo
-                    </label>
-                    <select
-                      value={veiculoForm.tipo}
-                      onChange={(e) => setVeiculoForm({ ...veiculoForm, tipo: e.target.value })}
-                      className="input-field"
-                    >
-                      <option value="Truck">Truck</option>
-                      <option value="Cavalo">Cavalo</option>
-                      <option value="Carreta">Carreta</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {veiculoForm.tipo === 'Truck' 
-                        ? 'Placa *' 
-                        : veiculoForm.tipo === 'Carreta' 
-                          ? 'Placa da Carreta *' 
-                          : 'Placa do Cavalo *'}
-                      {consultandoPlaca && (
-                        <span className="ml-2 text-blue-500 text-xs">
-                          Consultando...
-                        </span>
-                      )}
-                    </label>
-                    <input
-                      type="text"
-                      value={veiculoForm.tipo === 'Truck' 
-                        ? veiculoForm.placa 
-                        : veiculoForm.tipo === 'Carreta' 
-                          ? veiculoForm.placaCarreta 
-                          : veiculoForm.placaCavalo}
-                      onChange={(e) => {
-                        const formatted = formatPlaca(e.target.value);
-                        
-                        if (veiculoForm.tipo === 'Truck') {
-                          setVeiculoForm({ ...veiculoForm, placa: formatted });
-                        } else if (veiculoForm.tipo === 'Carreta') {
-                          setVeiculoForm({ ...veiculoForm, placaCarreta: formatted });
-                        } else {
-                          setVeiculoForm({ ...veiculoForm, placaCavalo: formatted });
-                        }
-                        
-                        // Remove formatação para validação
-                        const placaLimpa = formatted.replace(/[^A-Z0-9]/g, '').toUpperCase();
-
-                        // Reset flag de consulta quando a placa muda
-                        if (placaConsultada && placaConsultada !== placaLimpa) {
-                          setPlacaConsultada('');
-                        }
-                        
-                        // Consulta placa automaticamente se for válida
-                        if (VehicleService.validarPlaca(placaLimpa)) {
-                          handlePlacaConsultation(placaLimpa);
-                        }
-                      }}
-                      className={`input-field ${consultandoPlaca ? 'opacity-50' : ''}`}
-                      placeholder="ABC1234 ou ABC1D23"
-                      disabled={consultandoPlaca}
-                      required
-                    />
-                    {placaConsultada && (
-                      <p className="text-green-600 text-xs mt-1">
-                        ✓ Dados da placa consultados automaticamente
-                      </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Removido: quantidade de carretas para Conjunto. Cavalo não possui campos de carreta. */}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Fabricante
-                        </label>
-                        <input
-                          type="text"
-                          value={veiculoForm.fabricante}
-                          onChange={(e) => setVeiculoForm({ ...veiculoForm, fabricante: e.target.value })}
-                          className="input-field"
-                        />
-                      </div>
-
-                      {veiculoForm.tipo !== 'Carreta' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Modelo
+                            Fabricante
                           </label>
                           <input
                             type="text"
-                            value={veiculoForm.modelo}
-                            onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
+                            value={veiculoForm.fabricante}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, fabricante: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+
+                        {veiculoForm.tipo !== 'Carreta' && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Modelo
+                            </label>
+                            <input
+                              type="text"
+                              value={veiculoForm.modelo}
+                              onChange={(e) => setVeiculoForm({ ...veiculoForm, modelo: e.target.value })}
+                              className="input-field"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Ano
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.ano}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, ano: e.target.value })}
+                            className="input-field"
+                            placeholder="2023"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Chassi
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.chassis}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, chassis: e.target.value })}
+                            className="input-field"
+                          />
+                        </div>
+                      </div>
+
+                      {veiculoForm.tipo === 'Truck' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Carroceria
+                          </label>
+                          <input
+                            type="text"
+                            value={veiculoForm.carroceria}
+                            onChange={(e) => setVeiculoForm({ ...veiculoForm, carroceria: e.target.value })}
                             className="input-field"
                           />
                         </div>
                       )}
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Ano
-                        </label>
-                        <input
-                          type="text"
-                          value={veiculoForm.ano}
-                          onChange={(e) => setVeiculoForm({ ...veiculoForm, ano: e.target.value })}
-                          className="input-field"
-                          placeholder="2023"
-                        />
+                      {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
+                          Para Carreta, usamos apenas a placa principal acima. */}
+
+                      <div className="flex space-x-4 pt-4">
+                        <button
+                          type="button"
+                          onClick={resetVeiculoForm}
+                          className="btn-secondary flex-1"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn-primary flex-1"
+                        >
+                          {editingVeiculo ? 'Atualizar' : 'Criar'}
+                        </button>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Chassi
-                        </label>
-                        <input
-                          type="text"
-                          value={veiculoForm.chassis}
-                          onChange={(e) => setVeiculoForm({ ...veiculoForm, chassis: e.target.value })}
-                          className="input-field"
-                        />
-                      </div>
-                    </div>
-
-                    {veiculoForm.tipo === 'Truck' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Carroceria
-                        </label>
-                        <input
-                          type="text"
-                          value={veiculoForm.carroceria}
-                          onChange={(e) => setVeiculoForm({ ...veiculoForm, carroceria: e.target.value })}
-                          className="input-field"
-                        />
-                      </div>
-                    )}
-
-                    {/* Removido: campos específicos de Conjunto (carretas, dolly e placas múltiplas).
-                        Para Carreta, usamos apenas a placa principal acima. */}
-
-                    <div className="flex space-x-4 pt-4">
-                      <button
-                        type="button"
-                        onClick={resetVeiculoForm}
-                        className="btn-secondary flex-1"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="btn-primary flex-1"
-                      >
-                        {editingVeiculo ? 'Atualizar' : 'Criar'}
-                      </button>
-                    </div>
-                  </form>
+                    </form>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Removido: Modal de Vinculação motorista↔veículo */}
 
