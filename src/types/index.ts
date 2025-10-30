@@ -57,6 +57,7 @@ export interface Motorista {
   nome: string
   cpf: string
   cnh: string
+  nacionalidade: 'Brasileiro' | 'Estrangeiro' // NOVO CAMPO
   categoriaCnh?: string
   validadeCnh?: Date
   telefone?: string

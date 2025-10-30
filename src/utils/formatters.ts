@@ -51,6 +51,44 @@ export const formatCUIT = (value: string): string => {
   return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`
 }
 
+// NOVO: Formatação de contato condicional
+export const formatContact = (value: string): string => {
+  if (!value) return '';
+
+  // Se começar com '+', assume formato internacional (ex: +55 11 9 9999-9999)
+  if (value.startsWith('+')) {
+    // Remove tudo exceto números e o '+' inicial
+    const clean = '+' + value.slice(1).replace(/\D/g, '');
+    
+    // Tenta aplicar a máscara: +00 0 0000 00-0000 (máscara complexa, vamos simplificar para legibilidade)
+    // Exemplo: +5511987654321 -> +55 11 9 8765-4321
+    let formatted = clean;
+    
+    // +XX (código país)
+    if (clean.length > 3) formatted = clean.slice(0, 3) + ' ' + clean.slice(3);
+    // +XX XX (DDD)
+    if (clean.length > 5) formatted = formatted.slice(0, 6) + ' ' + formatted.slice(6);
+    // +XX XX X (Dígito 9)
+    if (clean.length > 6) formatted = formatted.slice(0, 8) + ' ' + formatted.slice(8);
+    // +XX XX X XXXX (Primeiros 4)
+    if (clean.length > 10) formatted = formatted.slice(0, 13) + '-' + formatted.slice(13);
+    
+    return formatted;
+  }
+
+  // Se começar com número, assume formato brasileiro (ex: (11) 99999-9999)
+  const numbers = value.replace(/\D/g, '');
+  
+  if (numbers.length <= 11) {
+    return numbers
+      .replace(/^(\d{2})(\d)/g, '($1) $2')
+      .replace(/(\d{4,5})(\d{4})$/, '$1-$2');
+  }
+  
+  return value;
+};
+
+
 // Formatação de valor monetário: R$ 10.000,00
 export const formatCurrency = (value: string | number): string => {
   // Se for número, formata diretamente

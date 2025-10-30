@@ -4,7 +4,8 @@ import { useModal } from '../hooks/useModal';
 import { XCircle, CheckCircle, AlertTriangle, X, Plus } from 'lucide-react';
 import { 
   formatDocument, 
-  formatPlaca
+  formatPlaca,
+  formatContact // Importado
 } from '../utils/formatters';
 import StandardCheckbox from '../components/StandardCheckbox';
 import { CNPJService } from '../services/cnpjService';
@@ -72,6 +73,8 @@ export default function Parceiros() {
     nome: '',
     cpf: '',
     cnh: '',
+    nacionalidade: 'Brasileiro' as 'Brasileiro' | 'Estrangeiro', // NOVO CAMPO
+    telefone: '', // NOVO CAMPO
     parceiroId: '',
     veiculoVinculado: ''
   });
@@ -120,6 +123,8 @@ export default function Parceiros() {
       nome: '',
       cpf: '',
       cnh: '',
+      nacionalidade: 'Brasileiro', // Reset para padrão
+      telefone: '',
       parceiroId: '',
       veiculoVinculado: ''
     });
@@ -332,6 +337,20 @@ export default function Parceiros() {
     });
     setEditingParceiro(parceiro);
     setShowParceiroForm(true);
+  };
+  
+  const handleEditMotorista = (motorista: any) => {
+    setMotoristaForm({
+      nome: motorista.nome || '',
+      cpf: motorista.cpf || '',
+      cnh: motorista.cnh || '',
+      nacionalidade: motorista.nacionalidade || 'Brasileiro', // Carrega nacionalidade
+      telefone: motorista.telefone || '', // Carrega telefone
+      parceiroId: motorista.parceiroId || '',
+      veiculoVinculado: motorista.veiculoVinculado || ''
+    });
+    setEditingMotorista(motorista);
+    setShowMotoristaForm(true);
   };
 
   const handleDeleteParceiro = (id: string) => {
@@ -1172,6 +1191,21 @@ export default function Parceiros() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nacionalidade *
+                    </label>
+                    <select
+                      value={motoristaForm.nacionalidade}
+                      onChange={(e) => setMotoristaForm({ ...motoristaForm, nacionalidade: e.target.value as 'Brasileiro' | 'Estrangeiro' })}
+                      className="input-field"
+                      required
+                    >
+                      <option value="Brasileiro">Brasileiro</option>
+                      <option value="Estrangeiro">Estrangeiro</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       CPF *
                     </label>
                     <input
@@ -1197,6 +1231,23 @@ export default function Parceiros() {
                       onChange={(e) => setMotoristaForm({ ...motoristaForm, cnh: e.target.value })}
                       className="input-field"
                       required
+                    />
+                  </div>
+                  
+                  {/* NOVO CAMPO: Telefone/Contato */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Telefone/Contato (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={motoristaForm.telefone}
+                      onChange={(e) => {
+                        const formatted = formatContact(e.target.value);
+                        setMotoristaForm({ ...motoristaForm, telefone: formatted });
+                      }}
+                      className="input-field"
+                      placeholder="Ex: (11) 99999-9999 ou +55 11 9 9999-9999"
                     />
                   </div>
 
@@ -1478,6 +1529,100 @@ export default function Parceiros() {
       <div className="p-6 card">
         <h2 className="text-xl font-semibold">Detalhes do Parceiro</h2>
         <p className="mt-2 text-gray-600 dark:text-gray-400">Implementação do painel de detalhes do parceiro, motoristas e veículos.</p>
+        
+        {/* Botão para adicionar novo motorista */}
+        <button
+          onClick={() => {
+            resetMotoristaForm();
+            setShowMotoristaForm(true);
+          }}
+          className="btn-primary mt-4"
+        >
+          <Plus className="h-5 w-5" />
+          Novo Motorista
+        </button>
+        
+        {/* Botão para adicionar novo veículo */}
+        <button
+          onClick={() => {
+            resetVeiculoForm();
+            setShowVeiculoForm(true);
+          }}
+          className="btn-primary mt-4 ml-4"
+        >
+          <Plus className="h-5 w-5" />
+          Novo Veículo
+        </button>
+        
+        {/* Lista de Motoristas do Parceiro */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4">Motoristas Vinculados</h3>
+          <div className="space-y-3">
+            {motoristas.filter(m => m.parceiroId === selectedParceiro.id).map(m => (
+              <div key={m.id} className="card p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{m.nome}</p>
+                  <p className="text-sm text-gray-500">CPF: {formatDocument(m.cpf, 'PF')} | CNH: {m.cnh}</p>
+                  {m.telefone && <p className="text-sm text-gray-500">Contato: {m.telefone}</p>}
+                  <p className="text-xs text-gray-400">Nacionalidade: {m.nacionalidade}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEditMotorista(m)}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    title="Editar Motorista"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget({ type: 'motorista', id: m.id, name: m.nome })}
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Excluir Motorista"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {motoristas.filter(m => m.parceiroId === selectedParceiro.id).length === 0 && (
+              <p className="text-gray-500 text-sm">Nenhum motorista vinculado.</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Lista de Veículos do Parceiro */}
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4">Veículos Vinculados</h3>
+          <div className="space-y-3">
+            {veiculos.filter(v => v.parceiroId === selectedParceiro.id).map(v => (
+              <div key={v.id} className="card p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{v.tipo} - {v.placa || v.placaCavalo || v.placaCarreta}</p>
+                  <p className="text-sm text-gray-500">{v.fabricante} / {v.modelo} ({v.ano})</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setEditingVeiculo(v)}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    title="Editar Veículo"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget({ type: 'veiculo', id: v.id, name: v.placa || v.placaCavalo || v.placaCarreta || 'Veículo' })}
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Excluir Veículo"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {veiculos.filter(v => v.parceiroId === selectedParceiro.id).length === 0 && (
+              <p className="text-gray-500 text-sm">Nenhum veículo vinculado.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
