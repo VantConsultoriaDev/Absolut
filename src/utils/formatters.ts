@@ -26,9 +26,14 @@ export const formatCNPJ = (value: string): string => {
 };
 
 // Formatação de documento (CPF ou CNPJ baseado no tamanho)
-export const formatDocument = (value: string, type?: 'PF' | 'PJ'): string => {
+export const formatDocument = (value: string, type?: 'PF' | 'PJ' | 'INTERNACIONAL'): string => {
   const numbers = value.replace(/\D/g, '');
   
+  if (type === 'INTERNACIONAL') {
+    // Para internacional, retorna o valor sem formatação específica (pode ser CUIT, etc.)
+    return value;
+  }
+
   if (type === 'PF' || (!type && numbers.length <= 11)) {
     return formatCPF(value);
   } else if (type === 'PJ' || (!type && numbers.length > 11)) {
