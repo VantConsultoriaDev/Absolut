@@ -126,7 +126,14 @@ export class CNPJService {
       return resultado;
       
     } catch (error: unknown) {
-      console.error(`CNPJService: Erro na requisição da API. Usando dados simulados como fallback:`, error);
+      // Loga o erro detalhado para diagnóstico
+      if (axios.isAxiosError(error)) {
+        console.error(`CNPJService: Erro Axios. Status: ${error.response?.status}, Mensagem: ${error.message}, Dados:`, error.response?.data);
+      } else {
+        console.error(`CNPJService: Erro desconhecido na requisição da API:`, error);
+      }
+      
+      console.log('CNPJService: Usando dados simulados como fallback.');
       
       // Fallback para dados simulados em caso de erro
       const cnpjLimpo = cnpj.replace(/\D/g, '');
