@@ -38,9 +38,12 @@ export class CNPJService {
     // Formata o CNPJ para o padrão XX.XXX.XXX/XXXX-XX
     const cnpjFormatado = cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
     console.log('CNPJService: CNPJ formatado:', cnpjFormatado);
+    console.log('CNPJService: API_TOKEN está configurado?', !!API_TOKEN);
+
 
     if (!API_TOKEN) {
       console.error('CNPJService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
+      alert('ERRO DE CONFIGURAÇÃO: O token VITE_APIBRASIL_TOKEN não está definido. Verifique seu arquivo .env.');
       return this.gerarDadosSimulados(cnpjFormatado);
     }
 
@@ -129,6 +132,11 @@ export class CNPJService {
       // Loga o erro detalhado para diagnóstico
       if (axios.isAxiosError(error)) {
         console.error(`CNPJService: Erro Axios. Status: ${error.response?.status}, Mensagem: ${error.message}, Dados:`, error.response?.data);
+        
+        // Se for um erro 401/403, o problema é quase certamente o token
+        if (error.response?.status === 401 || error.response?.status === 403) {
+             alert('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
+        }
       } else {
         console.error(`CNPJService: Erro desconhecido na requisição da API:`, error);
       }
