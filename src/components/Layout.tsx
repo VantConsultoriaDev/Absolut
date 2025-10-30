@@ -11,16 +11,14 @@ import {
   Moon,
   LogOut,
   ChevronRight,
-  FileText
+  FileText,
+  Handshake // Importando o novo ícone
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import ApertoDeMaoIcon from '../assets/aperto-de-mao.png'; // Importando a imagem
+// Removendo a importação da imagem: import ApertoDeMaoIcon from '../assets/aperto-de-mao.png'; 
 
-// Componente auxiliar para renderizar a imagem como ícone
-const ImageIcon: React.FC<{ src: string, alt: string, className: string }> = ({ src, alt, className }) => (
-  <img src={src} alt={alt} className={className} />
-);
+// Removendo o componente auxiliar ImageIcon
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -44,31 +42,7 @@ const Layout: React.FC = () => {
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { 
-      name: 'Parceiros', 
-      href: '/parceiros', 
-      // Usando uma função para aplicar classes dinâmicas à imagem
-      icon: (props: any) => {
-        const isActive = location.pathname === '/parceiros';
-        const baseClasses = 'h-5 w-5 flex-shrink-0 transition-all duration-200';
-        
-        // Classes para simular o estado inativo (grayscale e opacidade)
-        // Usamos um filtro para tentar simular a cor vermelha quando ativo
-        const inactiveClasses = 'grayscale opacity-60 group-hover:opacity-100 group-hover:grayscale-0';
-        
-        // Classes para o estado ativo (cor total + filtro para cor vermelha)
-        const activeClasses = 'opacity-100 filter sepia hue-rotate-330 brightness-110'; // Tenta simular o vermelho
-
-        return (
-          <ImageIcon 
-            src={ApertoDeMaoIcon} 
-            alt="Parceiros" 
-            className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`} 
-          />
-        );
-      }, 
-      permission: 'parceiros' 
-    },
+    { name: 'Parceiros', href: '/parceiros', icon: Handshake, permission: 'parceiros' }, // Usando Handshake
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ];
 
@@ -131,12 +105,7 @@ const Layout: React.FC = () => {
                     : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                {/* Renderiza o componente de ícone (que pode ser a imagem ou o Lucide) */}
-                {item.name === 'Parceiros' ? (
-                    <IconComponent />
-                ) : (
-                    <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
-                )}
+                <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
                 <span>{item.name}</span>
                 {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
               </Link>
@@ -192,12 +161,7 @@ const Layout: React.FC = () => {
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                   } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
-                  {/* Se for o ícone de Parceiros, ele já tem as classes de estilo aplicadas internamente */}
-                  {item.name === 'Parceiros' ? (
-                    <IconComponent />
-                  ) : (
-                    <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
-                  )}
+                  <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
                   <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                     {item.name}
                   </span>
