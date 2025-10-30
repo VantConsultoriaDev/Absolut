@@ -7,5 +7,9 @@ export default defineConfig({
   server: {
     port: 3000,
     open: false
+  },
+  build: {
+    // Aumenta o limite de aviso de tamanho do chunk para 1000kB (1MB)
+    chunkSizeWarningLimit: 1000
   }
 })
