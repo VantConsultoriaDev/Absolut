@@ -72,14 +72,14 @@ const Layout: React.FC = () => {
     setSidebarOpen(prev => !prev);
   };
   
-  // Determina a largura do menu
-  const menuWidthClass = sidebarCollapsed && !isHovering && !isMenuManual ? 'lg:w-20' : 'lg:w-72';
-  
   // Determina se o menu deve estar expandido (para desktop)
   const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
   
   // Determina se o menu está no modo automático (expansão por hover)
   const isAutoMode = !isMenuManual;
+  
+  // CORREÇÃO: A largura do menu depende diretamente de isExpanded
+  const menuWidthClass = isExpanded ? 'lg:w-72' : 'lg:w-20';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
@@ -260,7 +260,8 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${!isExpanded ? 'lg:pl-20' : 'lg:pl-72'}`}>
+      {/* CORREÇÃO: O padding do conteúdo principal depende de isExpanded */}
+      <div className={`transition-all duration-300 ${isExpanded ? 'lg:pl-72' : 'lg:pl-20'}`}>
         {/* Top Header */}
         <div className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
           {/* Mobile Menu */}
