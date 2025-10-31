@@ -227,14 +227,14 @@ const Layout: React.FC = () => {
               
               {/* Checkbox Menu Manual */}
               <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
-                <StandardCheckbox
-                    label="Menu Manual"
-                    checked={isMenuManual}
-                    onChange={toggleMenuManual}
-                    className={`w-full ${!isExpanded ? 'hidden' : ''}`}
-                />
-                {/* Ícone de menu fixo para o modo colapsado */}
-                {!isExpanded && (
+                {isExpanded ? (
+                    <StandardCheckbox
+                        label="Menu Manual"
+                        checked={isMenuManual}
+                        onChange={toggleMenuManual}
+                        className="w-full"
+                    />
+                ) : (
                     <button
                         onClick={toggleMenuManual}
                         className={`btn-ghost p-3`}
