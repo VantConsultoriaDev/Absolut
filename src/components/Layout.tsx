@@ -222,8 +222,8 @@ const Layout: React.FC = () => {
           </nav>
 
           {/* Footer - User Info & Logout (Desktop only) */}
-          <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
-            <div className={`w-full ${!isExpanded ? 'flex flex-col items-center' : 'space-y-3'}`}>
+          <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}>
+            <div className={`w-full ${!isExpanded ? 'flex flex-col items-center space-y-2' : 'space-y-3'}`}>
               
               {/* Checkbox Menu Manual */}
               <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
