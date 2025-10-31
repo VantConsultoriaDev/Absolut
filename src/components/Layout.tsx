@@ -232,7 +232,7 @@ const Layout: React.FC = () => {
                     checked={isMenuManual}
                     onChange={toggleMenuManual}
                     className={`w-full ${!isExpanded ? 'hidden' : ''}`}
-                    description="Desativa a retração automática do menu."
+                    // Removido: description="Desativa a retração automática do menu."
                 />
                 {/* Ícone de menu fixo para o modo colapsado */}
                 {!isExpanded && (
