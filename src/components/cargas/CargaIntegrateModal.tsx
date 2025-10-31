@@ -53,9 +53,51 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
 }) => {
   if (!isOpen || !integratingCarga) return null;
 
-  const jaIntegrada = useMemo(() => {
-    return movimentacoes.some(m => m.cargaId === integratingCarga.id);
+  const { hasAdiantamento, hasSaldo, isFullyIntegrated } = useMemo(() => {
+    const relatedMovs = movimentacoes.filter(m => m.cargaId === integratingCarga.id);
+    const adto = relatedMovs.some(m => m.descricao.startsWith('Adto -'));
+    const saldo = relatedMovs.some(m => m.descricao.startsWith('Saldo -'));
+    const frete = relatedMovs.some(m => m.descricao.startsWith('Frete -'));
+    
+    // Se houver Adiantamento E Saldo, está totalmente integrado (split)
+    if (adto && saldo) return { hasAdiantamento: true, hasSaldo: true, isFullyIntegrated: true };
+    
+    // Se houver apenas Frete (lançamento único), está totalmente integrado (sem split)
+    if (frete) return { hasAdiantamento: false, hasSaldo: false, isFullyIntegrated: true };
+    
+    return { hasAdiantamento: adto, hasSaldo: saldo, isFullyIntegrated: false };
   }, [movimentacoes, integratingCarga]);
+
+  // Ajusta o estado inicial da modal com base no que já foi lançado
+  React.useEffect(() => {
+    if (isOpen && integratingCarga) {
+      if (hasAdiantamento && !hasSaldo) {
+        // Se só tem Adiantamento, força o lançamento de Saldo
+        setIntegrateData(prev => ({
+          ...prev,
+          adiantamentoEnabled: true,
+          splitOption: 'saldo',
+          // Mantém o percentual original para cálculo do saldo
+        }));
+      } else if (hasSaldo && !hasAdiantamento) {
+        // Se só tem Saldo, força o lançamento de Adiantamento
+        setIntegrateData(prev => ({
+          ...prev,
+          adiantamentoEnabled: true,
+          splitOption: 'adiantamento',
+        }));
+      } else if (isFullyIntegrated) {
+        // Se já está totalmente integrado (Adto+Saldo ou Frete Único), desabilita o formulário
+        setIntegrateData(prev => ({
+          ...prev,
+          adiantamentoEnabled: false,
+          despesasEnabled: false,
+          diariasEnabled: false,
+        }));
+      }
+    }
+  }, [isOpen, integratingCarga, hasAdiantamento, hasSaldo, isFullyIntegrated, setIntegrateData]);
+
 
   const calcularValorBRL = useMemo(() => {
     if (!integrateData.despesasEnabled) return 0;
@@ -95,12 +137,9 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
       } else if (integrateData.splitOption === 'saldo') {
         baseValue = calcularSaldo;
       } else { // 'ambos' ou fallback
-        // Se for 'ambos', o total final não faz sentido ser exibido aqui, 
-        // mas vamos calcular o total da carga + extras para fins de resumo.
         baseValue = valorTotal;
       }
       
-      // Se a opção for 'ambos', o total final é o valor total da carga + extras
       if (integrateData.splitOption === 'ambos') {
           return valorTotal + extrasTotal;
       }
@@ -118,6 +157,26 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
     setIntegrateData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Determina se o botão de integração deve ser desabilitado
+  const isIntegrationDisabled = useMemo(() => {
+    if (isFullyIntegrated) return true;
+    
+    // Se for lançamento de Adiantamento, mas Adiantamento já existe
+    if (integrateData.splitOption === 'adiantamento' && hasAdiantamento) return true;
+    
+    // Se for lançamento de Saldo, mas Saldo já existe
+    if (integrateData.splitOption === 'saldo' && hasSaldo) return true;
+    
+    // Se for lançamento de Ambos, mas já existe Adiantamento OU Saldo (o que significa que já foi lançado parcialmente)
+    if (integrateData.splitOption === 'ambos' && (hasAdiantamento || hasSaldo)) return true;
+    
+    // Se for lançamento único (sem adiantamento habilitado), mas já existe qualquer lançamento
+    if (!integrateData.adiantamentoEnabled && (hasAdiantamento || hasSaldo)) return true;
+    
+    return false;
+  }, [isFullyIntegrated, integrateData.splitOption, integrateData.adiantamentoEnabled, hasAdiantamento, hasSaldo]);
+
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
@@ -131,16 +190,34 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
         </div>
         
         <div className="p-6">
-          {jaIntegrada && (
+          {isFullyIntegrated && (
             <div className="p-4 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-3" />
               <p className="text-sm text-red-700 dark:text-red-400">
-                Esta carga já foi integrada ao financeiro. A integração duplicada não é permitida.
+                Esta carga já está totalmente integrada ao financeiro.
+              </p>
+            </div>
+          )}
+          
+          {/* Aviso de Lançamento Parcial */}
+          {(hasAdiantamento && !hasSaldo) && (
+            <div className="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                Apenas o Adiantamento foi lançado. Você pode lançar o Saldo agora.
+              </p>
+            </div>
+          )}
+          {(hasSaldo && !hasAdiantamento) && (
+            <div className="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                Apenas o Saldo foi lançado. Você pode lançar o Adiantamento agora.
               </p>
             </div>
           )}
 
-          <div className="space-y-6" style={{ opacity: jaIntegrada ? 0.5 : 1, pointerEvents: jaIntegrada ? 'none' : 'auto' }}>
+          <div className="space-y-6" style={{ opacity: isFullyIntegrated ? 0.5 : 1, pointerEvents: isFullyIntegrated ? 'none' : 'auto' }}>
             {/* A. Adiantamento */}
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
@@ -181,7 +258,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                       Lançamento no Financeiro
                     </label>
                     <div className="space-y-2">
-                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                      <label className={`flex items-center text-sm text-gray-700 dark:text-gray-300 ${hasAdiantamento || hasSaldo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <input
                           type="radio"
                           name="splitOption"
@@ -189,10 +266,11 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                           checked={integrateData.splitOption === 'ambos'}
                           onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
                           className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          disabled={hasAdiantamento || hasSaldo}
                         />
                         Adiantamento e Saldo (2 lançamentos)
                       </label>
-                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                      <label className={`flex items-center text-sm text-gray-700 dark:text-gray-300 ${hasAdiantamento ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <input
                           type="radio"
                           name="splitOption"
@@ -200,10 +278,11 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                           checked={integrateData.splitOption === 'adiantamento'}
                           onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
                           className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          disabled={hasAdiantamento}
                         />
                         Somente Adiantamento (1 lançamento)
                       </label>
-                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                      <label className={`flex items-center text-sm text-gray-700 dark:text-gray-300 ${hasSaldo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <input
                           type="radio"
                           name="splitOption"
@@ -211,6 +290,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                           checked={integrateData.splitOption === 'saldo'}
                           onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
                           className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          disabled={hasSaldo}
                         />
                         Somente Saldo (1 lançamento)
                       </label>
@@ -492,7 +572,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <button
               type="button"
               onClick={onIntegrate}
-              disabled={jaIntegrada}
+              disabled={isIntegrationDisabled}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Integrar

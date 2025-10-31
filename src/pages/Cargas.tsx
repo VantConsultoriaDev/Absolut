@@ -93,7 +93,7 @@ const Cargas: React.FC = () => {
     createMovimentacao,
     movimentacoes,
     buildMovimentacaoDescription,
-    generateContract, // NOVO: Função para gerar contrato
+    generateContract, // Mantido, mas não chamado automaticamente
     deleteMovimentacao, // Adicionado para o undo
   } = useDatabase();
 
@@ -405,11 +405,35 @@ const Cargas: React.FC = () => {
   const handleIntegrateSubmit = () => {
     if (!integratingCarga) return;
 
-    const jaIntegrada = movimentacoes.some(m => m.cargaId === integratingCarga.id);
-    if (jaIntegrada) {
-      alert('Esta carga já possui integração financeira. Exclua a movimentação para reintegrar.');
+    // A verificação de bloqueio agora é feita dentro da modal, mas fazemos uma checagem final
+    const relatedMovs = movimentacoes.filter(m => m.cargaId === integratingCarga.id);
+    const hasAdiantamento = relatedMovs.some(m => m.descricao.startsWith('Adto -'));
+    const hasSaldo = relatedMovs.some(m => m.descricao.startsWith('Saldo -'));
+    const hasFreteUnico = relatedMovs.some(m => m.descricao.startsWith('Frete -'));
+
+    if (hasFreteUnico) {
+      alert('Esta carga já possui lançamento único de Frete. Exclua a movimentação para reintegrar.');
       return;
     }
+    
+    // Se o usuário tentar lançar Ambos, mas já existe um lançamento parcial
+    if (integrateData.splitOption === 'ambos' && (hasAdiantamento || hasSaldo)) {
+        alert('Não é possível lançar Adiantamento e Saldo juntos, pois uma das parcelas já foi lançada. Lance a parcela faltante individualmente.');
+        return;
+    }
+    
+    // Se o usuário tentar lançar Adiantamento, mas já existe
+    if (integrateData.splitOption === 'adiantamento' && hasAdiantamento) {
+        alert('O Adiantamento já foi lançado.');
+        return;
+    }
+    
+    // Se o usuário tentar lançar Saldo, mas já existe
+    if (integrateData.splitOption === 'saldo' && hasSaldo) {
+        alert('O Saldo já foi lançado.');
+        return;
+    }
+
 
     const valorTotal = parseCurrency(formatCurrency(integratingCarga.valor || 0));
     
@@ -426,7 +450,6 @@ const Cargas: React.FC = () => {
     const extrasTotal = despesasAdicionais + diarias;
 
     // Array para armazenar as novas movimentações criadas
-    const newMovs: string[] = [];
     const movsToUndo: string[] = []; // IDs das movimentações criadas para o undo
 
     // Função para criar movimentação e registrar para undo
@@ -436,7 +459,7 @@ const Cargas: React.FC = () => {
       return newMov;
     };
 
-    // Case 1: No split, no extras
+    // Case 1: No split, no extras (Lançamento Único)
     if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
       createAndRegisterMov({
         tipo: 'despesa',
@@ -493,12 +516,6 @@ const Cargas: React.FC = () => {
           observacoes: `Saldo ${100 - parseFloat(integrateData.adiantamentoPercentual)}%: ${formatCurrency(valorSaldo)}${extrasTotal > 0 && somaOpcao === 'saldo' ? `, Extras somados: ${formatCurrency(extrasTotal)}` : ''}`
         });
       }
-      
-      // Se houver extras e o split for 'ambos', mas a somaOpcao não foi definida (o que não deve acontecer com a UI atual),
-      // ou se houver extras e o split for 'ambos', mas a somaOpcao não foi usada (porque os extras foram somados acima),
-      // garantimos que os extras foram contabilizados.
-      // Nota: A lógica acima já garante que os extras são somados ao Adiantamento OU Saldo, dependendo de `somaOpcao` e `splitOption`.
-
     } 
     // Case 3: No split, but with extras
     else {
@@ -527,10 +544,10 @@ const Cargas: React.FC = () => {
         });
     }
 
-    // GATILHO AUTOMÁTICO DE CONTRATO
-    if (integratingCarga.id) {
-      generateContract(integratingCarga.id);
-    }
+    // REMOVIDO: GATILHO AUTOMÁTICO DE CONTRATO para evitar erro de UUID
+    // if (integratingCarga.id) {
+    //   generateContract(integratingCarga.id);
+    // }
 
     handleCloseIntegrateModal();
   };
