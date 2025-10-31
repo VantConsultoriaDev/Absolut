@@ -237,10 +237,11 @@ const Layout: React.FC = () => {
                 ) : (
                     <button
                         onClick={toggleMenuManual}
-                        className={`btn-ghost p-3`}
+                        className={`btn-ghost p-3 flex flex-col items-center space-y-1`}
                         title="Menu Manual"
                     >
                         <FileBadge className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
+                        <span className="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">Menu Manual</span>
                     </button>
                 )}
               </div>

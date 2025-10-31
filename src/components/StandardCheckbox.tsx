@@ -6,7 +6,6 @@ interface StandardCheckboxProps {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   className?: string;
-  // Removido: description?: string;
 }
 
 export default function StandardCheckbox({
@@ -15,12 +14,11 @@ export default function StandardCheckbox({
   onChange,
   disabled = false,
   className = '',
-  // Removido: description
 }: StandardCheckboxProps) {
   return (
     <div className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg w-full ${className}`}>
       <label 
-        className={`text-sm font-medium ${disabled ? 'text-gray-500 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'} cursor-pointer`}
+        className={`text-sm font-medium whitespace-nowrap ${disabled ? 'text-gray-500 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'} cursor-pointer`}
         onClick={() => !disabled && onChange(!checked)}
       >
         {label}
