@@ -228,7 +228,7 @@ const Layout: React.FC = () => {
               {/* Checkbox Menu Manual */}
               <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
                 <StandardCheckbox
-                    label="Menu Fixo"
+                    label="Menu Manual"
                     checked={isMenuManual}
                     onChange={toggleMenuManual}
                     className={`w-full ${!isExpanded ? 'hidden' : ''}`}
@@ -239,7 +239,7 @@ const Layout: React.FC = () => {
                     <button
                         onClick={toggleMenuManual}
                         className={`btn-ghost p-3`}
-                        title="Menu Fixo"
+                        title="Menu Manual"
                     >
                         <FileBadge className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
                     </button>
@@ -260,7 +260,6 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      {/* CORREÇÃO: O padding do conteúdo principal depende de isExpanded */}
       <div className={`transition-all duration-300 ${isExpanded ? 'lg:pl-72' : 'lg:pl-20'}`}>
         {/* Top Header */}
         <div className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
