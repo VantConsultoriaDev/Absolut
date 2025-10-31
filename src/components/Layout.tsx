@@ -138,7 +138,7 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-30`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-30 overflow-x-hidden`}
         onMouseEnter={() => {
           if (isAutoMode) {
             setIsHovering(true);
@@ -152,7 +152,7 @@ const Layout: React.FC = () => {
           }
         }}
       >
-        <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
+        <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-hidden">
           {/* Logo e Botão de Toggle Manual */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3 w-full">
@@ -212,7 +212,7 @@ const Layout: React.FC = () => {
                   } ${!isExpanded ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
                   <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
-                  <span className={`transition-all duration-300 ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                  <span className={`transition-all duration-300 ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 whitespace-nowrap'}`}>
                     {item.name}
                   </span>
                   {isExpanded && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
@@ -232,7 +232,6 @@ const Layout: React.FC = () => {
                     checked={isMenuManual}
                     onChange={toggleMenuManual}
                     className={`w-full ${!isExpanded ? 'hidden' : ''}`}
-                    // Removido: description="Desativa a retração automática do menu."
                 />
                 {/* Ícone de menu fixo para o modo colapsado */}
                 {!isExpanded && (
