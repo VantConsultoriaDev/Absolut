@@ -12,44 +12,48 @@ import {
   LogOut,
   ChevronRight,
   FileText,
-  Briefcase, // Novo ícone para Parceiros
-  FileBadge // Ícone para CRT/MIC
+  Briefcase,
+  FileBadge,
+  Menu as MenuIcon // Usando MenuIcon para o botão de toggle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-// Removendo a importação da imagem: import ApertoDeMaoIcon from '../assets/aperto-de-mao.png'; 
-
-// Removendo o componente auxiliar ImageIcon
+import StandardCheckbox from './StandardCheckbox'; // Importando o checkbox
 
 const Layout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Estado para mobile
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Estado para desktop (auto)
   const [isHovering, setIsHovering] = useState(false);
+  
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, isMenuManual, toggleMenuManual } = useTheme(); // Usando isMenuManual
   const location = useLocation();
 
+  // Efeito para controlar a retração automática (apenas se não for manual)
   useEffect(() => {
-    if (!isHovering) {
-      const timer = setTimeout(() => {
-        setSidebarCollapsed(true);
-      }, 300);
-      return () => clearTimeout(timer);
+    if (!isMenuManual && !isHovering) {
+      // Removendo o timeout (delay)
+      setSidebarCollapsed(true);
     }
-  }, [isHovering]);
+  }, [isHovering, isMenuManual]);
+  
+  // Efeito para garantir que o menu esteja aberto no modo manual se sidebarOpen for true (para desktop)
+  useEffect(() => {
+    if (isMenuManual && sidebarOpen) {
+        setSidebarCollapsed(false);
+    }
+  }, [isMenuManual, sidebarOpen]);
 
   const navigation = [
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },
-    { name: 'CRT/MIC', href: '/crt-mic', icon: FileBadge, permission: 'cargas' }, // NOVO MÓDULO
-    { name: 'Parceiros', href: '/parceiros', icon: Briefcase, permission: 'parceiros' }, // Usando Briefcase
+    { name: 'CRT/MIC', href: '/crt-mic', icon: FileBadge, permission: 'cargas' },
+    { name: 'Parceiros', href: '/parceiros', icon: Briefcase, permission: 'parceiros' },
     { name: 'Clientes', href: '/clientes', icon: Users, permission: 'clientes' },
   ];
 
-  // Simplificando a verificação de permissão: se o usuário existe, ele tem acesso.
-  // A lógica de permissões granulares (view/edit) foi removida com o módulo de usuários.
   const hasPermission = () => {
     return !!user;
   };
@@ -59,6 +63,15 @@ const Layout: React.FC = () => {
   const handleLogout = () => {
     logout();
   };
+  
+  // Determina a largura do menu
+  const menuWidthClass = sidebarCollapsed && !isHovering && !isMenuManual ? 'lg:w-20' : 'lg:w-72';
+  
+  // Determina se o menu deve estar expandido (para desktop)
+  const isExpanded = !sidebarCollapsed || isMenuManual;
+  
+  // Determina se o menu está no modo automático (expansão por hover)
+  const isAutoMode = !isMenuManual;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
@@ -72,7 +85,7 @@ const Layout: React.FC = () => {
 
       {/* Mobile Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 lg:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
               <Truck className="h-6 w-6 text-white" />
@@ -91,7 +104,6 @@ const Layout: React.FC = () => {
             const isActive = location.pathname === item.href;
             const IconComponent = item.icon;
             
-            // Classes de cor do ícone:
             const iconColorClasses = isActive 
               ? 'text-red-700 dark:text-red-300' 
               : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300';
@@ -118,36 +130,57 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed && !isHovering ? 'lg:w-20' : 'lg:w-72'} z-30`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-30`}
         onMouseEnter={() => {
-          setIsHovering(true);
-          setSidebarCollapsed(false);
+          if (isAutoMode) {
+            setIsHovering(true);
+            setSidebarCollapsed(false);
+          }
         }}
         onMouseLeave={() => {
-          setIsHovering(false);
+          if (isAutoMode) {
+            setIsHovering(false);
+            setSidebarCollapsed(true); // Retrai imediatamente
+          }
         }}
       >
         <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
           {/* Logo */}
-          <div className="h-20 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3 w-full">
               <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Truck className="h-6 w-6 text-white" />
               </div>
-              <span className={`text-lg font-bold text-slate-900 dark:text-white transition-all duration-300 whitespace-nowrap ${sidebarCollapsed && !isHovering ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+              <span className={`text-lg font-bold text-slate-900 dark:text-white transition-all duration-300 whitespace-nowrap ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                 ABSOLUT
               </span>
             </div>
           </div>
+          
+          {/* Menu Manual Toggle Button (Apenas no modo manual) */}
+          {isMenuManual && (
+            <div className={`p-3 transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
+                <button
+                    onClick={() => setSidebarCollapsed(prev => !prev)}
+                    className={`btn-ghost w-full justify-center ${!isExpanded ? 'p-3' : 'px-4 py-2'}`}
+                    title={isExpanded ? 'Recolher Menu' : 'Expandir Menu'}
+                >
+                    <MenuIcon className="h-5 w-5" />
+                    {isExpanded && <span className="ml-2">Recolher Menu</span>}
+                </button>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
-              const isCollapsed = sidebarCollapsed && !isHovering;
+              
+              // O menu está colapsado se não estiver expandido E não estiver no modo manual
+              const isCurrentlyCollapsed = !isExpanded && isAutoMode; 
+              
               const IconComponent = item.icon;
               
-              // Classes de cor do ícone:
               const iconColorClasses = isActive 
                 ? 'text-red-700 dark:text-red-300' 
                 : 'text-slate-700 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-300';
@@ -156,36 +189,55 @@ const Layout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  title={isCollapsed ? item.name : undefined}
+                  title={!isExpanded ? item.name : undefined}
                   className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-red-50 dark:bg-red-900/30'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-                  } ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
+                  } ${!isExpanded ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
                 >
                   <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
-                  <span className={`transition-all duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                  <span className={`transition-all duration-300 ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                     {item.name}
                   </span>
-                  {!isCollapsed && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
+                  {isExpanded && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Footer - User Info (Desktop only) */}
-          <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${sidebarCollapsed && !isHovering ? 'flex justify-center' : ''}`}>
-            <div className={`${sidebarCollapsed && !isHovering ? 'flex justify-center' : 'space-y-3'}`}>
-              {!sidebarCollapsed && <div className="px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-xs">
-                <p className="font-semibold text-slate-900 dark:text-white truncate">{user?.email}</p>
-                <p className="text-slate-500 dark:text-slate-400 capitalize">Usuário Autenticado</p>
-              </div>}
+          {/* Footer - User Info & Logout (Desktop only) */}
+          <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
+            <div className={`w-full ${!isExpanded ? 'flex flex-col items-center' : 'space-y-3'}`}>
+              
+              {/* Checkbox Menu Manual */}
+              <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
+                <StandardCheckbox
+                    label="Menu Fixo"
+                    checked={isMenuManual}
+                    onChange={toggleMenuManual}
+                    className={`w-full ${!isExpanded ? 'hidden' : ''}`}
+                    description="Desativa a retração automática do menu."
+                />
+                {/* Ícone de menu fixo para o modo colapsado */}
+                {!isExpanded && (
+                    <button
+                        onClick={toggleMenuManual}
+                        className={`btn-ghost p-3`}
+                        title="Menu Fixo"
+                    >
+                        <FileBadge className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
+                    </button>
+                )}
+              </div>
+              
+              {/* Botão de Sair */}
               <button
                 onClick={handleLogout}
-                className={`btn-ghost w-full justify-center ${!sidebarCollapsed && !isHovering ? '' : ''}`}
+                className={`btn-ghost w-full justify-center ${!isExpanded ? 'p-3' : 'px-4 py-2'}`}
               >
                 <LogOut className="h-5 w-5" />
-                {!sidebarCollapsed && <span className="ml-2">Sair</span>}
+                {isExpanded && <span className="ml-2">Sair</span>}
               </button>
             </div>
           </div>
@@ -193,7 +245,7 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed && !isHovering ? 'lg:pl-20' : 'lg:pl-72'}`}>
+      <div className={`transition-all duration-300 ${!isExpanded ? 'lg:pl-20' : 'lg:pl-72'}`}>
         {/* Top Header */}
         <div className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
           {/* Mobile Menu */}
@@ -226,32 +278,10 @@ const Layout: React.FC = () => {
               )}
             </button>
 
-            {/* Divider */}
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-
-            {/* User Menu & Logout (Desktop) */}
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="flex flex-col items-end text-right">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {user?.email}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                  Usuário Autenticado
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="btn-ghost p-2"
-                title="Sair"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* User Menu (Mobile) */}
+            {/* User Menu (Mobile/Desktop) */}
             <button
               onClick={handleLogout}
-              className="btn-ghost p-2 sm:hidden"
+              className="btn-ghost p-2"
               title="Sair"
             >
               <LogOut className="h-5 w-5" />

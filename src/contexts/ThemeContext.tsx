@@ -17,6 +17,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState(false)
+  const [isMenuManual, setIsMenuManual] = useState(false) // NOVO ESTADO
 
   useEffect(() => {
     // Check saved theme preference
@@ -27,6 +28,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     } else {
       setIsDark(false)
       document.documentElement.classList.remove('dark')
+    }
+    
+    // Check saved menu preference
+    const savedMenuMode = localStorage.getItem('absolut_menu_mode')
+    if (savedMenuMode === 'manual') {
+        setIsMenuManual(true)
+    } else {
+        setIsMenuManual(false)
     }
   }, [])
 
@@ -42,10 +51,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       localStorage.setItem('absolut_theme', 'light')
     }
   }
+  
+  const toggleMenuManual = () => {
+    const newMode = !isMenuManual
+    setIsMenuManual(newMode)
+    
+    if (newMode) {
+        localStorage.setItem('absolut_menu_mode', 'manual')
+    } else {
+        localStorage.setItem('absolut_menu_mode', 'auto')
+    }
+  }
 
   const value: ThemeContextType = {
     isDark,
-    toggleTheme
+    toggleTheme,
+    isMenuManual, // EXPORTADO
+    toggleMenuManual // EXPORTADO
   }
 
   return (

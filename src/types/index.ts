@@ -166,6 +166,8 @@ export interface AuthContextType {
 export interface ThemeContextType {
   isDark: boolean
   toggleTheme: () => void
+  isMenuManual: boolean // NOVO
+  toggleMenuManual: () => void // NOVO
 }
 
 export interface DatabaseContextType {
