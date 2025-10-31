@@ -153,8 +153,8 @@ const Layout: React.FC = () => {
         }}
       >
         <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
-          {/* Logo */}
-          <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
+          {/* Logo e Botão de Toggle Manual */}
+          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3 w-full">
               <div className="h-10 w-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Truck className="h-6 w-6 text-white" />
@@ -163,18 +163,28 @@ const Layout: React.FC = () => {
                 ABSOLUT
               </span>
             </div>
-          </div>
-          
-          {/* Menu Manual Toggle Button (Apenas no modo manual) */}
-          {isMenuManual && (
-            <div className={`p-3 transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
+            
+            {/* Botão de Toggle Manual (Visível apenas no modo manual) */}
+            {isMenuManual && (
                 <button
-                    onClick={toggleManualMenu} // Usando a nova função
-                    className={`btn-ghost w-full justify-center ${!isExpanded ? 'p-3' : 'px-4 py-2'}`}
+                    onClick={toggleManualMenu}
+                    className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'ml-auto' : 'hidden'}`}
                     title={isExpanded ? 'Recolher Menu' : 'Expandir Menu'}
                 >
                     <MenuIcon className="h-5 w-5" />
-                    {isExpanded && <span className="ml-2">Recolher Menu</span>}
+                </button>
+            )}
+          </div>
+          
+          {/* Botão de Toggle Manual (Visível quando colapsado no modo manual) */}
+          {isMenuManual && !isExpanded && (
+            <div className="p-3 flex justify-center">
+                <button
+                    onClick={toggleManualMenu}
+                    className={`btn-ghost p-3`}
+                    title={'Expandir Menu'}
+                >
+                    <MenuIcon className="h-5 w-5" />
                 </button>
             </div>
           )}
@@ -183,9 +193,6 @@ const Layout: React.FC = () => {
           <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
-              
-              // O menu está colapsado se não estiver expandido E não estiver no modo manual
-              const isCurrentlyCollapsed = !isExpanded && isAutoMode; 
               
               const IconComponent = item.icon;
               
