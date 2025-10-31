@@ -222,11 +222,12 @@ const Layout: React.FC = () => {
           </nav>
 
           {/* Footer - User Info & Logout (Desktop only) */}
+          {/* Adicionando altura mínima para o contêiner do Menu Manual para estabilizar o footer */}
           <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}>
             <div className={`w-full ${!isExpanded ? 'flex flex-col items-center space-y-2' : 'space-y-3'}`}>
               
-              {/* Checkbox Menu Manual */}
-              <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
+              {/* Checkbox Menu Manual - Envolvido em um div com altura fixa para estabilizar a linha divisória */}
+              <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''} h-10 flex items-center`}>
                 {isExpanded ? (
                     <StandardCheckbox
                         label="Menu Manual"
@@ -272,9 +273,9 @@ const Layout: React.FC = () => {
           </button>
 
           {/* Header Title / Breadcrumb (Future enhancement) */}
-          {/* REMOVIDO: <div className="flex-1 flex items-center gap-2 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Dashboard</span>
-          </div> */}
+          <div className="flex-1 flex items-center gap-2 text-sm">
+            {/* Conteúdo removido */}
+          </div>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
