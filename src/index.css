@@ -11,7 +11,8 @@
   }
   
   body {
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors duration-200;
+    /* Ajuste: Usando slate-900 em vez de slate-950 para um fundo escuro mais suave */
+    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-200 leading-relaxed;
   }
 
   h1 {
@@ -123,6 +124,14 @@
   
   .table-cell-nowrap {
     @apply table-cell whitespace-nowrap;
+  }
+  
+  /* Linhas Zebra */
+  .table-body-row:nth-child(even) {
+    @apply bg-slate-50 dark:bg-slate-800/50;
+  }
+  .table-body-row:hover {
+    @apply bg-slate-100 dark:bg-slate-800;
   }
 
   /* Stats/KPI Cards */

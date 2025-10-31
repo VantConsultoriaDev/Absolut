@@ -101,7 +101,7 @@ const Financeiro: React.FC = () => {
     cancelado: { label: 'Adiado', color: 'badge-danger', icon: AlertTriangle }
   }
 
-  // Componente de calendário para seleção de intervalo
+  // Componente de calendário para seleção de intervalo (Mantido, mas RangeCalendar foi movido para componente separado)
   const RangeCalendar: React.FC<{
     month: Date,
     start: Date | null,
@@ -646,7 +646,7 @@ const Financeiro: React.FC = () => {
                 </tr>
               ) : (
                 filteredMovimentacoes.map((movimentacao) => (
-                  <tr key={movimentacao.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                  <tr key={movimentacao.id} className="table-body-row">
                     <td className="table-cell text-sm">
                       {format(new Date(movimentacao.data), 'dd/MM/yyyy', { locale: ptBR })}
                     </td>
