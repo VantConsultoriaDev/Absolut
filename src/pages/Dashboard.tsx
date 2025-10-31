@@ -83,10 +83,7 @@ export default function Dashboard() {
               <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-            <ArrowUpRight className="h-4 w-4" />
-            <span>Aumentando</span>
-          </div>
+          {/* Removido: <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium"> */}
         </div>
 
         {/* Em Trânsito */}
@@ -100,9 +97,7 @@ export default function Dashboard() {
               <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <p className="stat-change text-blue-600 dark:text-blue-400 pt-4">
-            Operando normalmente
-          </p>
+          {/* Removido: <p className="stat-change text-blue-600 dark:text-blue-400 pt-4"> */}
         </div>
 
         {/* Entregues */}
@@ -116,10 +111,7 @@ export default function Dashboard() {
               <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
-          <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-            <ArrowUpRight className="h-4 w-4" />
-            <span>+12% esta semana</span>
-          </div>
+          {/* Removido: <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium"> */}
         </div>
 
         {/* Valor Total */}
@@ -133,9 +125,7 @@ export default function Dashboard() {
               <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="stat-change text-slate-600 dark:text-slate-400 pt-4">
-            Em movimentação
-          </p>
+          {/* Removido: <p className="stat-change text-slate-600 dark:text-slate-400 pt-4"> */}
         </div>
       </div>
 
