@@ -272,9 +272,9 @@ const Layout: React.FC = () => {
           </button>
 
           {/* Header Title / Breadcrumb (Future enhancement) */}
-          <div className="flex-1 flex items-center gap-2 text-sm">
+          {/* REMOVIDO: <div className="flex-1 flex items-center gap-2 text-sm">
             <span className="text-slate-500 dark:text-slate-400">Dashboard</span>
-          </div>
+          </div> */}
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
