@@ -18,6 +18,7 @@ interface IntegrateData {
   diariasEnabled: boolean;
   valorDiarias: string;
   somaOpcao: 'adiantamento' | 'saldo';
+  splitOption: 'ambos' | 'adiantamento' | 'saldo'; // NOVO CAMPO
 }
 
 interface CargaIntegrateModalProps {
@@ -87,12 +88,28 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
     const extrasTotal = valorBRL + diarias;
 
     if (integrateData.adiantamentoEnabled) {
-      if (integrateData.somaOpcao === 'adiantamento') {
-        return calcularAdiantamento + extrasTotal;
-      } else {
-        return calcularSaldo + extrasTotal;
+      let baseValue = 0;
+      
+      if (integrateData.splitOption === 'adiantamento') {
+        baseValue = calcularAdiantamento;
+      } else if (integrateData.splitOption === 'saldo') {
+        baseValue = calcularSaldo;
+      } else { // 'ambos' ou fallback
+        // Se for 'ambos', o total final não faz sentido ser exibido aqui, 
+        // mas vamos calcular o total da carga + extras para fins de resumo.
+        baseValue = valorTotal;
       }
+      
+      // Se a opção for 'ambos', o total final é o valor total da carga + extras
+      if (integrateData.splitOption === 'ambos') {
+          return valorTotal + extrasTotal;
+      }
+      
+      // Se for 'adiantamento' ou 'saldo', soma os extras apenas à parcela selecionada
+      return baseValue + extrasTotal;
+      
     } else {
+      // Sem adiantamento, o total é o valor da carga + extras
       return valorTotal + extrasTotal;
     }
   }, [integratingCarga, integrateData, calcularAdiantamento, calcularSaldo, calcularValorBRL]);
@@ -130,7 +147,13 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                 <StandardCheckbox
                   label="Adiantamento"
                   checked={integrateData.adiantamentoEnabled}
-                  onChange={(checked) => handleDataChange('adiantamentoEnabled', checked)}
+                  onChange={(checked) => {
+                    handleDataChange('adiantamentoEnabled', checked);
+                    // Se desabilitar, reseta a opção de split para 'ambos'
+                    if (!checked) {
+                        handleDataChange('splitOption', 'ambos');
+                    }
+                  }}
                   description="Habilitar cálculo de adiantamento sobre o valor total"
                 />
               </div>
@@ -150,6 +173,48 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                       <option value="70">70%</option>
                       <option value="80">80%</option>
                     </select>
+                  </div>
+                  
+                  {/* Opção de Split (Adiantamento, Saldo, Ambos) */}
+                  <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Lançamento no Financeiro
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="radio"
+                          name="splitOption"
+                          value="ambos"
+                          checked={integrateData.splitOption === 'ambos'}
+                          onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
+                          className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        Adiantamento e Saldo (2 lançamentos)
+                      </label>
+                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="radio"
+                          name="splitOption"
+                          value="adiantamento"
+                          checked={integrateData.splitOption === 'adiantamento'}
+                          onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
+                          className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        Somente Adiantamento (1 lançamento)
+                      </label>
+                      <label className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="radio"
+                          name="splitOption"
+                          value="saldo"
+                          checked={integrateData.splitOption === 'saldo'}
+                          onChange={(e) => handleDataChange('splitOption', e.target.value as 'ambos' | 'adiantamento' | 'saldo')}
+                          className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        Somente Saldo (1 lançamento)
+                      </label>
+                    </div>
                   </div>
                   
                   {/* Cálculos Automáticos */}
@@ -178,28 +243,32 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                   
                   {/* Datas de Vencimento */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Data de Vencimento do Adiantamento
-                      </label>
-                      <input
-                        type="date"
-                        value={integrateData.dataVencimentoAdiantamento}
-                        onChange={(e) => handleDataChange('dataVencimentoAdiantamento', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Data de Vencimento do Saldo
-                      </label>
-                      <input
-                        type="date"
-                        value={integrateData.dataVencimentoSaldo}
-                        onChange={(e) => handleDataChange('dataVencimentoSaldo', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
+                    {integrateData.splitOption !== 'saldo' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Data de Vencimento do Adiantamento
+                        </label>
+                        <input
+                          type="date"
+                          value={integrateData.dataVencimentoAdiantamento}
+                          onChange={(e) => handleDataChange('dataVencimentoAdiantamento', e.target.value)}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
+                    {integrateData.splitOption !== 'adiantamento' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Data de Vencimento do Saldo
+                        </label>
+                        <input
+                          type="date"
+                          value={integrateData.dataVencimentoSaldo}
+                          onChange={(e) => handleDataChange('dataVencimentoSaldo', e.target.value)}
+                          className="input-field"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -338,14 +407,14 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
               </div>
             )}
 
-            {/* D. Opção de Soma */}
-            {(integrateData.adiantamentoEnabled || integrateData.despesasEnabled || integrateData.diariasEnabled) && (
+            {/* D. Opção de Soma (Apenas se houver extras e adiantamento não estiver habilitado ou se o split for 'ambos') */}
+            {((integrateData.despesasEnabled || integrateData.diariasEnabled) && integrateData.adiantamentoEnabled && integrateData.splitOption !== 'ambos') && (
               <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-                  Opção de Soma
+                  Onde somar Despesas/Diárias?
                 </label>
                 <div className="space-y-3">
-                  {integrateData.adiantamentoEnabled && (
+                  {integrateData.splitOption === 'adiantamento' && (
                     <label className="flex items-center">
                       <input
                         type="radio"
@@ -358,7 +427,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                       <span className="text-sm text-gray-700 dark:text-gray-300">Somar ao Adiantamento</span>
                     </label>
                   )}
-                  {integrateData.adiantamentoEnabled && (
+                  {integrateData.splitOption === 'saldo' && (
                     <label className="flex items-center">
                       <input
                         type="radio"
@@ -374,24 +443,38 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                 </div>
               </div>
             )}
+            
+            {/* D. Opção de Soma (Se não houver adiantamento, mas houver extras) */}
+            {((integrateData.despesasEnabled || integrateData.diariasEnabled) && !integrateData.adiantamentoEnabled) && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Despesas e Diárias serão somadas ao valor total da carga em um único lançamento.
+                </p>
+              </div>
+            )}
 
-            {/* Total Final */}
-            {(integrateData.adiantamentoEnabled || integrateData.despesasEnabled || integrateData.diariasEnabled) && (
+
+            {/* Total Final (Apenas para resumo, se houver extras ou se não houver split) */}
+            {((integrateData.despesasEnabled || integrateData.diariasEnabled) || !integrateData.adiantamentoEnabled) && (
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium text-gray-700 dark:text-gray-300">Total Final:</span>
+                    <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                      {integrateData.adiantamentoEnabled && integrateData.splitOption !== 'ambos' ? 'Valor do Lançamento Único:' : 'Total da Carga + Extras:'}
+                    </span>
                     <span className="text-2xl font-bold text-gray-900 dark:text-white">
                       {formatCurrency(calcularTotalFinal)}
                     </span>
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {integrateData.adiantamentoEnabled && integrateData.somaOpcao === 'adiantamento' && 
-                      `Adiantamento + Despesas + Diárias`}
-                    {integrateData.adiantamentoEnabled && integrateData.somaOpcao === 'saldo' && 
-                      `Saldo + Despesas + Diárias`}
+                    {integrateData.adiantamentoEnabled && integrateData.splitOption === 'adiantamento' && 
+                      `Adiantamento + Extras (${integrateData.somaOpcao === 'adiantamento' ? 'somados ao adiantamento' : 'somados ao saldo'}).`}
+                    {integrateData.adiantamentoEnabled && integrateData.splitOption === 'saldo' && 
+                      `Saldo + Extras (${integrateData.somaOpcao === 'saldo' ? 'somados ao saldo' : 'somados ao adiantamento'}).`}
+                    {integrateData.adiantamentoEnabled && integrateData.splitOption === 'ambos' && 
+                      `Serão criados 2 lançamentos (Adiantamento e Saldo), totalizando o valor da carga + extras.`}
                     {!integrateData.adiantamentoEnabled && 
-                      `Valor da Carga + Despesas + Diárias`}
+                      `Valor da Carga + Despesas + Diárias.`}
                   </div>
                 </div>
               </div>
