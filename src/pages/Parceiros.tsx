@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, ChevronRight, FileText } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, ChevronRight, FileText, Search } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca,
@@ -26,6 +26,14 @@ interface PermissoData {
   enderecoCompleto: string;
   simulado?: boolean;
 }
+
+// Função auxiliar para gerar iniciais
+const getInitials = (name: string) => {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
 
 export default function Parceiros() {
   const { 
@@ -813,15 +821,22 @@ export default function Parceiros() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredParceiros.map((parceiro) => (
-                  <tr key={parceiro.id}>
+                  <tr key={parceiro.id} className="table-body-row">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{parceiro.nome}</div>
-                        {parceiro.isMotorista && (
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 mt-1">
-                            Motorista
-                          </span>
-                        )}
+                      <div className="flex items-center">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3 ${
+                          parceiro.tipo === 'PF' ? 'bg-purple-500' : 'bg-orange-500'
+                        }`}>
+                          {getInitials(parceiro.nome || '')}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{parceiro.nome}</div>
+                          {parceiro.isMotorista && (
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 mt-1">
+                              Motorista
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1027,7 +1042,7 @@ export default function Parceiros() {
                       <div className="flex-1 space-y-1">
                         <p className="font-bold text-gray-900 dark:text-white">{m.nome}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {m.nacionalidade === 'Brasileiro' ? 'CPF' : 'Documento'}: {formatDocument(m.cpf, 'PF')} | CNH: {m.cnh || 'N/A'}
+                          {m.nacionalidade === 'Brasileiro' ? 'CPF' : 'Documento'}: {formatDocument(m.cpf || '', 'PF')} | CNH: {m.cnh || 'N/A'}
                         </p>
                         {m.telefone && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -1227,6 +1242,7 @@ export default function Parceiros() {
                           value={parceiroForm.documento}
                           onChange={(e) => {
                             const formatted = formatDocument(e.target.value, parceiroForm.tipo as 'PF' | 'PJ');
+                            const limpo = formatted.replace(/\D/g, '')
                             setParceiroForm({ ...parceiroForm, documento: formatted });
                             
                             // Reset flag de consulta quando o documento muda
@@ -1235,7 +1251,7 @@ export default function Parceiros() {
                             }
                             
                             // Consulta CNPJ automaticamente se for PJ e tiver 14 dígitos
-                            if (parceiroForm.tipo === 'PJ' && formatted.replace(/\D/g, '').length === 14) {
+                            if (parceiroForm.tipo === 'PJ' && limpo.length === 14) {
                               handleCNPJConsultation(formatted);
                             }
                           }}

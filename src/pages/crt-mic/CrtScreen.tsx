@@ -101,7 +101,7 @@ const CrtScreen: React.FC = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredCrts.map((crt) => (
-                <tr key={crt.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={crt.id} className="table-body-row">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{crt.numero}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {format(crt.dataEmissao, 'dd/MM/yyyy', { locale: ptBR })}

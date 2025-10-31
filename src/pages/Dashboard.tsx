@@ -11,11 +11,14 @@ import {
   Clock, 
   AlertTriangle,
   DollarSign,
-  ArrowUpRight
+  ArrowUpRight,
+  ArrowDownRight,
+  FileText,
+  Users
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const { cargas } = useDatabase()
+  const { cargas, parceiros, clientes, movimentacoes } = useDatabase()
   const navigate = useNavigate()
 
   const handleStatusClick = (status: string) => {
@@ -24,7 +27,7 @@ export default function Dashboard() {
   }
 
   const cargoStats = useMemo(() => {
-    const aColeta = cargas.filter(carga => carga.status === 'a_coletar').length
+    const aColetar = cargas.filter(carga => carga.status === 'a_coletar').length
     const emTransito = cargas.filter(carga => carga.status === 'em_transito').length
     const armazenada = cargas.filter(carga => carga.status === 'armazenada').length
     const entregue = cargas.filter(carga => carga.status === 'entregue').length
@@ -34,7 +37,7 @@ export default function Dashboard() {
     const valorTotal = cargas.reduce((sum, carga) => sum + (carga.valor || 0), 0)
     
     return { 
-      aColeta, 
+      aColetar, 
       emTransito, 
       armazenada, 
       entregue, 
@@ -43,13 +46,24 @@ export default function Dashboard() {
       valorTotal
     }
   }, [cargas])
+  
+  const financeiroStats = useMemo(() => {
+    const receitas = movimentacoes.filter(t => t.tipo === 'receita')
+    const despesas = movimentacoes.filter(t => t.tipo === 'despesa')
+    
+    const totalReceitas = receitas.reduce((sum, t) => sum + (t.valor || 0), 0)
+    const totalDespesas = despesas.reduce((sum, t) => sum + (t.valor || 0), 0)
+    const saldo = totalReceitas - totalDespesas
+    
+    return { saldo, totalReceitas, totalDespesas }
+  }, [movimentacoes])
 
   const statusConfig = {
-    a_coletar: { label: 'À Coletar', icon: Clock, color: 'bg-amber-50', iconColor: 'text-amber-600' },
-    em_transito: { label: 'Em Trânsito', icon: Truck, color: 'bg-blue-50', iconColor: 'text-blue-600' },
-    armazenada: { label: 'Armazenadas', icon: Package, color: 'bg-purple-50', iconColor: 'text-purple-600' },
-    entregue: { label: 'Entregues', icon: CheckCircle, color: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-    cancelada: { label: 'Canceladas', icon: AlertTriangle, color: 'bg-red-50', iconColor: 'text-red-600' }
+    a_coletar: { label: 'À Coletar', icon: Clock, color: 'bg-amber-50', iconColor: 'text-amber-600', count: cargoStats.aColetar },
+    em_transito: { label: 'Em Trânsito', icon: Truck, color: 'bg-blue-50', iconColor: 'text-blue-600', count: cargoStats.emTransito },
+    armazenada: { label: 'Armazenadas', icon: Package, color: 'bg-purple-50', iconColor: 'text-purple-600', count: cargoStats.armazenada },
+    entregue: { label: 'Entregues', icon: CheckCircle, color: 'bg-emerald-50', iconColor: 'text-emerald-600', count: cargoStats.entregue },
+    cancelada: { label: 'Canceladas', icon: AlertTriangle, color: 'bg-red-50', iconColor: 'text-red-600', count: cargoStats.cancelada }
   }
 
   const cargasRecentes = useMemo(() => {
@@ -72,71 +86,84 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Saldo Financeiro */}
+        <div className={`stat-card hover:shadow-md ${financeiroStats.saldo >= 0 ? 'border-l-4 border-emerald-500' : 'border-l-4 border-red-500'}`}>
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 flex-1">
+              <p className="stat-label">Saldo Financeiro</p>
+              <p className={`stat-value text-lg ${financeiroStats.saldo >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(financeiroStats.saldo)}
+              </p>
+            </div>
+            <div className={`p-3 rounded-lg ${financeiroStats.saldo >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+              <DollarSign className={`h-6 w-6 ${financeiroStats.saldo >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} />
+            </div>
+          </div>
+          <div className="pt-4 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <FileText className="h-4 w-4" />
+            {formatCurrency(financeiroStats.totalReceitas)} Receitas / {formatCurrency(financeiroStats.totalDespesas)} Despesas
+          </div>
+        </div>
+        
         {/* Total de Cargas */}
-        <div className="stat-card hover:shadow-md">
+        <div className="stat-card hover:shadow-md border-l-4 border-blue-500">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
               <p className="stat-label">Total de Cargas</p>
               <p className="stat-value">{cargoStats.total}</p>
             </div>
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </div>
-          {/* Removido: <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium"> */}
-        </div>
-
-        {/* Em Trânsito */}
-        <div className="stat-card hover:shadow-md">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1 flex-1">
-              <p className="stat-label whitespace-nowrap">Em Trânsito</p>
-              <p className="stat-value">{cargoStats.emTransito}</p>
-            </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          {/* Removido: <p className="stat-change text-blue-600 dark:text-blue-400 pt-4"> */}
-        </div>
-
-        {/* Entregues */}
-        <div className="stat-card hover:shadow-md">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1 flex-1">
-              <p className="stat-label whitespace-nowrap">Entregues</p>
-              <p className="stat-value">{cargoStats.entregue}</p> {/* Corrigido de .entregues para .entregue */}
-            </div>
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
+          <div className="pt-4 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <Truck className="h-4 w-4" />
+            {cargoStats.emTransito} em trânsito
           </div>
-          {/* Removido: <div className="pt-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-xs font-medium"> */}
         </div>
 
-        {/* Valor Total */}
-        <div className="stat-card hover:shadow-md">
+        {/* Total de Parceiros */}
+        <div className="stat-card hover:shadow-md border-l-4 border-purple-500">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
-              <p className="stat-label whitespace-nowrap">Valor Total</p>
-              <p className="stat-value text-lg">{formatCurrency(cargoStats.valorTotal)}</p>
+              <p className="stat-label">Total de Parceiros</p>
+              <p className="stat-value">{parceiros.length}</p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          {/* Removido: <p className="stat-change text-slate-600 dark:text-slate-400 pt-4"> */}
+          <div className="pt-4 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <span className="text-emerald-600 dark:text-emerald-400">{clientes.length} Clientes</span> cadastrados
+          </div>
+        </div>
+
+        {/* Valor Total das Cargas */}
+        <div className="stat-card hover:shadow-md border-l-4 border-amber-500">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 flex-1">
+              <p className="stat-label whitespace-nowrap">Valor Total Cargas</p>
+              <p className="stat-value text-lg">{formatCurrency(cargoStats.valorTotal)}</p>
+            </div>
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <DollarSign className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <div className="pt-4 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+            <Clock className="h-4 w-4" />
+            {cargoStats.aColetar} cargas à coletar
+          </div>
         </div>
       </div>
 
       {/* Status Distribution */}
       <div>
         <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50 mb-4">
-          Distribuição de Status
+          Distribuição de Status das Cargas
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {Object.entries(statusConfig).map(([status, config]) => {
-            const count = cargoStats[status as keyof typeof cargoStats] as number || 0
+            const count = config.count
             const Icon = config.icon
             
             return (
@@ -188,7 +215,7 @@ export default function Dashboard() {
                   </tr>
                 ) : (
                   cargasRecentes.map((carga) => (
-                    <tr key={carga.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <tr key={carga.id} className="table-body-row cursor-pointer" onClick={() => navigate('/cargas')}>
                       <td className="table-cell font-medium text-slate-900 dark:text-white">
                         {carga.crt || '-'}
                       </td>

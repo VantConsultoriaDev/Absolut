@@ -223,7 +223,7 @@ const Contratos: React.FC = () => {
                 </tr>
               ) : (
                 filteredContratos.map((contrato) => (
-                  <tr key={contrato.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={contrato.id} className="table-body-row">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {contrato.crt || '-'}
                     </td>

@@ -453,10 +453,21 @@ const Cargas: React.FC = () => {
     const movsToUndo: string[] = []; // IDs das movimentações criadas para o undo
 
     // Função para criar movimentação e registrar para undo
-    const createAndRegisterMov = (data: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const createAndRegisterMov = (data: any) => {
       const newMov = createMovimentacao(data);
       movsToUndo.push(newMov.id);
       return newMov;
+    };
+    
+    // Função auxiliar para formatar uma data para exibição
+    const formatDateForDisplay = (dateString: string | undefined): string => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return format(date, 'dd/MM/yyyy', { locale: ptBR });
+      } catch (error) {
+        return dateString; // Retorna original se não for uma data válida
+      }
     };
 
     // Case 1: No split, no extras (Lançamento Único)
@@ -543,11 +554,6 @@ const Cargas: React.FC = () => {
             }
         });
     }
-
-    // REMOVIDO: GATILHO AUTOMÁTICO DE CONTRATO para evitar erro de UUID
-    // if (integratingCarga.id) {
-    //   generateContract(integratingCarga.id);
-    // }
 
     handleCloseIntegrateModal();
   };
@@ -873,7 +879,7 @@ const Cargas: React.FC = () => {
                 </tr>
               ) : (
                 filteredCargas.map((carga) => (
-                  <tr key={carga.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={carga.id} className="table-body-row">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {carga.crt || '-'}
                     </td>

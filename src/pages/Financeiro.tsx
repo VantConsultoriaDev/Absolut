@@ -20,7 +20,9 @@ import {
   RefreshCw,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react'
 
 const Financeiro: React.FC = () => {
@@ -404,6 +406,12 @@ const Financeiro: React.FC = () => {
               <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
+          <div className="pt-4 flex items-center gap-2 text-sm">
+            <ArrowUpRight className="h-4 w-4 text-emerald-600" />
+            <span className="text-slate-600 dark:text-slate-400">
+              {formatCurrency(stats.receitasPendentes)} pendentes
+            </span>
+          </div>
         </div>
 
         {/* Despesas */}
@@ -416,6 +424,12 @@ const Financeiro: React.FC = () => {
             <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
               <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
+          </div>
+          <div className="pt-4 flex items-center gap-2 text-sm">
+            <ArrowDownRight className="h-4 w-4 text-red-600" />
+            <span className="text-slate-600 dark:text-slate-400">
+              {formatCurrency(stats.despesasPendentes)} pendentes
+            </span>
           </div>
         </div>
 
@@ -431,6 +445,11 @@ const Financeiro: React.FC = () => {
             <div className={`p-3 rounded-lg ${stats.saldo >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
               <DollarSign className={`h-6 w-6 ${stats.saldo >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} />
             </div>
+          </div>
+          <div className="pt-4 flex items-center gap-2 text-sm">
+            <span className="text-slate-600 dark:text-slate-400">
+              {stats.totalTransacoes} transações no total
+            </span>
           </div>
         </div>
       </div>

@@ -99,7 +99,7 @@ const MicScreen: React.FC = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredMics.map((mic) => (
-                <tr key={mic.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={mic.id} className="table-body-row">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{mic.numero}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {format(mic.dataEmissao, 'dd/MM/yyyy', { locale: ptBR })}
