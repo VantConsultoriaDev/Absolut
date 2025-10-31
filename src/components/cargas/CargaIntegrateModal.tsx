@@ -222,7 +222,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Adiantamento"
+                  label="Adiantamento (Habilitar cálculo de adiantamento sobre o valor total)"
                   checked={integrateData.adiantamentoEnabled}
                   onChange={(checked) => {
                     handleDataChange('adiantamentoEnabled', checked);
@@ -231,7 +231,6 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                         handleDataChange('splitOption', 'ambos');
                     }
                   }}
-                  description="Habilitar cálculo de adiantamento sobre o valor total"
                 />
               </div>
               
@@ -358,10 +357,9 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Despesas Adicionais"
+                  label="Despesas Adicionais (Incluir despesas em pesos argentinos com conversão automática)"
                   checked={integrateData.despesasEnabled}
                   onChange={(checked) => handleDataChange('despesasEnabled', checked)}
-                  description="Incluir despesas em pesos argentinos com conversão automática"
                 />
               </div>
               
@@ -443,10 +441,9 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Diárias"
+                  label="Diárias (Incluir valor de diárias em reais)"
                   checked={integrateData.diariasEnabled}
                   onChange={(checked) => handleDataChange('diariasEnabled', checked)}
-                  description="Incluir valor de diárias em reais"
                 />
               </div>
               

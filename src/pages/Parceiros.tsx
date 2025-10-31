@@ -1207,7 +1207,6 @@ export default function Parceiros() {
                       label="É Motorista"
                       checked={parceiroForm.isMotorista}
                       onChange={(checked) => setParceiroForm({ ...parceiroForm, isMotorista: checked })}
-                      description="Marque se esta pessoa física atua como motorista"
                     />
                   )}
 
