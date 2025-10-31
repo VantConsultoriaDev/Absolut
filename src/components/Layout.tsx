@@ -138,7 +138,7 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-30 overflow-x-hidden`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-x-hidden`}
         onMouseEnter={() => {
           if (isAutoMode) {
             setIsHovering(true);
@@ -241,7 +241,6 @@ const Layout: React.FC = () => {
                         title="Menu Manual"
                     >
                         <FileBadge className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
-                        {/* Removido o span com o texto 'Menu Manual' */}
                     </button>
                 )}
               </div>
