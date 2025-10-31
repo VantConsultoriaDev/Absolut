@@ -233,14 +233,14 @@ const Clientes: React.FC = () => {
                         className="h-10 w-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className={`p-2 rounded-lg flex-shrink-0 ${
-                        c.tipo === 'PJ' ? 'bg-blue-100 dark:bg-blue-900/50' : 
-                        c.tipo === 'PF' ? 'bg-green-100 dark:bg-green-900/50' : 
-                        'bg-purple-100 dark:bg-purple-900/50'
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        c.tipo === 'PJ' ? 'bg-blue-500 text-white' : 
+                        c.tipo === 'PF' ? 'bg-green-500 text-white' : 
+                        'bg-purple-500 text-white'
                       }`}>
-                        {c.tipo === 'PJ' ? <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" /> :
-                         c.tipo === 'PF' ? <User className="h-5 w-5 text-green-600 dark:text-green-400" /> :
-                         <Globe className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                        {c.tipo === 'PJ' ? <Building2 className="h-5 w-5" /> :
+                         c.tipo === 'PF' ? <User className="h-5 w-5" /> :
+                         <Globe className="h-5 w-5" />}
                       </div>
                     )}
                     <div>
