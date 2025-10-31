@@ -32,15 +32,17 @@ const Layout: React.FC = () => {
   // Efeito para controlar a retração automática (apenas se não for manual)
   useEffect(() => {
     if (!isMenuManual && !isHovering) {
-      // Removendo o timeout (delay)
+      // Retrai imediatamente
       setSidebarCollapsed(true);
     }
   }, [isHovering, isMenuManual]);
   
-  // Efeito para garantir que o menu esteja aberto no modo manual se sidebarOpen for true (para desktop)
+  // Efeito para sincronizar o estado de abertura/colapso no modo manual
   useEffect(() => {
-    if (isMenuManual && sidebarOpen) {
-        setSidebarCollapsed(false);
+    if (isMenuManual) {
+        // No modo manual, o estado de abertura do mobile (sidebarOpen) é usado para controlar o estado de colapso do desktop.
+        // Se sidebarOpen for true, o menu deve estar expandido (collapsed=false).
+        setSidebarCollapsed(!sidebarOpen);
     }
   }, [isMenuManual, sidebarOpen]);
 
@@ -64,11 +66,17 @@ const Layout: React.FC = () => {
     logout();
   };
   
+  // Função para alternar o estado do menu no modo manual (desktop)
+  const toggleManualMenu = () => {
+    // No modo manual, alternamos o estado de abertura (que controla o colapso via useEffect)
+    setSidebarOpen(prev => !prev);
+  };
+  
   // Determina a largura do menu
   const menuWidthClass = sidebarCollapsed && !isHovering && !isMenuManual ? 'lg:w-20' : 'lg:w-72';
   
   // Determina se o menu deve estar expandido (para desktop)
-  const isExpanded = !sidebarCollapsed || isMenuManual;
+  const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
   
   // Determina se o menu está no modo automático (expansão por hover)
   const isAutoMode = !isMenuManual;
@@ -161,7 +169,7 @@ const Layout: React.FC = () => {
           {isMenuManual && (
             <div className={`p-3 transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''}`}>
                 <button
-                    onClick={() => setSidebarCollapsed(prev => !prev)}
+                    onClick={toggleManualMenu} // Usando a nova função
                     className={`btn-ghost w-full justify-center ${!isExpanded ? 'p-3' : 'px-4 py-2'}`}
                     title={isExpanded ? 'Recolher Menu' : 'Expandir Menu'}
                 >
