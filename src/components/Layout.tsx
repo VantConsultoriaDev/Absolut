@@ -14,38 +14,55 @@ import {
   FileText,
   Briefcase,
   FileBadge,
-  Menu as MenuIcon,
   Pin 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import StandardCheckbox from './StandardCheckbox'; // Importando o checkbox
+// StandardCheckbox não é mais necessário aqui
 
 const Layout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Estado para mobile
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Estado para desktop (auto)
+  // sidebarOpen: Usado para Mobile E para o estado de expansão no MODO MANUAL (Desktop)
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
+  // sidebarCollapsed: Usado para o estado de colapso no MODO AUTOMÁTICO (Desktop)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); 
   const [isHovering, setIsHovering] = useState(false);
   
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme, isMenuManual, toggleMenuManual } = useTheme(); // Usando isMenuManual
+  const { isDark, toggleTheme, isMenuManual, toggleMenuManual } = useTheme(); 
   const location = useLocation();
 
-  // Efeito para controlar a retração automática (apenas se não for manual)
+  // Determina se o menu está no modo automático (expansão por hover)
+  const isAutoMode = !isMenuManual;
+  
+  // Efeito para controlar a retração automática (apenas se estiver no modo automático)
   useEffect(() => {
-    if (!isMenuManual && !isHovering) {
-      // Retrai imediatamente
+    if (isAutoMode && !isHovering) {
       setSidebarCollapsed(true);
     }
-  }, [isHovering, isMenuManual]);
+  }, [isHovering, isAutoMode]);
   
-  // Efeito para sincronizar o estado de abertura/colapso no modo manual
-  useEffect(() => {
+  // Determina se o menu deve estar expandido (para desktop)
+  const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
+  
+  // CORREÇÃO: A largura do menu depende diretamente de isExpanded
+  const menuWidthClass = isExpanded ? 'lg:w-72' : 'lg:w-20';
+
+  // Handler para o botão Pin (Alterna entre modo Manual e Automático)
+  const handlePinToggle = () => {
+    toggleMenuManual(); // Alterna o estado persistente
+    
     if (isMenuManual) {
-        // No modo manual, o estado de abertura do mobile (sidebarOpen) é usado para controlar o estado de colapso do desktop.
-        // Se sidebarOpen for true, o menu deve estar expandido (collapsed=false).
-        setSidebarCollapsed(!sidebarOpen);
+      // Se estava em Manual (isMenuManual=true), vai para Auto (isMenuManual=false)
+      // Deve colapsar
+      setSidebarOpen(false); // Colapsa o estado manual
+      setSidebarCollapsed(true); // Garante que o estado auto comece colapsado
+    } else {
+      // Se estava em Auto (isMenuManual=false), vai para Manual (isMenuManual=true)
+      // Deve expandir e fixar
+      setSidebarOpen(true); // Expande o estado manual
+      setSidebarCollapsed(false); // Desabilita o colapso automático
     }
-  }, [isMenuManual, sidebarOpen]);
+  };
 
   const navigation = [
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
@@ -67,21 +84,6 @@ const Layout: React.FC = () => {
     logout();
   };
   
-  // Função para alternar o estado do menu no modo manual (desktop)
-  const toggleManualMenu = () => {
-    // No modo manual, alternamos o estado de abertura (que controla o colapso via useEffect)
-    setSidebarOpen(prev => !prev);
-  };
-  
-  // Determina se o menu deve estar expandido (para desktop)
-  const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
-  
-  // Determina se o menu está no modo automático (expansão por hover)
-  const isAutoMode = !isMenuManual;
-  
-  // CORREÇÃO: A largura do menu depende diretamente de isExpanded
-  const menuWidthClass = isExpanded ? 'lg:w-72' : 'lg:w-20';
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Mobile Sidebar Overlay */}
@@ -139,7 +141,7 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-y-hidden`}
         onMouseEnter={() => {
           if (isAutoMode) {
             setIsHovering(true);
@@ -149,7 +151,7 @@ const Layout: React.FC = () => {
         onMouseLeave={() => {
           if (isAutoMode) {
             setIsHovering(false);
-            setSidebarCollapsed(true); // Retrai imediatamente
+            // O useEffect cuidará do colapso
           }
         }}
       >
@@ -164,32 +166,8 @@ const Layout: React.FC = () => {
                 ABSOLUT
               </span>
             </div>
-            
-            {/* Botão de Toggle Manual (Visível apenas no modo manual) */}
-            {isMenuManual && (
-                <button
-                    onClick={toggleManualMenu}
-                    className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'ml-auto' : 'hidden'}`}
-                    title={isExpanded ? 'Recolher Menu' : 'Expandir Menu'}
-                >
-                    <MenuIcon className="h-5 w-5" />
-                </button>
-            )}
           </div>
           
-          {/* Botão de Toggle Manual (Visível quando colapsado no modo manual) */}
-          {isMenuManual && !isExpanded && (
-            <div className="p-3 flex justify-center">
-                <button
-                    onClick={toggleManualMenu}
-                    className={`btn-ghost p-3`}
-                    title={'Expandir Menu'}
-                >
-                    <MenuIcon className="h-5 w-5" />
-                </button>
-            </div>
-          )}
-
           {/* Navigation */}
           <nav className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}>
             {filteredNavigation.map((item) => {
@@ -223,37 +201,25 @@ const Layout: React.FC = () => {
           </nav>
 
           {/* Footer - User Info & Logout (Desktop only) */}
-          {/* Adicionando altura mínima para o contêiner do Menu Manual para estabilizar o footer */}
           <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}>
-            <div className={`w-full ${!isExpanded ? 'flex flex-col items-center space-y-2' : 'space-y-3'}`}>
+            <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center`}>
               
-              {/* Checkbox Menu Manual - Envolvido em um div com altura fixa para estabilizar a linha divisória */}
-              <div className={`w-full transition-all duration-300 ${!isExpanded ? 'flex justify-center' : ''} h-10 flex items-center`}>
-                {isExpanded ? (
-                    <StandardCheckbox
-                        label="Menu Manual"
-                        checked={isMenuManual}
-                        onChange={toggleMenuManual}
-                        className="w-full"
-                    />
-                ) : (
-                    <button
-                        onClick={toggleMenuManual}
-                        className={`btn-ghost p-3`}
-                        title="Menu Manual"
-                    >
-                        <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
-                    </button>
-                )}
-              </div>
+              {/* Botão Pin/Fixar */}
+              <button
+                onClick={handlePinToggle}
+                className={`btn-ghost p-2 flex-shrink-0`}
+                title={isMenuManual ? 'Desafixar Menu (Modo Automático)' : 'Fixar Menu (Modo Manual)'}
+              >
+                <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
+              </button>
               
               {/* Botão de Sair */}
               <button
                 onClick={handleLogout}
-                className={`btn-ghost w-full justify-center ${!isExpanded ? 'p-3' : 'px-4 py-2'}`}
+                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? '' : 'ml-auto'}`}
+                title="Sair"
               >
                 <LogOut className="h-5 w-5" />
-                {isExpanded && <span className="ml-2">Sair</span>}
               </button>
             </div>
           </div>
@@ -261,7 +227,7 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${isExpanded ? 'lg:pl-72' : 'lg:pl-20'}`}>
+      <div className={`transition-all duration-300 ${menuWidthClass === 'lg:w-72' ? 'lg:pl-72' : 'lg:pl-20'}`}>
         {/* Top Header */}
         <div className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
           {/* Mobile Menu */}
