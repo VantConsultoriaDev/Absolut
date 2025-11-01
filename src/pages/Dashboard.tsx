@@ -11,8 +11,6 @@ import {
   Clock, 
   AlertTriangle,
   DollarSign,
-  ArrowUpRight,
-  ArrowDownRight,
   FileText,
   Users
 } from 'lucide-react'

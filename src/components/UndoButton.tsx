@@ -26,14 +26,15 @@ const UndoButton: React.FC = () => {
     let interval: number | null = null;
 
     if (currentAction && timeLeft > 0) {
-      interval = setInterval(() => {
+      // Usando window.setInterval e forçando o cast para number para compatibilidade com o ambiente de navegador
+      interval = window.setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             return 0;
           }
           return prev - 1;
         });
-      }, 1000);
+      }, 1000) as unknown as number;
     }
 
     return () => {

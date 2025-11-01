@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
-import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, ChevronRight, FileText, Search } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, FileText } from 'lucide-react';
 import { 
   formatDocument, 
   formatPlaca,

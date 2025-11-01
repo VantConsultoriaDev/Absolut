@@ -93,7 +93,7 @@ const Cargas: React.FC = () => {
     createMovimentacao,
     movimentacoes,
     buildMovimentacaoDescription,
-    generateContract, // Mantido, mas não chamado automaticamente
+    // generateContract, // Removido
     deleteMovimentacao, // Adicionado para o undo
   } = useDatabase();
 
@@ -459,17 +459,6 @@ const Cargas: React.FC = () => {
       return newMov;
     };
     
-    // Função auxiliar para formatar uma data para exibição
-    const formatDateForDisplay = (dateString: string | undefined): string => {
-      if (!dateString) return '';
-      try {
-        const date = new Date(dateString);
-        return format(date, 'dd/MM/yyyy', { locale: ptBR });
-      } catch (error) {
-        return dateString; // Retorna original se não for uma data válida
-      }
-    };
-
     // Case 1: No split, no extras (Lançamento Único)
     if (!integrateData.adiantamentoEnabled && !integrateData.despesasEnabled && !integrateData.diariasEnabled) {
       createAndRegisterMov({
