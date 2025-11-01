@@ -18,7 +18,7 @@ import {
   AlertTriangle,
   Edit,
   Trash2,
-  FileText, // Adicionado para o botão de contrato
+  // FileText, // Removido
   // FileBadge, // Removido
 } from 'lucide-react';
 
@@ -93,8 +93,8 @@ const Cargas: React.FC = () => {
     veiculos,
     clientes,
     movimentacoes,
-    contratos, // Adicionado
-    generateContract, // Adicionado
+    // contratos, // Removido
+    // generateContract, // Removido
     createMovimentacao,
     deleteMovimentacao,
     buildMovimentacaoDescription,
@@ -147,7 +147,7 @@ const Cargas: React.FC = () => {
   const [showIntegrateModal, setShowIntegrateModal] = useState(false);
   const [integratingCarga, setIntegratingCarga] = useState<Carga | null>(null);
   const [integrateData, setIntegrateData] = useState<IntegrateData>(initialIntegrateData);
-  const [isGeneratingContract, setIsGeneratingContract] = useState(false); // Novo estado para geração
+  // const [isGeneratingContract, setIsGeneratingContract] = useState(false); // Removido
 
   // Delete State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -551,14 +551,10 @@ const Cargas: React.FC = () => {
     handleCloseIntegrateModal();
   };
   
-  // Função para gerar/regerar contrato de uma única carga
-  const handleGenerateContract = async (cargaId: string) => {
-    setIsGeneratingContract(true);
-    await generateContract(cargaId);
-    setIsGeneratingContract(false);
-  };
+  // Função para gerar/regerar contrato de uma única carga (REMOVIDA)
+  // const handleGenerateContract = async (cargaId: string) => { ... };
   
-  // Função para gerar contratos em lote (REMOVIDA DAQUI)
+  // Função para gerar contratos em lote (REMOVIDA)
   // const handleGeneratePendingContracts = async () => { ... };
 
   // Filtering logic
@@ -630,10 +626,8 @@ const Cargas: React.FC = () => {
     return movimentacoes.some(m => m.cargaId === cargaId && m.categoria === 'FRETE');
   };
   
-  // Função para verificar se o contrato existe
-  const hasContract = (cargaId: string) => {
-    return contratos.some(c => c.cargaId === cargaId);
-  };
+  // Função para verificar se o contrato existe (REMOVIDA)
+  // const hasContract = (cargaId: string) => { ... };
 
   return (
     <div className="space-y-6">
@@ -644,7 +638,6 @@ const Cargas: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">Gestão de cargas e transportes</p>
         </div>
         <div className="flex gap-3">
-          {/* Botão de lote removido daqui */}
           <button
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
@@ -889,7 +882,7 @@ const Cargas: React.FC = () => {
               ) : (
                 filteredCargas.map((carga) => {
                   const integrated = isCargaIntegrated(carga.id);
-                  const contractExists = hasContract(carga.id);
+                  // const contractExists = hasContract(carga.id); // Removido
                   
                   return (
                   <tr key={carga.id} className="table-body-row">
@@ -949,20 +942,8 @@ const Cargas: React.FC = () => {
                           <Link className="h-4 w-4" />
                         </button>
                         
-                        {/* Botão de Integração Financeira / Contrato */}
-                        {integrated ? (
-                          // Integrado: Gerar/Regerar Contrato
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateContract(carga.id)}
-                            disabled={isGeneratingContract}
-                            className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
-                            title={contractExists ? "Regerar Contrato (Atualizar dados)" : "Gerar Contrato de Frete"}
-                          >
-                            <FileText className={`h-4 w-4 ${isGeneratingContract ? 'animate-spin' : ''}`} />
-                          </button>
-                        ) : (
-                          // Não integrado: Integrar Financeiro
+                        {/* Botão de Integração Financeira */}
+                        {!integrated && (
                           <button
                             type="button"
                             onClick={() => handleIntegrateFinanceiro(carga)}
