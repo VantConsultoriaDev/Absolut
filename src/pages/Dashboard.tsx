@@ -26,7 +26,7 @@ export default function Dashboard() {
     clientes, 
     movimentacoes, 
     resetDemoData,
-    syncDemoDataToSupabase, // Importado
+    syncDemoDataToSupabase, // AGORA É O PULL
     isSynced, // Importado
     isSyncing // Importado
   } = useDatabase()
@@ -40,17 +40,18 @@ export default function Dashboard() {
   const handleResetData = () => {
     if (window.confirm('ATENÇÃO: Você tem certeza que deseja resetar todos os dados de demonstração? Esta ação é irreversível e apagará todas as alterações locais.')) {
       resetDemoData();
-      // Força a sincronização após o reset para garantir que o Supabase também seja limpo (se o usuário logar novamente)
-      syncDemoDataToSupabase(true); 
+      // Após o reset local, o usuário deve sincronizar para puxar dados limpos do Supabase, se necessário.
     }
   }
   
   const handleSyncData = async () => {
-    const success = await syncDemoDataToSupabase(true); // Força a sincronização
-    if (success) {
-      alert('Sincronização manual concluída com sucesso!');
-    } else {
-      alert('Falha na sincronização manual. Verifique o console para detalhes.');
+    if (window.confirm('Deseja sincronizar agora? Isso irá PUXAR todos os dados do Supabase e SOBRESCREVER o estado local do seu navegador.')) {
+      const success = await syncDemoDataToSupabase(); // Chama o PULL
+      if (success) {
+        alert('Sincronização concluída! Dados do Supabase carregados localmente.');
+      } else {
+        alert('Falha na sincronização. Verifique o console para detalhes.');
+      }
     }
   }
 
@@ -136,10 +137,10 @@ export default function Dashboard() {
               onClick={handleSyncData}
               disabled={isSyncing}
               className="btn-info text-sm px-3 py-2 flex items-center gap-2 disabled:opacity-50"
-              title="Forçar sincronização dos dados locais para o Supabase"
+              title="Puxar dados do Supabase e sobrescrever o estado local"
             >
               <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}
+              {isSyncing ? 'Puxando Dados...' : 'Sincronizar Agora (PULL)'}
             </button>
             
             <button

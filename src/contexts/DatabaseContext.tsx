@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional } from '../types'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext' // Necessário para obter o userId
+import { parseDocument } from '../utils/formatters'
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
 
@@ -474,6 +475,277 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // Utility function to generate IDs
   const generateId = generateUuid // Usando o novo gerador de UUID
 
+  // --- MAPPERS ---
+  // Mapeia o objeto local para o formato do Supabase (snake_case)
+  const mapToSupabase = (tableName: string, item: any) => {
+    const base = {
+      user_id: user?.id,
+      created_at: item.createdAt?.toISOString(),
+      updated_at: item.updatedAt?.toISOString(),
+      id: item.id,
+    };
+
+    switch (tableName) {
+      case 'clientes':
+        return {
+          ...base,
+          tipo: item.tipo, nome: item.nome, documento: item.documento, email: item.email, telefone: item.telefone, endereco: item.endereco, cidade: item.cidade, estado: item.estado, cep: item.cep, observacoes: item.observacoes, is_active: item.isActive, avatar_url: item.avatarUrl,
+        };
+      case 'parceiros':
+        return {
+          ...base,
+          tipo: item.tipo, nome: item.nome, documento: item.documento, cnh: item.cnh, email: item.email, telefone: item.telefone, endereco: item.endereco, cidade: item.cidade, estado: item.estado, cep: item.cep, observacoes: item.observacoes, is_motorista: item.isMotorista, is_active: item.isActive,
+        };
+      case 'motoristas':
+        return {
+          ...base,
+          parceiro_id: item.parceiroId, nome: item.nome || '', cpf: item.cpf || '', cnh: item.cnh || '', nacionalidade: item.nacionalidade, categoria_cnh: item.categoriaCnh, validade_cnh: item.validadeCnh?.toISOString().split('T')[0], telefone: item.telefone, is_active: item.isActive,
+        };
+      case 'veiculos':
+        return {
+          ...base,
+          parceiro_id: item.parceiroId, placa: item.placa, placa_cavalo: item.placaCavalo, placa_carreta: item.placaCarreta, placa_carreta1: item.placaCarreta1, placa_carreta2: item.placaCarreta2, placa_dolly: item.placaDolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidade_carretas: item.quantidadeCarretas, possui_dolly: item.possuiDolly, motorista_vinculado: item.motoristaVinculado, carretas_vinculadas: item.carretasVinculadas || [], is_active: item.isActive,
+        };
+      case 'permisso_internacional':
+        return {
+          ...base,
+          veiculo_id: item.veiculoId, razao_social: item.razaoSocial, nome_fantasia: item.nomeFantasia, cnpj: item.cnpj, endereco_completo: item.enderecoCompleto, data_consulta: item.dataConsulta.toISOString(),
+        };
+      case 'cargas':
+        return {
+          ...base,
+          descricao: item.descricao, origem: item.origem, destino: item.destino, peso: item.peso, valor: item.valor, data_coleta: item.dataColeta?.toISOString().split('T')[0], data_entrega: item.dataEntrega?.toISOString().split('T')[0], status: item.status, cliente_id: item.clienteId, parceiro_id: item.parceiroId, motorista_id: item.motoristaId, veiculo_id: item.veiculoId, carretas_selecionadas: item.carretasSelecionadas || [], crt: item.crt, observacoes: item.observacoes,
+        };
+      case 'movimentacoes_financeiras':
+        return {
+          ...base,
+          tipo: item.tipo, valor: item.valor, descricao: item.descricao, categoria: item.categoria, data: item.data.toISOString().split('T')[0], status: item.status, data_pagamento: item.dataPagamento?.toISOString().split('T')[0], parceiro_id: item.parceiroId, carga_id: item.cargaId, is_pago: item.isPago, observacoes: item.observacoes,
+        };
+      case 'contratos_frete':
+        return {
+          ...base,
+          carga_id: item.cargaId, pdf_url: item.pdfUrl, motorista_nome: item.motoristaNome, parceiro_nome: item.parceiroNome, crt: item.crt,
+        };
+      default:
+        return base;
+    }
+  };
+
+  // Mapeia o objeto Supabase (snake_case) para o formato local (camelCase)
+  const mapFromSupabase = (tableName: string, item: any) => {
+    const base = {
+      id: item.id,
+      createdAt: new Date(item.created_at),
+      updatedAt: new Date(item.updated_at),
+    };
+
+    switch (tableName) {
+      case 'clientes':
+        return {
+          ...base,
+          tipo: item.tipo, nome: item.nome, documento: item.documento, email: item.email, telefone: item.telefone, endereco: item.endereco, cidade: item.cidade, estado: item.estado, cep: item.cep, observacoes: item.observacoes, isActive: item.is_active, avatarUrl: item.avatar_url,
+        } as Cliente;
+      case 'parceiros':
+        return {
+          ...base,
+          tipo: item.tipo, nome: item.nome, documento: item.documento, cnh: item.cnh, email: item.email, telefone: item.telefone, endereco: item.endereco, cidade: item.cidade, estado: item.estado, cep: item.cep, observacoes: item.observacoes, isMotorista: item.is_motorista, isActive: item.is_active,
+        } as Parceiro;
+      case 'motoristas':
+        return {
+          ...base,
+          parceiroId: item.parceiro_id, nome: item.nome, cpf: item.cpf, cnh: item.cnh, nacionalidade: item.nacionalidade, categoriaCnh: item.categoria_cnh, validadeCnh: item.validade_cnh ? new Date(item.validade_cnh) : undefined, telefone: item.telefone, isActive: item.is_active,
+        } as Motorista;
+      case 'veiculos':
+        return {
+          ...base,
+          parceiroId: item.parceiro_id, placa: item.placa, placaCavalo: item.placa_cavalo, placaCarreta: item.placa_carreta, placaCarreta1: item.placa_carreta1, placaCarreta2: item.placa_carreta2, placaDolly: item.placa_dolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidadeCarretas: item.quantidade_carretas, possuiDolly: item.possui_dolly, motoristaVinculado: item.motorista_vinculado, carretasVinculadas: item.carretas_vinculadas || [], isActive: item.is_active,
+        } as Veiculo;
+      case 'permisso_internacional':
+        return {
+          ...base,
+          veiculoId: item.veiculo_id, razaoSocial: item.razao_social, nomeFantasia: item.nome_fantasia, cnpj: item.cnpj, enderecoCompleto: item.endereco_completo, dataConsulta: new Date(item.data_consulta), simulado: item.simulado,
+        } as PermissoInternacional;
+      case 'cargas':
+        return {
+          ...base,
+          descricao: item.descricao, origem: item.origem, destino: item.destino, peso: item.peso, valor: item.valor, dataColeta: item.data_coleta ? new Date(item.data_coleta) : undefined, dataEntrega: item.data_entrega ? new Date(item.data_entrega) : undefined, status: item.status, clienteId: item.cliente_id, parceiroId: item.parceiro_id, motoristaId: item.motorista_id, veiculoId: item.veiculo_id, carretasSelecionadas: item.carretas_selecionadas || [], crt: item.crt, observacoes: item.observacoes,
+        } as Carga;
+      case 'movimentacoes_financeiras':
+        return {
+          ...base,
+          tipo: item.tipo, valor: item.valor, descricao: item.descricao, categoria: item.categoria, data: new Date(item.data), status: item.status, dataPagamento: item.data_pagamento ? new Date(item.data_pagamento) : null, parceiroId: item.parceiro_id, cargaId: item.carga_id, isPago: item.is_pago, observacoes: item.observacoes,
+        } as MovimentacaoFinanceira;
+      case 'contratos_frete':
+        return {
+          ...base,
+          cargaId: item.carga_id, pdfUrl: item.pdf_url, motoristaNome: item.motorista_nome, parceiroNome: item.parceiro_nome, crt: item.crt,
+        } as ContratoFrete;
+      default:
+        return base;
+    }
+  };
+
+  // --- AUTO-SYNC (R1) ---
+  const syncItemToSupabase = useCallback(async (tableName: string, item: any, operation: 'INSERT' | 'UPDATE' | 'DELETE') => {
+    if (!supabase || !user) return false;
+    
+    try {
+      if (operation === 'DELETE') {
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .eq('id', item.id);
+        
+        if (error) throw error;
+        console.log(`[AUTO-SYNC DELETE] ${tableName} ${item.id} excluído.`);
+        return true;
+      }
+
+      const payload = mapToSupabase(tableName, item);
+      
+      const { error } = await supabase
+        .from(tableName)
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) throw error;
+      
+      console.log(`[AUTO-SYNC ${operation}] ${tableName} ${item.id} sincronizado.`);
+      return true;
+
+    } catch (error) {
+      console.error(`[AUTO-SYNC ERROR] Falha ao sincronizar ${tableName} (${operation}):`, error);
+      // Se falhar, definimos isSynced como false para que o usuário saiba que há divergência
+      setIsSynced(false);
+      return false;
+    }
+  }, [user]);
+
+  // --- PULL SYNC (R3) ---
+  const pullSupabaseData = useCallback(async () => {
+    if (!supabase || !user) {
+      alert('Supabase não está configurado ou usuário não autenticado.');
+      return false;
+    }
+    
+    setIsSyncing(true);
+    console.log('Iniciando PULL de dados do Supabase...');
+    
+    const userId = user.id;
+    let overallSuccess = true;
+
+    const fetchTable = async (tableName: string, setState: React.Dispatch<React.SetStateAction<any[]>>, mapFn: (item: any) => any) => {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error(`[PULL ERROR] Falha ao buscar ${tableName}:`, error.message);
+        overallSuccess = false;
+        return false;
+      }
+      
+      const mappedData = data.map(mapFn);
+      setState(mappedData);
+      console.log(`[PULL SUCCESS] ${tableName} carregado: ${mappedData.length} registros.`);
+      return true;
+    };
+
+    try {
+      // Fetching all tables
+      await Promise.all([
+        fetchTable('clientes', setClientes, (item) => mapFromSupabase('clientes', item)),
+        fetchTable('parceiros', setParceiros, (item) => mapFromSupabase('parceiros', item)),
+        fetchTable('motoristas', setMotoristas, (item) => mapFromSupabase('motoristas', item)),
+        fetchTable('permisso_internacional', setPermissoes, (item) => mapFromSupabase('permisso_internacional', item)),
+        fetchTable('veiculos', setVeiculos, (item) => mapFromSupabase('veiculos', item)),
+        fetchTable('cargas', setCargas, (item) => mapFromSupabase('cargas', item)),
+        fetchTable('movimentacoes_financeiras', setMovimentacoes, (item) => mapFromSupabase('movimentacoes_financeiras', item)),
+        fetchTable('contratos_frete', setContratos, (item) => mapFromSupabase('contratos_frete', item)),
+      ]);
+      
+      // Re-sincroniza permisso com veículos após carregar ambos
+      setVeiculos(prevVeiculos => prevVeiculos.map(v => ({
+          ...v,
+          permisso: permissoes.find(p => p.veiculoId === v.id)
+      })));
+
+      if (overallSuccess) {
+        setIsSynced(true);
+        localStorage.setItem('absolut_synced', 'true');
+        console.log('PULL de dados concluído com sucesso!');
+      }
+      
+      return overallSuccess;
+      
+    } catch (error) {
+      console.error('Falha crítica no PULL de dados:', error);
+      return false;
+    } finally {
+        setIsSyncing(false);
+    }
+  }, [user, permissoes]); // Depende de permissoes para o mapeamento final de veiculos
+
+  // --- PUSH SYNC (Antigo syncDemoDataToSupabase, agora para uso interno/fallback) ---
+  const pushLocalDataToSupabase = useCallback(async (force = false) => {
+    if (!supabase || !user) {
+        console.error('Supabase ou usuário não estão prontos para sincronização.');
+        return false;
+    }
+    
+    setIsSyncing(true);
+    console.log('Iniciando PUSH de dados de demonstração para o Supabase...');
+    
+    const userId = user.id;
+    let overallSuccess = true;
+
+    const syncTable = async (tableName: string, data: any[]) => {
+      const payload = data.map(item => mapToSupabase(tableName, item));
+      
+      const { error } = await supabase
+        .from(tableName)
+        .upsert(payload, { onConflict: 'id' }); 
+
+      if (error) {
+        console.error(`[PUSH ERROR] Falha ao sincronizar ${tableName}:`, error.message, error.details);
+        overallSuccess = false;
+        return false;
+      } else {
+        console.log(`[PUSH SUCCESS] Sincronização de ${tableName} concluída: ${payload.length} registros.`);
+        return true;
+      }
+    };
+
+    try {
+      // Sincronização sequencial
+      await Promise.all([
+        syncTable('clientes', clientes),
+        syncTable('parceiros', parceiros),
+        syncTable('motoristas', motoristas),
+        syncTable('permisso_internacional', permissoes),
+        syncTable('veiculos', veiculos),
+        syncTable('cargas', cargas),
+        syncTable('movimentacoes_financeiras', movimentacoes),
+        syncTable('contratos_frete', contratos),
+      ]);
+
+      if (overallSuccess) {
+        setIsSynced(true);
+        localStorage.setItem('absolut_synced', 'true');
+        console.log('PUSH de dados de demonstração concluído com sucesso!');
+      }
+      
+      return overallSuccess;
+      
+    } catch (error) {
+      console.error('Falha crítica no PUSH de dados de demonstração:', error);
+      return false;
+    } finally {
+        setIsSyncing(false);
+    }
+  }, [user, clientes, parceiros, motoristas, veiculos, permissoes, cargas, movimentacoes, contratos]);
+
+
   // Função para carregar dados do localStorage ou inicializar com demo data
   const loadData = useCallback(() => {
     const savedClientes = localStorage.getItem('absolut_clientes')
@@ -503,59 +775,14 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     } else {
       // Load existing data and convert date strings back to Date objects
       
-      const parsedClientes = JSON.parse(savedClientes || '[]').map((cliente: any) => ({
-        ...cliente,
-        createdAt: new Date(cliente.createdAt),
-        updatedAt: new Date(cliente.updatedAt)
-      }))
-      
-      const parsedParceiros = JSON.parse(savedParceiros || '[]').map((parceiro: any) => ({
-        ...parceiro,
-        createdAt: new Date(parceiro.createdAt),
-        updatedAt: new Date(parceiro.updatedAt)
-      }))
-      
-      const parsedMotoristas = JSON.parse(savedMotoristas || '[]').map((motorista: any) => ({
-        ...motorista,
-        validadeCnh: motorista.validadeCnh ? new Date(motorista.validadeCnh) : undefined,
-        createdAt: new Date(motorista.createdAt),
-        updatedAt: new Date(motorista.updatedAt)
-      }))
-      
-      const parsedVeiculos = JSON.parse(savedVeiculos || '[]').map((veiculo: any) => ({
-        ...veiculo,
-        createdAt: new Date(veiculo.createdAt),
-        updatedAt: new Date(veiculo.updatedAt)
-      }))
-      
-      const parsedMovimentacoes = JSON.parse(savedMovimentacoes || '[]').map((mov: any) => ({
-        ...mov,
-        data: new Date(mov.data),
-        dataPagamento: mov.dataPagamento ? new Date(mov.dataPagamento) : null,
-        createdAt: new Date(mov.createdAt),
-        updatedAt: new Date(mov.updatedAt)
-      }))
-      
-      const parsedCargas = JSON.parse(savedCargas || '[]').map((carga: any) => ({
-        ...carga,
-        dataColeta: carga.dataColeta ? new Date(carga.dataColeta) : undefined,
-        dataEntrega: carga.dataEntrega ? new Date(carga.dataEntrega) : undefined,
-        createdAt: new Date(carga.createdAt),
-        updatedAt: new Date(carga.updatedAt)
-      }))
-      
-      const parsedContratos = JSON.parse(savedContratos || '[]').map((contrato: any) => ({
-        ...contrato,
-        createdAt: new Date(contrato.createdAt),
-        updatedAt: new Date(contrato.updatedAt)
-      }))
-      
-      const parsedPermissoes = JSON.parse(savedPermissoes || '[]').map((permisso: any) => ({
-        ...permisso,
-        dataConsulta: new Date(permisso.dataConsulta),
-        createdAt: new Date(permisso.createdAt),
-        updatedAt: new Date(permisso.updatedAt)
-      }))
+      const parsedClientes = JSON.parse(savedClientes || '[]').map((cliente: any) => mapFromSupabase('clientes', cliente))
+      const parsedParceiros = JSON.parse(savedParceiros || '[]').map((parceiro: any) => mapFromSupabase('parceiros', parceiro))
+      const parsedMotoristas = JSON.parse(savedMotoristas || '[]').map((motorista: any) => mapFromSupabase('motoristas', motorista))
+      const parsedVeiculos = JSON.parse(savedVeiculos || '[]').map((veiculo: any) => mapFromSupabase('veiculos', veiculo))
+      const parsedMovimentacoes = JSON.parse(savedMovimentacoes || '[]').map((mov: any) => mapFromSupabase('movimentacoes_financeiras', mov))
+      const parsedCargas = JSON.parse(savedCargas || '[]').map((carga: any) => mapFromSupabase('cargas', carga))
+      const parsedContratos = JSON.parse(savedContratos || '[]').map((contrato: any) => mapFromSupabase('contratos_frete', contrato))
+      const parsedPermissoes = JSON.parse(savedPermissoes || '[]').map((permisso: any) => mapFromSupabase('permisso_internacional', permisso))
 
       setClientes(parsedClientes)
       setParceiros(parsedParceiros)
@@ -574,9 +801,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
     
     setIsSynced(savedSyncStatus === 'true');
-  }, [])
+  }, [mapFromSupabase])
 
-  // Função para resetar dados de demonstração (NOVO)
+  // Função para resetar dados de demonstração
   const resetDemoData = useCallback(() => {
     const demoData = initializeDemoData();
     setClientes(demoData.clientes);
@@ -606,112 +833,19 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     alert('Dados de demonstração resetados com sucesso!');
   }, []);
   
-  // Função de sincronização para o Supabase
-  const syncDemoDataToSupabase = useCallback(async (force = false) => {
-    if (!supabase || !user) {
-        console.error('Supabase ou usuário não estão prontos para sincronização.');
-        return false;
-    }
-    
-    setIsSyncing(true);
-    console.log('Iniciando sincronização de dados de demonstração para o Supabase...');
-    
-    const userId = user.id;
-    const now = new Date().toISOString();
-    let overallSuccess = true;
-
-    const syncTable = async (tableName: string, data: any[], mapFn: (item: any) => any) => {
-      const payload = data.map(item => ({
-        ...mapFn(item),
-        user_id: userId,
-        created_at: item.createdAt.toISOString(),
-        updated_at: item.updatedAt.toISOString(),
-      }));
-      
-      // Usamos upsert para garantir que os dados sejam inseridos ou atualizados
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(payload, { onConflict: 'id' }); 
-
-      if (error) {
-        console.error(`[SYNC ERROR] Falha ao sincronizar ${tableName}:`, error.message, error.details);
-        overallSuccess = false;
-        return false;
-      } else {
-        console.log(`[SYNC SUCCESS] Sincronização de ${tableName} concluída: ${payload.length} registros.`);
-        return true;
-      }
-    };
-
-    try {
-      // Sincronização sequencial
-      const results = await Promise.all([
-        syncTable('clientes', clientes, (c: Cliente) => ({
-          id: c.id, tipo: c.tipo, nome: c.nome, documento: c.documento, email: c.email, telefone: c.telefone, endereco: c.endereco, cidade: c.cidade, estado: c.estado, cep: c.cep, observacoes: c.observacoes, is_active: c.isActive,
-        })),
-        syncTable('parceiros', parceiros, (p: Parceiro) => ({
-          id: p.id, tipo: p.tipo, nome: p.nome, documento: p.documento, cnh: p.cnh, email: p.email, telefone: p.telefone, endereco: p.endereco, cidade: p.cidade, estado: p.estado, cep: p.cep, observacoes: p.observacoes, is_motorista: p.isMotorista, is_active: p.isActive,
-        })),
-        syncTable('motoristas', motoristas, (m: Motorista) => ({
-          id: m.id, 
-          parceiro_id: m.parceiroId, 
-          nome: m.nome || '', 
-          cpf: m.cpf || '', 
-          cnh: m.cnh || '', 
-          categoria_cnh: m.categoriaCnh, 
-          validade_cnh: m.validadeCnh?.toISOString().split('T')[0], 
-          telefone: m.telefone, 
-          is_active: m.isActive,
-        })),
-        syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
-          id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(),
-        })),
-        syncTable('veiculos', veiculos, (v: Veiculo) => ({
-          id: v.id, parceiro_id: v.parceiroId, placa: v.placa, placa_cavalo: v.placaCavalo, placa_carreta: v.placaCarreta, placa_carreta1: v.placaCarreta1, placa_carreta2: v.placaCarreta2, placa_dolly: v.placaDolly, modelo: v.modelo, fabricante: v.fabricante, ano: v.ano, capacidade: v.capacidade, chassis: v.chassis, carroceria: v.carroceria, tipo: v.tipo, quantidade_carretas: v.quantidadeCarretas, possui_dolly: v.possuiDolly, motorista_vinculado: v.motoristaVinculado, carretas_vinculadas: v.carretasVinculadas || [], is_active: v.isActive,
-        })),
-        syncTable('cargas', cargas, (c: Carga) => ({
-          id: c.id, descricao: c.descricao, origem: c.origem, destino: c.destino, peso: c.peso, valor: c.valor, data_coleta: c.dataColeta?.toISOString().split('T')[0], data_entrega: c.dataEntrega?.toISOString().split('T')[0], status: c.status, cliente_id: c.clienteId, parceiro_id: c.parceiroId, motorista_id: c.motoristaId, veiculo_id: c.veiculoId, carretas_selecionadas: c.carretasSelecionadas || [], crt: c.crt, observacoes: c.observacoes,
-        })),
-        syncTable('movimentacoes_financeiras', movimentacoes, (m: MovimentacaoFinanceira) => ({
-          id: m.id, tipo: m.tipo, valor: m.valor, descricao: m.descricao, categoria: m.categoria, data: m.data.toISOString().split('T')[0], status: m.status, data_pagamento: m.dataPagamento?.toISOString().split('T')[0], parceiro_id: m.parceiroId, carga_id: m.cargaId, is_pago: m.isPago, observacoes: m.observacoes,
-        })),
-        syncTable('contratos_frete', contratos, (c: ContratoFrete) => ({
-          id: c.id, carga_id: c.cargaId, pdf_url: c.pdfUrl, motorista_nome: c.motoristaNome, parceiro_nome: c.parceiroNome, crt: c.crt,
-        })),
-      ]);
-
-      
-      if (overallSuccess) {
-        setIsSynced(true);
-        localStorage.setItem('absolut_synced', 'true');
-        console.log('Sincronização de dados de demonstração concluída com sucesso!');
-      } else {
-        console.error('Sincronização falhou em uma ou mais tabelas. Verifique os logs acima.');
-      }
-      
-      return overallSuccess;
-      
-    } catch (error) {
-      console.error('Falha crítica na sincronização de dados de demonstração:', error);
-      return false;
-    } finally {
-        setIsSyncing(false);
-    }
-  }, [user, clientes, parceiros, motoristas, veiculos, permissoes, cargas, movimentacoes, contratos]);
-
   // Load data from localStorage on mount
   useEffect(() => {
     loadData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Efeito para sincronizar dados após o login
-  // Chamado sempre que o usuário loga para garantir que os dados locais sejam enviados.
+  // Efeito para sincronizar dados após o login (PUSH inicial de dados de demonstração)
   useEffect(() => {
-    if (isAuthenticated && user) {
-      syncDemoDataToSupabase();
+    if (isAuthenticated && user && !isSynced) {
+      // Se o usuário logou e nunca sincronizou, fazemos um PUSH inicial
+      pushLocalDataToSupabase();
     }
-  }, [isAuthenticated, user, syncDemoDataToSupabase]);
+  }, [isAuthenticated, user, isSynced, pushLocalDataToSupabase]);
 
   // Save data to localStorage whenever state changes
   useEffect(() => {
@@ -861,8 +995,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     setMovimentacoes(prev => prev.filter(mov => mov.cargaId !== cargaId));
   };
 
-  // Cliente operations
+  // --- CLIENTE OPERATIONS (Com validação de duplicidade e Auto-Sync) ---
   const createCliente = (clienteData: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>): Cliente => {
+    const cleanDocument = parseDocument(clienteData.documento || '');
+    if (cleanDocument && clientes.some(c => parseDocument(c.documento || '') === cleanDocument)) {
+      throw new Error('Cliente com este documento já cadastrado.');
+    }
+    
     const newCliente: Cliente = {
       ...clienteData,
       id: generateId(),
@@ -870,20 +1009,36 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setClientes(prev => [...prev, newCliente])
+    syncItemToSupabase('clientes', newCliente, 'INSERT');
     return newCliente
   }
 
   const updateCliente = (id: string, clienteData: Partial<Cliente>): Cliente | null => {
-    setClientes(prev => prev.map(cliente => 
-      cliente.id === id 
-        ? { ...cliente, ...clienteData, updatedAt: new Date() }
-        : cliente
-    ))
-    return getClienteById(id)
+    let updatedCliente: Cliente | null = null;
+    
+    setClientes(prev => prev.map(cliente => {
+      if (cliente.id === id) {
+        // Validação de duplicidade durante a edição
+        const cleanDocument = parseDocument(clienteData.documento || cliente.documento || '');
+        if (cleanDocument && clientes.some(c => parseDocument(c.documento || '') === cleanDocument && c.id !== id)) {
+          throw new Error('Cliente com este documento já cadastrado.');
+        }
+        
+        updatedCliente = { ...cliente, ...clienteData, updatedAt: new Date() };
+        syncItemToSupabase('clientes', updatedCliente, 'UPDATE');
+        return updatedCliente;
+      }
+      return cliente;
+    }));
+    return updatedCliente;
   }
 
   const deleteCliente = (id: string): boolean => {
+    const deletedCliente = clientes.find(c => c.id === id);
     setClientes(prev => prev.filter(cliente => cliente.id !== id))
+    if (deletedCliente) {
+      syncItemToSupabase('clientes', deletedCliente, 'DELETE');
+    }
     return true
   }
 
@@ -900,33 +1055,30 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       createdAt: new Date(),
       updatedAt: new Date()
     }
-    // setUsers(prev => [...prev, newUser]) // Não adiciona ao estado local
     return newUser
   }
 
   const updateUser = (_id: string, _userData: Partial<User>): User | null => {
     console.warn("DatabaseContext: updateUser chamado. A gestão de usuários deve ser feita via Supabase.");
-    // setUsers(prev => prev.map(user => // Não atualiza o estado local
-    //   user.id === id 
-    //     ? { ...user, ...userData, updatedAt: new Date() }
-    //     : user
-    // ))
     return getUserById(_id)
   }
 
   const deleteUser = (_id: string): boolean => {
     console.warn("DatabaseContext: deleteUser chamado. A gestão de usuários deve ser feita via Supabase.");
-    // setUsers(prev => prev.filter(user => user.id !== id)) // Não deleta do estado local
     return true
   }
 
   const getUserById = (_id: string): User | null => {
-    // Retorna null, pois os usuários não estão mais no estado local
     return null
   }
 
-  // Parceiro operations
+  // --- PARCEIRO OPERATIONS (Com validação de duplicidade e Auto-Sync) ---
   const createParceiro = (parceiroData: Omit<Parceiro, 'id' | 'createdAt' | 'updatedAt'>): Parceiro => {
+    const cleanDocument = parseDocument(parceiroData.documento || '');
+    if (cleanDocument && parceiros.some(p => parseDocument(p.documento || '') === cleanDocument)) {
+      throw new Error('Parceiro com este documento já cadastrado.');
+    }
+    
     const newParceiro: Parceiro = {
       ...parceiroData,
       id: generateId(),
@@ -934,24 +1086,40 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setParceiros(prev => [...prev, newParceiro])
+    syncItemToSupabase('parceiros', newParceiro, 'INSERT');
     return newParceiro
   }
 
   const updateParceiro = (id: string, parceiroData: Partial<Parceiro>): Parceiro | null => {
-    setParceiros(prev => prev.map(parceiro => 
-      parceiro.id === id 
-        ? { ...parceiro, ...parceiroData, updatedAt: new Date() }
-        : parceiro
-    ))
-    // Nota: A sincronização de cargas/movimentações será feita no useEffect abaixo
-    return getParceiroById(id)
+    let updatedParceiro: Parceiro | null = null;
+    
+    setParceiros(prev => prev.map(parceiro => {
+      if (parceiro.id === id) {
+        // Validação de duplicidade durante a edição
+        const cleanDocument = parseDocument(parceiroData.documento || parceiro.documento || '');
+        if (cleanDocument && parceiros.some(p => parseDocument(p.documento || '') === cleanDocument && p.id !== id)) {
+          throw new Error('Parceiro com este documento já cadastrado.');
+        }
+        
+        updatedParceiro = { ...parceiro, ...parceiroData, updatedAt: new Date() };
+        syncItemToSupabase('parceiros', updatedParceiro, 'UPDATE');
+        return updatedParceiro;
+      }
+      return parceiro;
+    }));
+    return updatedParceiro;
   }
 
   const deleteParceiro = (id: string): boolean => {
+    const deletedParceiro = parceiros.find(p => p.id === id);
     setParceiros(prev => prev.filter(parceiro => parceiro.id !== id))
     // Also delete related motoristas and veiculos
     setMotoristas(prev => prev.filter(motorista => motorista.parceiroId !== id))
     setVeiculos(prev => prev.filter(veiculo => veiculo.parceiroId !== id))
+    
+    if (deletedParceiro) {
+      syncItemToSupabase('parceiros', deletedParceiro, 'DELETE');
+    }
     return true
   }
 
@@ -959,8 +1127,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return parceiros.find(parceiro => parceiro.id === id) || null
   }
 
-  // Motorista operations
+  // --- MOTORISTA OPERATIONS (Com validação de duplicidade e Auto-Sync) ---
   const createMotorista = (motoristaData: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'>): Motorista => {
+    const cleanCpf = parseDocument(motoristaData.cpf || '');
+    if (cleanCpf && motoristas.some(m => parseDocument(m.cpf || '') === cleanCpf)) {
+      throw new Error('Motorista com este CPF/Documento já cadastrado.');
+    }
+    if (motoristaData.cnh && motoristas.some(m => m.cnh === motoristaData.cnh)) {
+      throw new Error('Motorista com esta CNH já cadastrada.');
+    }
+    
     const newMotorista: Motorista = {
       ...motoristaData,
       id: generateId(),
@@ -968,21 +1144,39 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setMotoristas(prev => [...prev, newMotorista])
+    syncItemToSupabase('motoristas', newMotorista, 'INSERT');
     return newMotorista
   }
 
   const updateMotorista = (id: string, motoristaData: Partial<Motorista>): Motorista | null => {
-    setMotoristas(prev => prev.map(motorista => 
-      motorista.id === id 
-        ? { ...motorista, ...motoristaData, updatedAt: new Date() }
-        : motorista
-    ))
-    // Nota: A sincronização de cargas/movimentações será feita no useEffect abaixo
-    return motoristas.find(m => m.id === id) || null
+    let updatedMotorista: Motorista | null = null;
+    
+    setMotoristas(prev => prev.map(motorista => {
+      if (motorista.id === id) {
+        // Validação de duplicidade durante a edição
+        const cleanCpf = parseDocument(motoristaData.cpf || motorista.cpf || '');
+        if (cleanCpf && motoristas.some(m => parseDocument(m.cpf || '') === cleanCpf && m.id !== id)) {
+          throw new Error('Motorista com este CPF/Documento já cadastrado.');
+        }
+        if (motoristaData.cnh && motoristas.some(m => m.cnh === motoristaData.cnh && m.id !== id)) {
+          throw new Error('Motorista com esta CNH já cadastrada.');
+        }
+        
+        updatedMotorista = { ...motorista, ...motoristaData, updatedAt: new Date() };
+        syncItemToSupabase('motoristas', updatedMotorista, 'UPDATE');
+        return updatedMotorista;
+      }
+      return motorista;
+    }));
+    return updatedMotorista;
   }
 
   const deleteMotorista = (id: string): boolean => {
+    const deletedMotorista = motoristas.find(m => m.id === id);
     setMotoristas(prev => prev.filter(motorista => motorista.id !== id))
+    if (deletedMotorista) {
+      syncItemToSupabase('motoristas', deletedMotorista, 'DELETE');
+    }
     return true
   }
 
@@ -990,8 +1184,21 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return motoristas.filter(motorista => motorista.parceiroId === parceiroId)
   }
 
-  // Veiculo operations
+  // --- VEICULO OPERATIONS (Com validação de duplicidade e Auto-Sync) ---
   const createVeiculo = (veiculoData: Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt'>): Veiculo => {
+    const checkPlaca = (placa: string | undefined) => {
+      if (placa && veiculos.some(v => v.placa === placa || v.placaCavalo === placa || v.placaCarreta === placa || v.placaCarreta1 === placa || v.placaCarreta2 === placa || v.placaDolly === placa)) {
+        throw new Error(`Veículo com a placa ${placa} já cadastrado.`);
+      }
+    };
+    
+    checkPlaca(veiculoData.placa);
+    checkPlaca(veiculoData.placaCavalo);
+    checkPlaca(veiculoData.placaCarreta);
+    checkPlaca(veiculoData.placaCarreta1);
+    checkPlaca(veiculoData.placaCarreta2);
+    checkPlaca(veiculoData.placaDolly);
+
     const newVeiculo: Veiculo = {
       ...veiculoData,
       id: generateId(),
@@ -999,14 +1206,31 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setVeiculos(prev => [...prev, newVeiculo])
+    syncItemToSupabase('veiculos', newVeiculo, 'INSERT');
     return newVeiculo
   }
 
   const updateVeiculo = (id: string, veiculoData: Partial<Veiculo>): Veiculo | null => {
     let updatedVeiculo: Veiculo | null = null;
+    
     setVeiculos(prev => prev.map(veiculo => {
       if (veiculo.id === id) {
+        // Validação de duplicidade durante a edição
+        const checkPlacaEdit = (placa: string | undefined) => {
+          if (placa && veiculos.some(v => (v.placa === placa || v.placaCavalo === placa || v.placaCarreta === placa || v.placaCarreta1 === placa || v.placaCarreta2 === placa || v.placaDolly === placa) && v.id !== id)) {
+            throw new Error(`Veículo com a placa ${placa} já cadastrado.`);
+          }
+        };
+        
+        checkPlacaEdit(veiculoData.placa || veiculo.placa);
+        checkPlacaEdit(veiculoData.placaCavalo || veiculo.placaCavalo);
+        checkPlacaEdit(veiculoData.placaCarreta || veiculo.placaCarreta);
+        checkPlacaEdit(veiculoData.placaCarreta1 || veiculo.placaCarreta1);
+        checkPlacaEdit(veiculoData.placaCarreta2 || veiculo.placaCarreta2);
+        checkPlacaEdit(veiculoData.placaDolly || veiculo.placaDolly);
+
         updatedVeiculo = { ...veiculo, ...veiculoData, updatedAt: new Date() };
+        syncItemToSupabase('veiculos', updatedVeiculo, 'UPDATE');
         return updatedVeiculo;
       }
       return veiculo;
@@ -1015,8 +1239,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }
 
   const deleteVeiculo = (id: string): boolean => {
+    const deletedVeiculo = veiculos.find(v => v.id === id);
     setVeiculos(prev => prev.filter(veiculo => veiculo.id !== id))
     setPermissoes(prev => prev.filter(permisso => permisso.veiculoId !== id)) // Deleta permisso associado
+    if (deletedVeiculo) {
+      syncItemToSupabase('veiculos', deletedVeiculo, 'DELETE');
+    }
     return true
   }
 
@@ -1024,7 +1252,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return veiculos.filter(veiculo => veiculo.parceiroId === parceiroId)
   }
   
-  // Permisso Operations (NOVO)
+  // --- PERMISSO OPERATIONS (Auto-Sync) ---
   const createPermisso = (permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'>, veiculoId: string): PermissoInternacional => {
     const newPermisso: PermissoInternacional = {
       ...permissoData,
@@ -1035,6 +1263,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setPermissoes(prev => [...prev, newPermisso])
+    syncItemToSupabase('permisso_internacional', newPermisso, 'INSERT');
     return newPermisso
   }
 
@@ -1048,6 +1277,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           updatedAt: new Date(), 
           dataConsulta: new Date() 
         };
+        syncItemToSupabase('permisso_internacional', updatedPermisso, 'UPDATE');
         return updatedPermisso;
       }
       return permisso;
@@ -1059,7 +1289,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return permissoes.find(p => p.veiculoId === veiculoId) || null;
   }
 
-  // Movimentacao operations
+  // --- MOVIMENTACAO OPERATIONS (Auto-Sync) ---
   const createMovimentacao = (movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'>): MovimentacaoFinanceira => {
     const newMovimentacao: MovimentacaoFinanceira = {
       ...movimentacaoData,
@@ -1068,24 +1298,33 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setMovimentacoes(prev => [...prev, newMovimentacao])
+    syncItemToSupabase('movimentacoes_financeiras', newMovimentacao, 'INSERT');
     return newMovimentacao
   }
 
   const updateMovimentacao = (id: string, movimentacaoData: Partial<MovimentacaoFinanceira>): MovimentacaoFinanceira | null => {
-    setMovimentacoes(prev => prev.map(movimentacao => 
-      movimentacao.id === id 
-        ? { ...movimentacao, ...movimentacaoData, updatedAt: new Date() }
-        : movimentacao
-    ))
-    return movimentacoes.find(m => m.id === id) || null
+    let updatedMovimentacao: MovimentacaoFinanceira | null = null;
+    setMovimentacoes(prev => prev.map(movimentacao => {
+      if (movimentacao.id === id) {
+        updatedMovimentacao = { ...movimentacao, ...movimentacaoData, updatedAt: new Date() };
+        syncItemToSupabase('movimentacoes_financeiras', updatedMovimentacao, 'UPDATE');
+        return updatedMovimentacao;
+      }
+      return movimentacao;
+    }));
+    return updatedMovimentacao;
   }
 
   const deleteMovimentacao = (id: string): boolean => {
+    const deletedMovimentacao = movimentacoes.find(m => m.id === id);
     setMovimentacoes(prev => prev.filter(movimentacao => movimentacao.id !== id))
+    if (deletedMovimentacao) {
+      syncItemToSupabase('movimentacoes_financeiras', deletedMovimentacao, 'DELETE');
+    }
     return true
   }
 
-  // Carga operations
+  // --- CARGA OPERATIONS (Auto-Sync) ---
   const createCarga = (cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>): Carga => {
     const newCarga: Carga = {
       ...cargaData,
@@ -1094,6 +1333,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       updatedAt: new Date()
     }
     setCargas(prev => [...prev, newCarga])
+    syncItemToSupabase('cargas', newCarga, 'INSERT');
     return newCarga
   }
 
@@ -1103,22 +1343,18 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     setCargas(prev => prev.map(carga => {
       if (carga.id === id) {
         updatedCarga = { ...carga, ...cargaData, updatedAt: new Date() };
+        syncItemToSupabase('cargas', updatedCarga, 'UPDATE');
         return updatedCarga;
       }
       return carga;
     }));
-
-    // Se a carga foi atualizada e possui movimentações financeiras, sincroniza a descrição e o valor
-    if (updatedCarga) {
-      // Chamamos a sincronização no useEffect, mas se quisermos garantir a atualização imediata
-      // para o próximo render, podemos chamar aqui, mas o useEffect já cobre isso.
-      // syncMovimentacoesForCarga(id, cargas, movimentacoes); // Removido para evitar estado obsoleto
-    }
     
     return updatedCarga;
   }
 
   const deleteCarga = (id: string): boolean => {
+    const deletedCarga = cargas.find(c => c.id === id);
+    
     // 1. Exclui as movimentações financeiras associadas
     deleteMovimentacoesByCargaId(id);
     
@@ -1128,17 +1364,18 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     // 3. Exclui o contrato associado (se existir)
     setContratos(prev => prev.filter(contrato => contrato.cargaId !== id))
     
+    if (deletedCarga) {
+      syncItemToSupabase('cargas', deletedCarga, 'DELETE');
+    }
     return true
   }
 
   // Contrato Operations
   const getContracts = useCallback(async (): Promise<ContratoFrete[]> => {
     if (!supabase || !user) {
-      // Retorna dados mockados/locais se Supabase não estiver pronto
       return contratos;
     }
     
-    // Em uma aplicação real, buscaríamos do Supabase
     try {
       const { data, error } = await supabase
         .from('contratos_frete')
@@ -1148,22 +1385,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         
       if (error) throw error;
       
-      // Mapeia datas de volta para objetos Date
-      const fetchedContratos: ContratoFrete[] = data.map(c => ({
-        ...c,
-        createdAt: new Date(c.created_at),
-        updatedAt: new Date(c.updated_at)
-      }));
+      const fetchedContratos: ContratoFrete[] = data.map(c => mapFromSupabase('contratos_frete', c));
       
       setContratos(fetchedContratos);
       return fetchedContratos;
       
     } catch (error) {
       console.error('Erro ao buscar contratos do Supabase. Retornando dados locais:', error);
-      // Fallback para dados locais em caso de erro de API
       return contratos;
     }
-  }, [contratos, user]); // Depende de 'contratos' e 'user'
+  }, [contratos, user, mapFromSupabase]);
 
   const generateContract = useCallback(async (cargaId: string) => {
     if (!supabase || !user) {
@@ -1171,14 +1402,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       return;
     }
     
-    // FORÇA A SINCRONIZAÇÃO ANTES DE TENTAR GERAR O CONTRATO
-    if (!isSynced) {
-        console.log('Forçando sincronização antes de gerar contrato...');
-        const syncSuccess = await syncDemoDataToSupabase(true);
-        if (!syncSuccess) {
-            alert('Falha na sincronização dos dados. Não é possível gerar o contrato.');
-            return;
-        }
+    // Garante que a carga esteja sincronizada antes de gerar o contrato
+    const cargaToSync = cargas.find(c => c.id === cargaId);
+    if (cargaToSync) {
+        await syncItemToSupabase('cargas', cargaToSync, 'UPDATE');
     }
     
     const projectRef = 'qoeocxprlioianbordjt'; // Supabase Project ID
@@ -1202,7 +1429,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         throw new Error(result.error || 'Falha ao gerar contrato na Edge Function.');
       }
       
-      // Após a geração bem-sucedida, atualiza a lista de contratos
       await getContracts();
       
       alert(`Contrato gerado/regenerado com sucesso! URL: ${result.pdfUrl}`);
@@ -1211,7 +1437,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       console.error('Erro na geração do contrato:', error);
       alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
-  }, [user, getContracts, isSynced, syncDemoDataToSupabase]);
+  }, [user, getContracts, cargas, syncItemToSupabase]);
 
 
   // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas/Parceiros mudarem
@@ -1237,12 +1463,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargas, motoristas, parceiros]); // Depende de cargas, motoristas e parceiros para capturar mudanças de nome/vínculo
-
-  // Efeito para carregar dados na inicialização
-  useEffect(() => {
-    loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
 
   // Efeito para carregar contratos na autenticação
   useEffect(() => {
@@ -1299,7 +1519,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     syncMovimentacoesForCarga: (cargaId: string) => syncMovimentacoesForCarga(cargaId, cargas, movimentacoes), // Wrapper para o hook
     resetDemoData, // NOVO: Exporta a função de reset
     // Sincronização
-    syncDemoDataToSupabase: syncDemoDataToSupabase as any, // Exporta a função de sincronização
+    syncDemoDataToSupabase: pullSupabaseData as any, // AGORA É O PULL
     isSynced,
     isSyncing,
   }
