@@ -17,15 +17,50 @@ interface DatabaseProviderProps {
   children: React.ReactNode
 }
 
+// Função para gerar IDs no formato UUID simulado (para compatibilidade com a Edge Function)
+const generateUuid = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Função para inicializar dados de demonstração (movida para fora do componente)
 const initializeDemoData = () => {
   // Utility function to generate IDs
-  const generateId = () => Math.random().toString(36).substr(2, 9)
+  const generateId = generateUuid // Usando o novo gerador de UUID
+
+  // IDs de demonstração fixos no formato UUID simulado
+  const cliente1Id = generateId();
+  const cliente2Id = generateId();
+  const cliente3Id = generateId();
+  const parceiro1Id = generateId();
+  const parceiro2Id = generateId();
+  const parceiro3Id = generateId();
+  const motorista1Id = generateId();
+  const motorista2Id = generateId();
+  const veiculo1Id = generateId();
+  const veiculo2Id = generateId();
+  const veiculo3Id = generateId();
+  const carreta1Id = generateId();
+  const permisso1Id = generateId();
+  const carga1Id = generateId();
+  const carga2Id = generateId();
+  const carga3Id = generateId();
+  const mov1Id = generateId();
+  const mov2Id = generateId();
+  const mov3Id = generateId();
+  const mov4Id = generateId();
+  const mov5Id = generateId();
+  const mov6Id = generateId();
+  const mov7Id = generateId();
+  const contrato1Id = generateId();
+
 
   // Demo clientes
   const demoClientes: Cliente[] = [
     {
-      id: 'cliente-1',
+      id: cliente1Id,
       tipo: 'PJ',
       nome: 'Loja do Centro Ltda',
       documento: '45.678.123/0001-55',
@@ -40,7 +75,7 @@ const initializeDemoData = () => {
       updatedAt: new Date('2024-01-08')
     },
     {
-      id: 'cliente-2',
+      id: cliente2Id,
       tipo: 'PF',
       nome: 'Ana Pereira',
       documento: '123.456.789-00',
@@ -55,7 +90,7 @@ const initializeDemoData = () => {
       updatedAt: new Date('2024-01-18')
     },
     {
-      id: 'cliente-3',
+      id: cliente3Id,
       tipo: 'INTERNACIONAL',
       nome: 'Global Imports S.A.',
       documento: '30-71000000-7', // Exemplo CUIT
@@ -74,7 +109,7 @@ const initializeDemoData = () => {
   // Demo parceiros
   const demoParceiros: Parceiro[] = [
     {
-      id: 'parceiro-1',
+      id: parceiro1Id,
       nome: 'Transportadora ABC Ltda',
       tipo: 'PJ',
       documento: '12.345.678/0001-90',
@@ -89,7 +124,7 @@ const initializeDemoData = () => {
       updatedAt: new Date('2024-01-10')
     },
     {
-      id: 'parceiro-2',
+      id: parceiro2Id,
       nome: 'Carlos Oliveira',
       tipo: 'PF',
       documento: '123.456.789-01',
@@ -107,7 +142,7 @@ const initializeDemoData = () => {
     },
     // Parceiro completo para teste de contrato
     {
-      id: 'parceiro-3',
+      id: parceiro3Id,
       nome: 'Transportes Internacionais LTDA',
       tipo: 'PJ',
       documento: '99.888.777/0001-66',
@@ -126,8 +161,8 @@ const initializeDemoData = () => {
   // Demo motoristas
   const demoMotoristas: Motorista[] = [
     {
-      id: 'motorista-1',
-      parceiroId: 'parceiro-1',
+      id: motorista1Id,
+      parceiroId: parceiro1Id,
       nome: 'José da Silva',
       cpf: '98765432100',
       cnh: '12345678901',
@@ -141,8 +176,8 @@ const initializeDemoData = () => {
     },
     // Motorista para Parceiro 3
     {
-      id: 'motorista-2',
-      parceiroId: 'parceiro-3',
+      id: motorista2Id,
+      parceiroId: parceiro3Id,
       nome: 'Ricardo Almeida',
       cpf: '11122233344',
       cnh: '99887766554',
@@ -159,8 +194,8 @@ const initializeDemoData = () => {
   // Demo permisso
   const demoPermissoes: PermissoInternacional[] = [
     {
-      id: 'permisso-1',
-      veiculoId: 'veiculo-3', // Vinculado ao Cavalo
+      id: permisso1Id,
+      veiculoId: veiculo3Id, // Vinculado ao Cavalo
       razaoSocial: 'TRANSPORTES INTERNACIONAIS LTDA',
       nomeFantasia: 'TransInter',
       cnpj: '99888777000166',
@@ -175,8 +210,8 @@ const initializeDemoData = () => {
   // Demo veículos
   const demoVeiculos: Veiculo[] = [
     {
-      id: 'veiculo-1',
-      parceiroId: 'parceiro-1',
+      id: veiculo1Id,
+      parceiroId: parceiro1Id,
       placa: 'ABC1234',
       fabricante: 'Mercedes-Benz',
       modelo: 'Atego 1719',
@@ -188,8 +223,8 @@ const initializeDemoData = () => {
       updatedAt: new Date('2024-01-12')
     },
     {
-      id: 'veiculo-2',
-      parceiroId: 'parceiro-2',
+      id: veiculo2Id,
+      parceiroId: parceiro2Id,
       placa: 'XYZ5678',
       fabricante: 'Ford',
       modelo: 'Cargo 816',
@@ -202,8 +237,8 @@ const initializeDemoData = () => {
     },
     // Veículo Cavalo para teste de contrato
     {
-      id: 'veiculo-3',
-      parceiroId: 'parceiro-3',
+      id: veiculo3Id,
+      parceiroId: parceiro3Id,
       placaCavalo: 'IJK9012',
       placa: 'IJK9012',
       fabricante: 'Scania',
@@ -218,8 +253,8 @@ const initializeDemoData = () => {
     },
     // Carreta 1 para teste de contrato
     {
-      id: 'carreta-1',
-      parceiroId: 'parceiro-3',
+      id: carreta1Id,
+      parceiroId: parceiro3Id,
       placaCarreta: 'MNO3456',
       placa: 'MNO3456',
       fabricante: 'Randon',
@@ -236,99 +271,99 @@ const initializeDemoData = () => {
   // Demo movimentações financeiras
   const demoMovimentacoes: MovimentacaoFinanceira[] = [
     {
-      id: 'mov-1',
+      id: mov1Id,
       tipo: 'receita',
       valor: 2500.00,
       descricao: 'Frete São Paulo - Rio de Janeiro',
       categoria: 'frete',
       data: new Date('2024-01-15'),
       status: 'pago',
-      parceiroId: 'parceiro-1',
-      cargaId: 'carga-1',
+      parceiroId: parceiro1Id,
+      cargaId: carga1Id,
       isPago: true,
       createdAt: new Date('2024-01-15'),
       updatedAt: new Date('2024-01-15')
     },
     {
-      id: 'mov-2',
+      id: mov2Id,
       tipo: 'despesa',
       valor: 350.00,
       descricao: 'Combustível',
       categoria: 'combustivel',
       data: new Date('2024-01-16'),
+      parceiroId: parceiro1Id,
       status: 'pago',
-      parceiroId: 'parceiro-1',
       isPago: true,
       createdAt: new Date('2024-01-16'),
       updatedAt: new Date('2024-01-16')
     },
     {
-      id: 'mov-3',
+      id: mov3Id,
       tipo: 'receita',
       valor: 1800.00,
       descricao: 'Frete local - entrega de materiais',
       categoria: 'frete',
       data: new Date('2024-01-22'),
       status: 'pendente',
-      parceiroId: 'parceiro-2',
-      cargaId: 'carga-2',
+      parceiroId: parceiro2Id,
+      cargaId: carga2Id,
       isPago: false,
       createdAt: new Date('2024-01-22'),
       updatedAt: new Date('2024-01-22')
     },
     // Movimentações para Carga de Contrato (Split 70/30 + Extras)
     {
-      id: 'mov-4',
+      id: mov4Id,
       tipo: 'despesa',
       valor: 7000.00, // 70% de 10000
       descricao: 'Adto - CRT-INT - Buenos Aires - Ricardo Almeida',
       categoria: 'FRETE',
       data: new Date('2024-07-20'),
       status: 'pendente',
-      parceiroId: 'parceiro-3',
-      cargaId: 'carga-3',
+      parceiroId: parceiro3Id,
+      cargaId: carga3Id,
       isPago: false,
       createdAt: new Date('2024-07-20'),
       updatedAt: new Date('2024-07-20')
     },
     {
-      id: 'mov-5',
+      id: mov5Id,
       tipo: 'despesa',
       valor: 3000.00, // 30% de 10000
       descricao: 'Saldo - CRT-INT - Buenos Aires - Ricardo Almeida',
       categoria: 'FRETE',
       data: new Date('2024-07-30'),
       status: 'pendente',
-      parceiroId: 'parceiro-3',
-      cargaId: 'carga-3',
+      parceiroId: parceiro3Id,
+      cargaId: carga3Id,
       isPago: false,
       createdAt: new Date('2024-07-20'),
       updatedAt: new Date('2024-07-20')
     },
     {
-      id: 'mov-6',
+      id: mov6Id,
       tipo: 'despesa',
       valor: 500.00, // Diárias
       descricao: 'Diárias - CRT-INT - Buenos Aires - Ricardo Almeida',
       categoria: 'DIARIA',
       data: new Date('2024-07-20'),
       status: 'pendente',
-      parceiroId: 'parceiro-3',
-      cargaId: 'carga-3',
+      parceiroId: parceiro3Id,
+      cargaId: carga3Id,
       isPago: false,
       createdAt: new Date('2024-07-20'),
       updatedAt: new Date('2024-07-20')
     },
     {
-      id: 'mov-7',
+      id: mov7Id,
       tipo: 'despesa',
       valor: 200.00, // Despesas Adicionais
       descricao: 'Despesas Adicionais - CRT-INT - Buenos Aires - Ricardo Almeida',
       categoria: 'OUTRAS DESPESAS',
       data: new Date('2024-07-20'),
       status: 'pendente',
-      parceiroId: 'parceiro-3',
-      cargaId: 'carga-3',
+      parceiroId: parceiro3Id,
+      cargaId: carga3Id,
       isPago: false,
       createdAt: new Date('2024-07-20'),
       updatedAt: new Date('2024-07-20')
@@ -338,7 +373,7 @@ const initializeDemoData = () => {
   // Demo cargas
   const demoCargas: Carga[] = [
     {
-      id: 'carga-1',
+      id: carga1Id,
       descricao: 'Produtos eletrônicos',
       origem: 'São Paulo - SP',
       destino: 'Rio de Janeiro - RJ',
@@ -347,15 +382,15 @@ const initializeDemoData = () => {
       dataColeta: new Date('2024-01-15'),
       dataEntrega: new Date('2024-01-16'),
       status: 'entregue',
-      parceiroId: 'parceiro-1',
-      motoristaId: 'motorista-1',
-      veiculoId: 'veiculo-1',
+      parceiroId: parceiro1Id,
+      motoristaId: motorista1Id,
+      veiculoId: veiculo1Id,
       crt: 'BR722',
       createdAt: new Date('2024-01-14'),
       updatedAt: new Date('2024-01-16')
     },
     {
-      id: 'carga-2',
+      id: carga2Id,
       descricao: 'Materiais de construção',
       origem: 'São Paulo - SP',
       destino: 'Campinas - SP',
@@ -364,16 +399,16 @@ const initializeDemoData = () => {
       dataColeta: new Date('2024-01-22'),
       dataEntrega: new Date('2024-01-22'),
       status: 'em_transito',
-      parceiroId: 'parceiro-2',
-      motoristaId: 'parceiro-2', // Parceiro PF que é motorista
-      veiculoId: 'veiculo-2',
+      parceiroId: parceiro2Id,
+      motoristaId: parceiro2Id, // Parceiro PF que é motorista
+      veiculoId: veiculo2Id,
       crt: 'BR723',
       createdAt: new Date('2024-01-21'),
       updatedAt: new Date('2024-01-22')
     },
     // Carga Internacional completa para teste de contrato
     {
-      id: 'carga-3',
+      id: carga3Id,
       descricao: 'Carga de Exportação para Argentina',
       origem: 'Porto Alegre - RS',
       destino: 'Buenos Aires', // Destino Internacional
@@ -382,11 +417,11 @@ const initializeDemoData = () => {
       dataColeta: new Date('2024-07-20'),
       dataEntrega: new Date('2024-07-25'),
       status: 'em_transito',
-      clienteId: 'cliente-3',
-      parceiroId: 'parceiro-3',
-      motoristaId: 'motorista-2',
-      veiculoId: 'veiculo-3',
-      carretasSelecionadas: ['carreta-1'],
+      clienteId: cliente3Id,
+      parceiroId: parceiro3Id,
+      motoristaId: motorista2Id,
+      veiculoId: veiculo3Id,
+      carretasSelecionadas: [carreta1Id],
       crt: 'CRT-INT',
       observacoes: 'Carga de alto valor, requer atenção especial na fronteira.',
       createdAt: new Date('2024-07-19'),
@@ -397,8 +432,8 @@ const initializeDemoData = () => {
   // Demo contratos (vazio inicialmente)
   const demoContratos: ContratoFrete[] = [
     {
-      id: generateId(),
-      cargaId: 'carga-3',
+      id: contrato1Id,
+      cargaId: carga3Id,
       pdfUrl: 'CONTRATO DE FRETE BASTOS.pdf', // Usando o arquivo de exemplo como URL simulada
       motoristaNome: 'Ricardo Almeida',
       parceiroNome: 'Transportes Internacionais LTDA',
@@ -435,7 +470,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [permissoes, setPermissoes] = useState<PermissoInternacional[]>([]) // NOVO: Estado para Permisso
 
   // Utility function to generate IDs
-  const generateId = () => Math.random().toString(36).substr(2, 9)
+  const generateId = generateUuid // Usando o novo gerador de UUID
 
   // Função para carregar dados do localStorage ou inicializar com demo data
   const loadData = useCallback(() => {
