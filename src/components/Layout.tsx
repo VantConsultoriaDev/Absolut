@@ -14,7 +14,8 @@ import {
   FileText,
   Briefcase,
   FileBadge,
-  Menu as MenuIcon // Usando MenuIcon para o botão de toggle
+  Menu as MenuIcon,
+  Pin // Importando o novo ícone
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -241,7 +242,7 @@ const Layout: React.FC = () => {
                         className={`btn-ghost p-3`}
                         title="Menu Manual"
                     >
-                        <FileBadge className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
+                        <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
                     </button>
                 )}
               </div>
