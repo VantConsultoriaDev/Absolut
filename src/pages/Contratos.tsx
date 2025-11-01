@@ -7,7 +7,6 @@ import { ptBR } from 'date-fns/locale';
 const Contratos: React.FC = () => {
   // Estados e lógica removidos, mantendo apenas o esqueleto visual.
   const [searchTerm, setSearchTerm] = useState('');
-  const [isGeneratingContract, setIsGeneratingContract] = useState(false);
   
   // Dados simulados para a tabela (apenas para visualização)
   const mockContratos = useMemo(() => [

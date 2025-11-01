@@ -99,7 +99,7 @@ export interface Veiculo {
   quantidadeCarretas?: number
   possuiDolly?: boolean
   motoristaVinculado?: string
-  carretasVinculadas?: string[]
+  carretasSelecionadas?: string[]
   isActive?: boolean
   permisso?: PermissoInternacional // Adicionado o permisso
   createdAt: Date
@@ -228,9 +228,16 @@ export interface DatabaseContextType {
   // Contrato operations (Novo)
   generateContract: (cargaId: string) => Promise<void>
   getContracts: () => Promise<ContratoFrete[]>
+  deleteContrato: (id: string) => boolean // CORRIGIDO: Adicionado deleteContrato
   
   // Utility functions for Cargas/Financeiro synchronization
   getMotoristaName: (motoristaId: string | undefined) => string
   buildMovimentacaoDescription: (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete') => string
   syncMovimentacoesForCarga: (cargaId: string) => void
+  
+  // Sincronização e Reset (Novos)
+  resetDemoData: () => void // CORRIGIDO: Adicionado resetDemoData
+  syncDemoDataToSupabase: () => Promise<boolean> // CORRIGIDO: Adicionado syncDemoDataToSupabase
+  isSynced: boolean // CORRIGIDO: Adicionado isSynced
+  isSyncing: boolean // CORRIGIDO: Adicionado isSyncing
 }

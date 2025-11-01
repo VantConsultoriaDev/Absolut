@@ -504,7 +504,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       case 'veiculos':
         return {
           ...base,
-          parceiro_id: item.parceiroId, placa: item.placa, placa_cavalo: item.placaCavalo, placa_carreta: item.placaCarreta, placa_carreta1: item.placaCarreta1, placa_carreta2: item.placaCarreta2, placa_dolly: item.placaDolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidade_carretas: item.quantidadeCarretas, possui_dolly: item.possuiDolly, motorista_vinculado: item.motoristaVinculado, carretas_vinculadas: item.carretasSelecionadas || [], is_active: item.isActive,
+          parceiro_id: item.parceiroId, placa: item.placa, placa_cavalo: item.placaCavalo, placa_carreta: item.placaCarreta, placa_carreta1: item.placaCarreta1, placa_carreta2: item.placaCarreta2, placa_dolly: item.placaDolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidade_carretas: item.quantidadeCarretas, possui_dolly: item.possuiDolly, motorista_vinculado: item.motoristaVinculado, carretas_selecionadas: item.carretasSelecionadas || [], is_active: item.isActive,
         };
       case 'permisso_internacional':
         return {
@@ -634,7 +634,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     let overallSuccess = true;
 
     const fetchTable = async (tableName: string, setState: React.Dispatch<React.SetStateAction<any[]>>, mapFn: (item: any) => any) => {
-      const { data, error } = await supabase
+      // CORREÇÃO 1: Usar o operador de asserção não nula (!)
+      const { data, error } = await supabase! 
         .from(tableName)
         .select('*')
         .eq('user_id', userId);
@@ -687,7 +688,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [user, permissoes]); // Depende de permissoes para o mapeamento final de veiculos
 
   // --- PUSH SYNC (Antigo syncDemoDataToSupabase, agora para uso interno/fallback) ---
-  const pushLocalDataToSupabase = useCallback(async (force = false) => {
+  // CORREÇÃO 2: Removendo 'force' não utilizado
+  const pushLocalDataToSupabase = useCallback(async () => { 
     if (!supabase || !user) {
         console.error('Supabase ou usuário não estão prontos para sincronização.');
         return false;
@@ -696,13 +698,14 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     setIsSyncing(true);
     console.log('Iniciando PUSH de dados de demonstração para o Supabase...');
     
-    const userId = user.id;
+    // CORREÇÃO 3: Removendo 'userId' não utilizado
     let overallSuccess = true;
 
     const syncTable = async (tableName: string, data: any[]) => {
       const payload = data.map(item => mapToSupabase(tableName, item));
       
-      const { error } = await supabase
+      // CORREÇÃO 4: Usando o operador de asserção não nula (!)
+      const { error } = await supabase! 
         .from(tableName)
         .upsert(payload, { onConflict: 'id' }); 
 
@@ -1378,7 +1381,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('contratos_frete')
         .select('*')
         .eq('user_id', user.id)
@@ -1386,7 +1389,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         
       if (error) throw error;
       
-      const fetchedContratos: ContratoFrete[] = data.map(c => mapFromSupabase('contratos_frete', c));
+      // CORREÇÃO 5: Mapeamento explícito para ContratoFrete
+      const fetchedContratos: ContratoFrete[] = data.map(c => mapFromSupabase('contratos_frete', c) as ContratoFrete);
       
       setContratos(fetchedContratos);
       return fetchedContratos;
@@ -1396,7 +1400,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       // Em caso de erro, retorna o estado atual sem lançar exceção
       return contratos;
     }
-  }, [user, mapFromSupabase]); // Removida a dependência de 'contratos'
+  }, [user, contratos, mapFromSupabase]); // Adicionada dependência de contratos e mapFromSupabase
 
   const generateContract = useCallback(async (cargaId: string) => {
     if (!supabase || !user) {
@@ -1533,7 +1537,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     syncMovimentacoesForCarga: (cargaId: string) => syncMovimentacoesForCarga(cargaId, cargas, movimentacoes), // Wrapper para o hook
     resetDemoData, // NOVO: Exporta a função de reset
     // Sincronização
-    syncDemoDataToSupabase: pullSupabaseData as any, // AGORA É O PULL
+    syncDemoDataToSupabase: pullSupabaseData, // AGORA É O PULL
     isSynced,
     isSyncing,
   }
