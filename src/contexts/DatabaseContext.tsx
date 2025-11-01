@@ -655,7 +655,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           id: p.id, tipo: p.tipo, nome: p.nome, documento: p.documento, cnh: p.cnh, email: p.email, telefone: p.telefone, endereco: p.endereco, cidade: p.cidade, estado: p.estado, cep: p.cep, observacoes: p.observacoes, is_motorista: p.isMotorista, is_active: p.isActive,
         })),
         syncTable('motoristas', motoristas, (m: Motorista) => ({
-          id: m.id, parceiro_id: m.parceiroId, nome: m.nome, cpf: m.cpf, cnh: m.cnh, categoria_cnh: m.categoriaCnh, validade_cnh: m.validadeCnh?.toISOString().split('T')[0], telefone: m.telefone, is_active: m.isActive,
+          id: m.id, 
+          parceiro_id: m.parceiroId, 
+          nome: m.nome || '', // Garante string não vazia
+          cpf: m.cpf || '', // Garante string não vazia
+          cnh: m.cnh || '', // Garante string não vazia
+          categoria_cnh: m.categoriaCnh, 
+          validade_cnh: m.validadeCnh?.toISOString().split('T')[0], 
+          telefone: m.telefone, 
+          is_active: m.isActive,
         })),
         syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
           id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(),
