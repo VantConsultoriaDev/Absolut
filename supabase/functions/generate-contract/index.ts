@@ -47,10 +47,11 @@ serve(async (req) => {
     }
 
     // 1. Buscar dados da Carga e todas as relações necessárias
+    // REMOVIDO: observacoes
     const { data: cargaData, error: cargaError } = await supabaseClient
       .from('cargas')
       .select(`
-        id, crt, origem, destino, valor, peso, observacoes, data_coleta, data_entrega,
+        id, crt, origem, destino, valor, peso, data_coleta, data_entrega,
         cliente:clientes(nome),
         motorista:motoristas(nome, cpf, cnh, telefone),
         parceiro:parceiros(nome, documento, endereco, cep, cidade, estado, telefone),
@@ -176,7 +177,7 @@ serve(async (req) => {
         cargaDestino: cargaData.destino,
         cargaDataEntrega: cargaData.data_entrega,
         cargaValor: cargaValorTotal, // 22
-        cargaObservacoes: cargaData.observacoes || '',
+        cargaObservacoes: '', // Removido da consulta, setado como vazio
         cargaClienteNome: cargaData.cliente?.nome || 'N/A', // 29
         cargaPeso: cargaData.peso || 0, // 30
         // 23-26: Financeiro
