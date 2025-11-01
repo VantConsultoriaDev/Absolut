@@ -612,14 +612,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         console.error('Supabase ou usuário não estão prontos para sincronização.');
         return false;
     }
-    // Remove a verificação isSynced && !force para garantir que os dados de demonstração sejam sempre enviados
-    // O upsert garante que apenas as alterações sejam aplicadas.
     
     setIsSyncing(true);
     console.log('Iniciando sincronização de dados de demonstração para o Supabase...');
     
     const userId = user.id;
     const now = new Date().toISOString();
+    let overallSuccess = true;
 
     const syncTable = async (tableName: string, data: any[], mapFn: (item: any) => any) => {
       const payload = data.map(item => ({
@@ -635,10 +634,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         .upsert(payload, { onConflict: 'id' }); 
 
       if (error) {
-        console.error(`Erro ao sincronizar ${tableName}:`, error);
+        console.error(`[SYNC ERROR] Falha ao sincronizar ${tableName}:`, error.message, error.details);
+        overallSuccess = false;
         return false;
       } else {
-        console.log(`Sincronização de ${tableName} concluída: ${payload.length} registros.`);
+        console.log(`[SYNC SUCCESS] Sincronização de ${tableName} concluída: ${payload.length} registros.`);
         return true;
       }
     };
@@ -680,17 +680,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         })),
       ]);
 
-      const success = results.every(r => r === true);
       
-      if (success) {
+      if (overallSuccess) {
         setIsSynced(true);
         localStorage.setItem('absolut_synced', 'true');
         console.log('Sincronização de dados de demonstração concluída com sucesso!');
       } else {
-        console.error('Sincronização falhou em uma ou mais tabelas.');
+        console.error('Sincronização falhou em uma ou mais tabelas. Verifique os logs acima.');
       }
       
-      return success;
+      return overallSuccess;
       
     } catch (error) {
       console.error('Falha crítica na sincronização de dados de demonstração:', error);
@@ -707,7 +706,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [])
 
   // Efeito para sincronizar dados após o login
-  // REMOVIDA A DEPENDÊNCIA isSynced para forçar a sincronização inicial se o usuário estiver logado
+  // Chamado sempre que o usuário loga para garantir que os dados locais sejam enviados.
   useEffect(() => {
     if (isAuthenticated && user) {
       syncDemoDataToSupabase();
