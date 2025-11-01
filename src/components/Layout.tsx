@@ -40,7 +40,11 @@ const Layout: React.FC = () => {
   // Efeito para controlar a retração automática (apenas se estiver no modo automático)
   useEffect(() => {
     if (isAutoMode && !isHovering) {
-      setSidebarCollapsed(true);
+      // Adiciona um pequeno delay para evitar fechamento acidental
+      const timeout = setTimeout(() => {
+        setSidebarCollapsed(true);
+      }, 100); 
+      return () => clearTimeout(timeout);
     }
   }, [isHovering, isAutoMode]);
   
@@ -150,16 +154,16 @@ const Layout: React.FC = () => {
       {/* Desktop Sidebar */}
       <div 
         className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-y-hidden`}
+        // O contêiner principal controla a persistência do hover (isHovering)
         onMouseEnter={() => {
           if (isAutoMode) {
             setIsHovering(true);
-            setSidebarCollapsed(false);
+            // REMOVIDO: setSidebarCollapsed(false) - A expansão é disparada pela NAV
           }
         }}
         onMouseLeave={() => {
           if (isAutoMode) {
             setIsHovering(false);
-            // O useEffect cuidará do colapso
           }
         }}
       >
@@ -176,9 +180,15 @@ const Layout: React.FC = () => {
             </div>
           </div>
           
-          {/* Navigation */}
+          {/* Navigation - Gatilho de Expansão */}
           <nav 
             className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            onMouseEnter={() => {
+              // Expande apenas se estiver no modo automático E colapsado
+              if (isAutoMode && sidebarCollapsed) {
+                setSidebarCollapsed(false);
+              }
+            }}
           >
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
