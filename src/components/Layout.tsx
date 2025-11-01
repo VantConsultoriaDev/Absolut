@@ -34,15 +34,15 @@ const Layout: React.FC = () => {
   // Determina se o menu está no modo automático (expansão por hover)
   const isAutoMode = !isMenuManual;
   
+  // Determina se o menu deve estar expandido (para desktop)
+  const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
+  
   // Efeito para controlar a retração automática (apenas se estiver no modo automático)
   useEffect(() => {
     if (isAutoMode && !isHovering) {
       setSidebarCollapsed(true);
     }
   }, [isHovering, isAutoMode]);
-  
-  // Determina se o menu deve estar expandido (para desktop)
-  const isExpanded = isMenuManual ? sidebarOpen : !sidebarCollapsed;
   
   // CORREÇÃO: A largura do menu depende diretamente de isExpanded
   const menuWidthClass = isExpanded ? 'lg:w-72' : 'lg:w-20';
@@ -212,14 +212,14 @@ const Layout: React.FC = () => {
 
           {/* Footer - User Info & Logout (Desktop only) */}
           <div 
-            className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}
+            className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300`}
           >
-            <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center flex-col`}>
+            <div className={`w-full flex flex-col ${!isExpanded ? 'items-center' : 'items-start'}`}>
               
               {/* Botão Pin/Fixar */}
               <button
                 onClick={handlePinToggle}
-                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : ''}`}
+                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : 'justify-center'}`}
                 title={isMenuManual ? 'Desafixar Menu (Modo Automático)' : 'Fixar Menu (Modo Manual)'}
               >
                 <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
@@ -229,7 +229,7 @@ const Layout: React.FC = () => {
               {/* Botão de Sair */}
               <button
                 onClick={handleLogout}
-                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : ''}`}
+                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : 'justify-center'}`}
                 title="Sair"
               >
                 <LogOut className="h-5 w-5" />
