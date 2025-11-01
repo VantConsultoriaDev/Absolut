@@ -47,7 +47,7 @@ serve(async (req) => {
     }
 
     // 1. Buscar dados da Carga e todas as relações necessárias
-    // REMOVIDO: observacoes
+    // A coluna 'observacoes' foi removida da seleção para evitar erros de esquema.
     const { data: cargaData, error: cargaError } = await supabaseClient
       .from('cargas')
       .select(`
@@ -177,7 +177,7 @@ serve(async (req) => {
         cargaDestino: cargaData.destino,
         cargaDataEntrega: cargaData.data_entrega,
         cargaValor: cargaValorTotal, // 22
-        cargaObservacoes: '', // Removido da consulta, setado como vazio
+        cargaObservacoes: '', // Setado como vazio, pois não estamos buscando
         cargaClienteNome: cargaData.cliente?.nome || 'N/A', // 29
         cargaPeso: cargaData.peso || 0, // 30
         // 23-26: Financeiro
