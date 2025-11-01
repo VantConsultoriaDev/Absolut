@@ -13,11 +13,22 @@ import {
   DollarSign,
   FileText,
   Users,
-  RotateCcw
+  RotateCcw,
+  Cloud,
+  Loader2
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const { cargas, parceiros, clientes, movimentacoes, resetDemoData } = useDatabase()
+  const { 
+    cargas, 
+    parceiros, 
+    clientes, 
+    movimentacoes, 
+    resetDemoData,
+    syncDemoDataToSupabase, // Importado
+    isSynced, // Importado
+    isSyncing // Importado
+  } = useDatabase()
   const navigate = useNavigate()
 
   const handleStatusClick = (status: string) => {
@@ -28,7 +39,17 @@ export default function Dashboard() {
   const handleResetData = () => {
     if (window.confirm('ATENÇÃO: Você tem certeza que deseja resetar todos os dados de demonstração? Esta ação é irreversível e apagará todas as alterações locais.')) {
       resetDemoData();
-      // Removido: window.location.reload();
+      // Força a sincronização após o reset para garantir que o Supabase também seja limpo (se o usuário logar novamente)
+      syncDemoDataToSupabase(true); 
+    }
+  }
+  
+  const handleSyncData = async () => {
+    const success = await syncDemoDataToSupabase(true); // Força a sincronização
+    if (success) {
+      alert('Sincronização manual concluída com sucesso!');
+    } else {
+      alert('Falha na sincronização manual. Verifique o console para detalhes.');
     }
   }
 
@@ -81,7 +102,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div className="space-y-1">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
             Dashboard
@@ -91,15 +112,45 @@ export default function Dashboard() {
           </p>
         </div>
         
-        {/* Botão de Reset de Dados */}
-        <button
-          onClick={handleResetData}
-          className="btn-danger text-sm px-3 py-2 flex items-center gap-2"
-          title="Resetar todos os dados de demonstração"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Resetar Dados
-        </button>
+        {/* Ações de Sincronização e Reset */}
+        <div className="flex flex-col items-end space-y-2">
+          {/* Status de Sincronização */}
+          <div className={`flex items-center text-sm font-medium px-3 py-1 rounded-full ${
+            isSyncing 
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+              : isSynced 
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+          }`}>
+            {isSyncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Cloud className="h-4 w-4 mr-2" />
+            )}
+            {isSyncing ? 'Sincronizando...' : isSynced ? 'Sincronizado com Supabase' : 'Sincronização Pendente'}
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="btn-info text-sm px-3 py-2 flex items-center gap-2 disabled:opacity-50"
+              title="Forçar sincronização dos dados locais para o Supabase"
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}
+            </button>
+            
+            <button
+              onClick={handleResetData}
+              className="btn-danger text-sm px-3 py-2 flex items-center gap-2"
+              title="Resetar todos os dados de demonstração"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Resetar Dados
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}

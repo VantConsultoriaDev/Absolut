@@ -469,6 +469,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [contratos, setContratos] = useState<ContratoFrete[]>([]) // Novo estado para contratos
   const [permissoes, setPermissoes] = useState<PermissoInternacional[]>([]) // NOVO: Estado para Permisso
   const [isSynced, setIsSynced] = useState(false); // NOVO: Estado para rastrear sincronização
+  const [isSyncing, setIsSyncing] = useState(false); // NOVO: Estado para rastrear sincronização em andamento
 
   // Utility function to generate IDs
   const generateId = generateUuid // Usando o novo gerador de UUID
@@ -606,9 +607,17 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, []);
   
   // Função de sincronização para o Supabase
-  const syncDemoDataToSupabase = useCallback(async () => {
-    if (!supabase || !user || isSynced) return;
-
+  const syncDemoDataToSupabase = useCallback(async (force = false) => {
+    if (!supabase || !user) {
+        console.error('Supabase ou usuário não estão prontos para sincronização.');
+        return false;
+    }
+    if (isSynced && !force) {
+        console.log('Sincronização já realizada. Use force=true para forçar.');
+        return true;
+    }
+    
+    setIsSyncing(true);
     console.log('Iniciando sincronização de dados de demonstração para o Supabase...');
     
     const userId = user.id;
@@ -629,148 +638,59 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
       if (error) {
         console.error(`Erro ao sincronizar ${tableName}:`, error);
-        // Não lançamos erro para não bloquear o login, mas registramos
+        return false;
       } else {
         console.log(`Sincronização de ${tableName} concluída: ${payload.length} registros.`);
+        return true;
       }
     };
 
     try {
-      // 1. Clientes
-      await syncTable('clientes', clientes, (c: Cliente) => ({
-        id: c.id,
-        tipo: c.tipo,
-        nome: c.nome,
-        documento: c.documento,
-        email: c.email,
-        telefone: c.telefone,
-        endereco: c.endereco,
-        cidade: c.cidade,
-        estado: c.estado,
-        cep: c.cep,
-        observacoes: c.observacoes,
-        is_active: c.isActive,
-      }));
+      // Sincronização sequencial
+      const results = await Promise.all([
+        syncTable('clientes', clientes, (c: Cliente) => ({
+          id: c.id, tipo: c.tipo, nome: c.nome, documento: c.documento, email: c.email, telefone: c.telefone, endereco: c.endereco, cidade: c.cidade, estado: c.estado, cep: c.cep, observacoes: c.observacoes, is_active: c.isActive,
+        })),
+        syncTable('parceiros', parceiros, (p: Parceiro) => ({
+          id: p.id, tipo: p.tipo, nome: p.nome, documento: p.documento, cnh: p.cnh, email: p.email, telefone: p.telefone, endereco: p.endereco, cidade: p.cidade, estado: p.estado, cep: p.cep, observacoes: p.observacoes, is_motorista: p.isMotorista, is_active: p.isActive,
+        })),
+        syncTable('motoristas', motoristas, (m: Motorista) => ({
+          id: m.id, parceiro_id: m.parceiroId, nome: m.nome, cpf: m.cpf, cnh: m.cnh, categoria_cnh: m.categoriaCnh, validade_cnh: m.validadeCnh?.toISOString().split('T')[0], telefone: m.telefone, is_active: m.isActive,
+        })),
+        syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
+          id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, nome_fantasia: p.nomeFantasia, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(), simulado: p.simulado,
+        })),
+        syncTable('veiculos', veiculos, (v: Veiculo) => ({
+          id: v.id, parceiro_id: v.parceiroId, placa: v.placa, placa_cavalo: v.placaCavalo, placa_carreta: v.placaCarreta, placa_carreta1: v.placaCarreta1, placa_carreta2: v.placaCarreta2, placa_dolly: v.placaDolly, modelo: v.modelo, fabricante: v.fabricante, ano: v.ano, capacidade: v.capacidade, chassis: v.chassis, carroceria: v.carroceria, tipo: v.tipo, quantidade_carretas: v.quantidadeCarretas, possui_dolly: v.possuiDolly, motorista_vinculado: v.motoristaVinculado, carretas_vinculadas: v.carretasVinculadas, is_active: v.isActive,
+        })),
+        syncTable('cargas', cargas, (c: Carga) => ({
+          id: c.id, descricao: c.descricao, origem: c.origem, destino: c.destino, peso: c.peso, valor: c.valor, data_coleta: c.dataColeta?.toISOString().split('T')[0], data_entrega: c.dataEntrega?.toISOString().split('T')[0], status: c.status, cliente_id: c.clienteId, parceiro_id: c.parceiroId, motorista_id: c.motoristaId, veiculo_id: c.veiculoId, carretas_selecionadas: c.carretasSelecionadas, crt: c.crt, observacoes: c.observacoes,
+        })),
+        syncTable('movimentacoes_financeiras', movimentacoes, (m: MovimentacaoFinanceira) => ({
+          id: m.id, tipo: m.tipo, valor: m.valor, descricao: m.descricao, categoria: m.categoria, data: m.data.toISOString().split('T')[0], status: m.status, data_pagamento: m.dataPagamento?.toISOString().split('T')[0], parceiro_id: m.parceiroId, carga_id: m.cargaId, is_pago: m.isPago, observacoes: m.observacoes,
+        })),
+        syncTable('contratos_frete', contratos, (c: ContratoFrete) => ({
+          id: c.id, carga_id: c.cargaId, pdf_url: c.pdfUrl, motorista_nome: c.motoristaNome, parceiro_nome: c.parceiroNome, crt: c.crt,
+        })),
+      ]);
 
-      // 2. Parceiros
-      await syncTable('parceiros', parceiros, (p: Parceiro) => ({
-        id: p.id,
-        tipo: p.tipo,
-        nome: p.nome,
-        documento: p.documento,
-        cnh: p.cnh,
-        email: p.email,
-        telefone: p.telefone,
-        endereco: p.endereco,
-        cidade: p.cidade,
-        estado: p.estado,
-        cep: p.cep,
-        observacoes: p.observacoes,
-        is_motorista: p.isMotorista,
-        is_active: p.isActive,
-      }));
-
-      // 3. Motoristas
-      await syncTable('motoristas', motoristas, (m: Motorista) => ({
-        id: m.id,
-        parceiro_id: m.parceiroId,
-        nome: m.nome,
-        cpf: m.cpf,
-        cnh: m.cnh,
-        categoria_cnh: m.categoriaCnh,
-        validade_cnh: m.validadeCnh?.toISOString().split('T')[0], // Apenas data
-        telefone: m.telefone,
-        is_active: m.isActive,
-      }));
+      const success = results.every(r => r === true);
       
-      // 4. Permissoes Internacionais
-      await syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
-        id: p.id,
-        veiculo_id: p.veiculoId,
-        razao_social: p.razaoSocial,
-        nome_fantasia: p.nomeFantasia,
-        cnpj: p.cnpj,
-        endereco_completo: p.enderecoCompleto,
-        data_consulta: p.dataConsulta.toISOString(),
-        simulado: p.simulado,
-      }));
-
-      // 5. Veículos
-      await syncTable('veiculos', veiculos, (v: Veiculo) => ({
-        id: v.id,
-        parceiro_id: v.parceiroId,
-        placa: v.placa,
-        placa_cavalo: v.placaCavalo,
-        placa_carreta: v.placaCarreta,
-        placa_carreta1: v.placaCarreta1,
-        placa_carreta2: v.placaCarreta2,
-        placa_dolly: v.placaDolly,
-        modelo: v.modelo,
-        fabricante: v.fabricante,
-        ano: v.ano,
-        capacidade: v.capacidade,
-        chassis: v.chassis,
-        carroceria: v.carroceria,
-        tipo: v.tipo,
-        quantidade_carretas: v.quantidadeCarretas,
-        possui_dolly: v.possuiDolly,
-        motorista_vinculado: v.motoristaVinculado,
-        carretas_vinculadas: v.carretasVinculadas,
-        is_active: v.isActive,
-      }));
-
-      // 6. Cargas
-      await syncTable('cargas', cargas, (c: Carga) => ({
-        id: c.id,
-        descricao: c.descricao,
-        origem: c.origem,
-        destino: c.destino,
-        peso: c.peso,
-        valor: c.valor,
-        data_coleta: c.dataColeta?.toISOString().split('T')[0],
-        data_entrega: c.dataEntrega?.toISOString().split('T')[0],
-        status: c.status,
-        cliente_id: c.clienteId,
-        parceiro_id: c.parceiroId,
-        motorista_id: c.motoristaId,
-        veiculo_id: c.veiculoId,
-        carretas_selecionadas: c.carretasSelecionadas,
-        crt: c.crt,
-        observacoes: c.observacoes,
-      }));
-
-      // 7. Movimentações Financeiras
-      await syncTable('movimentacoes_financeiras', movimentacoes, (m: MovimentacaoFinanceira) => ({
-        id: m.id,
-        tipo: m.tipo,
-        valor: m.valor,
-        descricao: m.descricao,
-        categoria: m.categoria,
-        data: m.data.toISOString().split('T')[0],
-        status: m.status,
-        data_pagamento: m.dataPagamento?.toISOString().split('T')[0],
-        parceiro_id: m.parceiroId,
-        carga_id: m.cargaId,
-        is_pago: m.isPago,
-        observacoes: m.observacoes,
-      }));
+      if (success) {
+        setIsSynced(true);
+        localStorage.setItem('absolut_synced', 'true');
+        console.log('Sincronização de dados de demonstração concluída com sucesso!');
+      } else {
+        console.error('Sincronização falhou em uma ou mais tabelas.');
+      }
       
-      // 8. Contratos (Apenas para garantir que o contrato de demonstração exista)
-      await syncTable('contratos_frete', contratos, (c: ContratoFrete) => ({
-        id: c.id,
-        carga_id: c.cargaId,
-        pdf_url: c.pdfUrl,
-        motorista_nome: c.motoristaNome,
-        parceiro_nome: c.parceiroNome,
-        crt: c.crt,
-      }));
-
-      setIsSynced(true);
-      localStorage.setItem('absolut_synced', 'true');
-      console.log('Sincronização de dados de demonstração concluída com sucesso!');
+      return success;
       
     } catch (error) {
       console.error('Falha crítica na sincronização de dados de demonstração:', error);
+      return false;
+    } finally {
+        setIsSyncing(false);
     }
   }, [user, isSynced, clientes, parceiros, motoristas, veiculos, permissoes, cargas, movimentacoes, contratos]);
 
@@ -1350,7 +1270,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     getMotoristaName,
     buildMovimentacaoDescription,
     syncMovimentacoesForCarga: (cargaId: string) => syncMovimentacoesForCarga(cargaId, cargas, movimentacoes), // Wrapper para o hook
-    resetDemoData // NOVO: Exporta a função de reset
+    resetDemoData, // NOVO: Exporta a função de reset
+    // Sincronização
+    syncDemoDataToSupabase: syncDemoDataToSupabase as any, // Exporta a função de sincronização
+    isSynced,
+    isSyncing,
   }
 
   return (
