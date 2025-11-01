@@ -26,7 +26,7 @@ import {
 import RangeCalendar from '../components/RangeCalendar';
 import CargasStats from '../components/cargas/CargasStats';
 import CargaFormModal, { CargaFormData } from '../components/cargas/CargaFormModal';
-import CargaLinkModal from '../components/cargas/CargasLinkModal';
+import CargaLinkModal from '../components/cargas/CargaLinkModal';
 import CargaIntegrateModal from '../components/cargas/CargaIntegrateModal';
 import CargaImportModal from '../components/cargas/CargaImportModal';
 import { UFS_ORDENADAS, STATUS_CONFIG } from '../utils/cargasConstants';
