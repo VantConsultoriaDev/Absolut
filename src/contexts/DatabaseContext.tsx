@@ -568,7 +568,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       // Atualiza veículos com permisso
       const veiculosWithPermisso = parsedVeiculos.map((v: Veiculo) => ({
           ...v,
-          permisso: permissoes.find((p: PermissoInternacional) => p.veiculoId === v.id)
+          permisso: parsedPermissoes.find((p: PermissoInternacional) => p.veiculoId === v.id)
       }));
       setVeiculos(veiculosWithPermisso);
     }
@@ -664,22 +664,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           validade_cnh: m.validadeCnh?.toISOString().split('T')[0], 
           telefone: m.telefone, 
           is_active: m.isActive,
-          // Nacionalidade removida, pois não existe no esquema do Supabase
         })),
         syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
-          id: p.id, 
-          veiculo_id: p.veiculoId, 
-          razao_social: p.razaoSocial, 
-          cnpj: p.cnpj, 
-          endereco_completo: p.enderecoCompleto, 
-          data_consulta: p.dataConsulta.toISOString(),
-          // nomeFantasia e simulado removidos
+          id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(),
         })),
         syncTable('veiculos', veiculos, (v: Veiculo) => ({
-          id: v.id, parceiro_id: v.parceiroId, placa: v.placa, placa_cavalo: v.placaCavalo, placa_carreta: v.placaCarreta, placa_carreta1: v.placaCarreta1, placa_carreta2: v.placaCarreta2, placa_dolly: v.placaDolly, modelo: v.modelo, fabricante: v.fabricante, ano: v.ano, capacidade: v.capacidade, chassis: v.chassis, carroceria: v.carroceria, tipo: v.tipo, quantidade_carretas: v.quantidadeCarretas, possui_dolly: v.possuiDolly, motorista_vinculado: v.motoristaVinculado, carretas_vinculadas: v.carretasVinculadas, is_active: v.isActive,
+          id: v.id, parceiro_id: v.parceiroId, placa: v.placa, placa_cavalo: v.placaCavalo, placa_carreta: v.placaCarreta, placa_carreta1: v.placaCarreta1, placa_carreta2: v.placaCarreta2, placa_dolly: v.placaDolly, modelo: v.modelo, fabricante: v.fabricante, ano: v.ano, capacidade: v.capacidade, chassis: v.chassis, carroceria: v.carroceria, tipo: v.tipo, quantidade_carretas: v.quantidadeCarretas, possui_dolly: v.possuiDolly, motorista_vinculado: v.motoristaVinculado, carretas_vinculadas: v.carretasVinculadas || [], is_active: v.isActive,
         })),
         syncTable('cargas', cargas, (c: Carga) => ({
-          id: c.id, descricao: c.descricao, origem: c.origem, destino: c.destino, peso: c.peso, valor: c.valor, data_coleta: c.dataColeta?.toISOString().split('T')[0], data_entrega: c.dataEntrega?.toISOString().split('T')[0], status: c.status, cliente_id: c.clienteId, parceiro_id: c.parceiroId, motorista_id: c.motoristaId, veiculo_id: c.veiculoId, carretas_selecionadas: c.carretasSelecionadas, crt: c.crt, observacoes: c.observacoes,
+          id: c.id, descricao: c.descricao, origem: c.origem, destino: c.destino, peso: c.peso, valor: c.valor, data_coleta: c.dataColeta?.toISOString().split('T')[0], data_entrega: c.dataEntrega?.toISOString().split('T')[0], status: c.status, cliente_id: c.clienteId, parceiro_id: c.parceiroId, motorista_id: c.motoristaId, veiculo_id: c.veiculoId, carretas_selecionadas: c.carretasSelecionadas || [], crt: c.crt, observacoes: c.observacoes,
         })),
         syncTable('movimentacoes_financeiras', movimentacoes, (m: MovimentacaoFinanceira) => ({
           id: m.id, tipo: m.tipo, valor: m.valor, descricao: m.descricao, categoria: m.categoria, data: m.data.toISOString().split('T')[0], status: m.status, data_pagamento: m.dataPagamento?.toISOString().split('T')[0], parceiro_id: m.parceiroId, carga_id: m.cargaId, is_pago: m.isPago, observacoes: m.observacoes,
