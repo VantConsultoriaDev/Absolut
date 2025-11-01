@@ -72,6 +72,7 @@ const Contratos: React.FC = () => {
     }
     setRegeneratingId(contratoId);
     await generateContract(cargaId);
+    await getContracts();
     setRegeneratingId(null);
   };
 
@@ -114,6 +115,9 @@ const Contratos: React.FC = () => {
       await generateContract(carga.id);
       successCount++;
     }
+    
+    // Após a geração em lote, atualiza a lista de contratos
+    await getContracts();
     
     alert(`${successCount} contratos gerados com sucesso!`);
     setIsGeneratingContract(false);
