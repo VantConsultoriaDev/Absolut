@@ -1173,6 +1173,16 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       return;
     }
     
+    // FORÇA A SINCRONIZAÇÃO ANTES DE TENTAR GERAR O CONTRATO
+    if (!isSynced) {
+        console.log('Forçando sincronização antes de gerar contrato...');
+        const syncSuccess = await syncDemoDataToSupabase(true);
+        if (!syncSuccess) {
+            alert('Falha na sincronização dos dados. Não é possível gerar o contrato.');
+            return;
+        }
+    }
+    
     const projectRef = 'qoeocxprlioianbordjt'; // Supabase Project ID
     const edgeFunctionUrl = `https://${projectRef}.supabase.co/functions/v1/generate-contract`;
     
@@ -1203,7 +1213,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       console.error('Erro na geração do contrato:', error);
       alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
-  }, [user, getContracts]);
+  }, [user, getContracts, isSynced, syncDemoDataToSupabase]);
 
 
   // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas/Parceiros mudarem
