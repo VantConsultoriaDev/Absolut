@@ -237,7 +237,7 @@ serve(async (req) => {
         parceiro_nome: cargaData.parceiro?.nome,
         crt: cargaData.crt,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'carga_id' })
+      })
       .select()
       .single()
 
