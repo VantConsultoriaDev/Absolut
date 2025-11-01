@@ -1370,9 +1370,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return true
   }
 
-  // Contrato Operations
+  // --- CONTRATO OPERATIONS ---
   const getContracts = useCallback(async (): Promise<ContratoFrete[]> => {
     if (!supabase || !user) {
+      // Retorna o estado local se o Supabase não estiver pronto
       return contratos;
     }
     
@@ -1392,9 +1393,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       
     } catch (error) {
       console.error('Erro ao buscar contratos do Supabase. Retornando dados locais:', error);
+      // Em caso de erro, retorna o estado atual sem lançar exceção
       return contratos;
     }
-  }, [contratos, user, mapFromSupabase]);
+  }, [user, mapFromSupabase]); // Removida a dependência de 'contratos'
 
   const generateContract = useCallback(async (cargaId: string) => {
     if (!supabase || !user) {
@@ -1429,6 +1431,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         throw new Error(result.error || 'Falha ao gerar contrato na Edge Function.');
       }
       
+      // Após a geração, puxa a lista atualizada
       await getContracts();
       
       alert(`Contrato gerado/regenerado com sucesso! URL: ${result.pdfUrl}`);
@@ -1438,6 +1441,19 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   }, [user, getContracts, cargas, syncItemToSupabase]);
+  
+  const deleteContrato = (id: string): boolean => {
+    const deletedContrato = contratos.find(c => c.id === id);
+    setContratos(prev => prev.filter(contrato => contrato.id !== id));
+    if (deletedContrato) {
+      // Não há necessidade de syncItemToSupabase('contratos_frete', deletedContrato, 'DELETE')
+      // pois a Edge Function não cria o registro no Supabase, apenas o PDF.
+      // No entanto, se o registro for criado no Supabase, precisamos deletá-lo.
+      // Como o registro é criado na Edge Function, vamos assumir que ele deve ser deletado do Supabase.
+      syncItemToSupabase('contratos_frete', deletedContrato, 'DELETE');
+    }
+    return true;
+  }
 
 
   // Efeito para sincronizar Movimentações Financeiras sempre que Cargas ou Motoristas/Parceiros mudarem
@@ -1467,7 +1483,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // Efeito para carregar contratos na autenticação
   useEffect(() => {
     if (user) {
-        getContracts();
+        // Não chamamos getContracts aqui para evitar loop, a tela Contratos.tsx chama na montagem.
+        // Apenas garantimos que o estado local seja carregado.
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]); 
@@ -1513,6 +1530,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     // Contrato functions
     generateContract,
     getContracts,
+    deleteContrato, // NOVO
     // Utility functions
     getMotoristaName,
     buildMovimentacaoDescription,

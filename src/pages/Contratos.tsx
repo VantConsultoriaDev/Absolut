@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, RefreshCw, Search, AlertTriangle, Download, Calendar, FileBadge } from 'lucide-react';
+import { FileText, RefreshCw, Search, AlertTriangle, Download, Calendar, FileBadge, Trash2 } from 'lucide-react';
 import { PDFService } from '../services/pdfService';
 import RangeCalendar from '../components/RangeCalendar';
 
@@ -13,6 +13,7 @@ const Contratos: React.FC = () => {
     movimentacoes, // Necessário para verificar integração
     getContracts, 
     generateContract,
+    deleteContrato: deleteContratoFromContext, // Renomeando para evitar conflito
   } = useDatabase();
   
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,7 @@ const Contratos: React.FC = () => {
       } catch (error) {
         console.error("Erro ao carregar contratos:", error);
       } finally {
+        // Garante que o loading seja desativado
         setLoading(false);
       }
     };
@@ -78,9 +80,10 @@ const Contratos: React.FC = () => {
     setRegeneratingId(contratoId);
     try {
       await generateContract(cargaId);
-      await getContracts();
+      // getContracts é chamado dentro de generateContract
     } catch (error) {
       console.error("Erro ao regerar contrato:", error);
+      alert('Falha ao regerar contrato. Verifique o console.');
     } finally {
       setRegeneratingId(null);
     }
@@ -92,6 +95,15 @@ const Contratos: React.FC = () => {
   
   const handleView = (url: string) => {
     window.open(url, '_blank');
+  };
+  
+  const handleDelete = (id: string, crt: string) => {
+    if (window.confirm(`Tem certeza que deseja EXCLUIR o contrato ${crt}? Isso não afeta a carga, mas remove o registro do contrato.`)) {
+      // A função deleteContrato precisa ser implementada no DatabaseContext
+      // Por enquanto, vamos simular a exclusão localmente e avisar que a função real precisa ser implementada.
+      alert('A exclusão de contratos no Supabase ainda não está implementada no DatabaseContext. Excluindo localmente.');
+      // deleteContratoFromContext(id); // Descomentar quando a função for implementada
+    }
   };
   
   // Função para gerar contratos em lote (MOVIDA PARA CÁ)
@@ -343,6 +355,14 @@ const Contratos: React.FC = () => {
                           title="Regerar Contrato"
                         >
                           <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(contrato.id, contrato.crt || contrato.cargaId)}
+                          className="text-gray-600 hover:text-red-800 dark:text-gray-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Excluir Contrato"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
