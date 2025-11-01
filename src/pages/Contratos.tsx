@@ -33,8 +33,13 @@ const Contratos: React.FC = () => {
   useEffect(() => {
     const fetchContracts = async () => {
       setLoading(true);
-      await getContracts();
-      setLoading(false);
+      try {
+        await getContracts();
+      } catch (error) {
+        console.error("Erro ao carregar contratos:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchContracts();
   }, [getContracts]);
@@ -71,9 +76,14 @@ const Contratos: React.FC = () => {
       return;
     }
     setRegeneratingId(contratoId);
-    await generateContract(cargaId);
-    await getContracts();
-    setRegeneratingId(null);
+    try {
+      await generateContract(cargaId);
+      await getContracts();
+    } catch (error) {
+      console.error("Erro ao regerar contrato:", error);
+    } finally {
+      setRegeneratingId(null);
+    }
   };
 
   const handleDownload = (url: string, crt: string) => {
