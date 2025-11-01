@@ -13,13 +13,38 @@ function simulatePdfFilling(data: any): string {
   
   const content = `
     CONTRATO DE FRETE GERADO AUTOMATICAMENTE
-    CRT: ${data.cargaCrt || 'N/A'}
-    NÚMERO SEQUENCIAL: ${data.contratoNumeroSequencial}
+    NÚMERO SEQUENCIAL (33): ${data.contratoNumeroSequencial}
+    DATA DE EMISSÃO (34): ${data.contratoDataEmissao}
     
-    [SIMULAÇÃO DE CONTEÚDO PDF PREENCHIDO COM 34 CAMPOS]
-    
+    --- DADOS DO PROPRIETÁRIO (PARCEIRO) ---
     1. Permisso Razão Social: ${data.permissoRazaoSocial}
+    2. Permisso CNPJ: ${data.permissoCnpj}
+    6. Nome Parceiro: ${data.parceiroNome}
+    7. Documento Parceiro: ${data.parceiroDocumento}
+    12. Contato: ${data.parceiroTelefone}
+    
+    --- DADOS DO VEÍCULO ---
+    3. Placas: ${data.placasVeiculoPrincipal} ${data.placasCarretas ? `+ Carretas: ${data.placasCarretas}` : ''}
+    4. Marca: ${data.veiculoMarca}
+    5. Ano: ${data.veiculoAno}
+    
+    --- DADOS DO MOTORISTA ---
+    13. Nome Motorista: ${data.motoristaNome}
+    14. CPF: ${data.motoristaCpf}
+    16. CNH: ${data.motoristaCnh}
+    
+    --- DADOS DA CARGA ---
+    17. Origem: ${data.cargaOrigem}
+    20. Destino: ${data.cargaDestino}
+    22. Valor Total Carga: ${data.cargaValor}
+    29. Cliente: ${data.cargaClienteNome}
+    30. Peso: ${data.cargaPeso}
+    
+    --- VALORES FINANCEIROS ---
+    23. Adiantamento: ${data.financeiroAdiantamento}
     26. Saldo a Receber: ${data.financeiroSaldo}
+    
+    [FIM DA SIMULAÇÃO]
   `;
   
   // Retorna o conteúdo como um Blob simulado (Base64 ou texto)
@@ -55,42 +80,42 @@ serve(async (req) => {
       })
     }
 
-    // 1. Buscar dados da Carga e todas as relações necessárias
-    const { data: cargaData, error: cargaError } = await supabaseClient
+    // 1. Buscar dados da Carga
+    const { data: carga, error: cargaError } = await supabaseClient
       .from('cargas')
-      .select(`
-        id, crt, origem, destino, valor, peso, data_coleta, data_entrega,
-        cliente:clientes(nome),
-        motorista:motoristas(nome, cpf, cnh, telefone),
-        parceiro:parceiros(nome, documento, endereco, cep, cidade, estado, telefone),
-        veiculo:veiculos(id, placa, placa_cavalo, placa_carreta, tipo, fabricante, ano, carretas_vinculadas)
-      `)
+      .select('*')
       .eq('id', cargaId)
       .single()
     
-    if (cargaError) {
-        console.error(`[GENERATE_CONTRACT] Erro ao buscar carga ${cargaId}:`, cargaError.message);
-        throw new Error('Carga não encontrada no banco de dados Supabase. Certifique-se de que a carga foi sincronizada.');
+    if (cargaError || !carga) {
+        console.error(`[GENERATE_CONTRACT] Erro ao buscar carga ${cargaId}:`, cargaError?.message || 'Carga não encontrada');
+        throw new Error('Carga não encontrada no banco de dados Supabase.');
     }
     
-    console.log(`[GENERATE_CONTRACT] Carga encontrada: ${cargaData.id}`);
-    
-    // 2. Buscar Permisso Internacional (se houver veículo)
+    // 2. Buscar Relações (Parceiro, Motorista, Cliente, Veículo)
+    const [parceiro, motorista, cliente, veiculo] = await Promise.all([
+        carga.parceiro_id ? supabaseClient.from('parceiros').select('*').eq('id', carga.parceiro_id).single().then(res => res.data) : Promise.resolve(null),
+        carga.motorista_id ? supabaseClient.from('motoristas').select('*').eq('id', carga.motorista_id).single().then(res => res.data) : Promise.resolve(null),
+        carga.cliente_id ? supabaseClient.from('clientes').select('nome').eq('id', carga.cliente_id).single().then(res => res.data) : Promise.resolve(null),
+        carga.veiculo_id ? supabaseClient.from('veiculos').select('*').eq('id', carga.veiculo_id).single().then(res => res.data) : Promise.resolve(null),
+    ]);
+
+    // 3. Buscar Permisso Internacional (se houver veículo)
     let permissoData = null;
-    if (cargaData.veiculo?.id) {
+    if (veiculo?.id) {
         const { data: pData, error: pError } = await supabaseClient
             .from('permisso_internacional')
             .select('razao_social, cnpj')
-            .eq('veiculo_id', cargaData.veiculo.id)
+            .eq('veiculo_id', veiculo.id)
             .single();
         
-        if (pError && pError.code !== 'PGRST116') { // PGRST116 = No rows found
+        if (pError && pError.code !== 'PGRST116') { 
             console.warn('[GENERATE_CONTRACT] Error fetching permisso:', pError.message);
         }
         permissoData = pData;
     }
 
-    // 3. Buscar Movimentações Financeiras
+    // 4. Buscar Movimentações Financeiras
     const { data: movData, error: movError } = await supabaseClient
       .from('movimentacoes_financeiras')
       .select('tipo, categoria, valor, descricao')
@@ -101,7 +126,7 @@ serve(async (req) => {
       throw new Error(movError.message)
     }
 
-    // 4. Classificar valores financeiros (23, 24, 25, 26)
+    // 5. Classificar valores financeiros (23, 24, 25, 26)
     let adiantamento = 0; // 23
     let despesasAdicionais = 0; // 24
     let diarias = 0; // 25
@@ -130,35 +155,34 @@ serve(async (req) => {
     // Se houve split, o valor total da carga (22) é Adiantamento + Saldo - Extras
     // Se não houve split, o saldo (26) é o valor da carga (22)
     const extrasTotal = despesasAdicionais + diarias;
-    const cargaValorTotal = hasSplit ? (adiantamento + saldo - extrasTotal) : (cargaData.valor || 0);
+    const cargaValorTotal = hasSplit ? (adiantamento + saldo - extrasTotal) : (carga.valor || 0);
     
     if (!hasSplit && saldo === 0) {
         saldo = cargaValorTotal;
     }
 
-    // 5. Montar Placas (3)
-    let placasVeiculoPrincipal = cargaData.veiculo?.placa || cargaData.veiculo?.placa_cavalo || 'N/A';
+    // 6. Montar Placas (3)
+    let placasVeiculoPrincipal = veiculo?.placa || veiculo?.placa_cavalo || 'N/A';
     let placasCarretas = '';
     
-    if (cargaData.veiculo?.carretas_vinculadas && cargaData.veiculo.carretas_vinculadas.length > 0) {
+    if (veiculo?.carretas_vinculadas && veiculo.carretas_vinculadas.length > 0) {
         // Busca as placas das carretas vinculadas
         const { data: carretasData } = await supabaseClient
             .from('veiculos')
             .select('placa, placa_carreta')
-            .in('id', cargaData.veiculo.carretas_vinculadas);
+            .in('id', veiculo.carretas_vinculadas);
             
         if (carretasData) {
             placasCarretas = carretasData.map(c => c.placa_carreta || c.placa).join(', ');
         }
     }
     
-    // 6. Gerar Número Sequencial (33)
-    // Simulação: CRT + Data (YYMM) + Sequencial (01)
+    // 7. Gerar Número Sequencial (33)
     const date = new Date();
     const datePart = date.toISOString().substring(2, 4) + date.toISOString().substring(5, 7);
-    const contractNumber = `${cargaData.crt || 'CRT-NA'}-${datePart}-01`; // Simplificado
+    const contractNumber = `${carga.crt || 'CRT-NA'}-${datePart}-01`; // Simplificado
 
-    // 7. Montar o objeto de dados completo
+    // 8. Montar o objeto de dados completo (34 campos)
     const contractData = {
         // 1-2: Permisso
         permissoRazaoSocial: permissoData?.razao_social || 'N/A',
@@ -167,51 +191,50 @@ serve(async (req) => {
         placasVeiculoPrincipal: placasVeiculoPrincipal,
         placasCarretas: placasCarretas,
         // 4-5: Veículo Detalhes
-        veiculoMarca: cargaData.veiculo?.fabricante || 'N/A',
-        veiculoAno: cargaData.veiculo?.ano || 'N/A',
+        veiculoMarca: veiculo?.fabricante || 'N/A',
+        veiculoAno: veiculo?.ano || 'N/A',
         // 6-12: Proprietário/Parceiro
-        parceiroNome: cargaData.parceiro?.nome || 'N/A',
-        parceiroDocumento: cargaData.parceiro?.documento || 'N/A',
-        parceiroEndereco: cargaData.parceiro?.endereco || 'N/A',
-        parceiroCep: cargaData.parceiro?.cep || 'N/A',
-        parceiroCidade: cargaData.parceiro?.cidade || 'N/A',
-        parceiroEstado: cargaData.parceiro?.estado || 'N/A',
-        parceiroTelefone: cargaData.parceiro?.telefone || 'N/A',
+        parceiroNome: parceiro?.nome || 'N/A',
+        parceiroDocumento: parceiro?.documento || 'N/A',
+        parceiroEndereco: parceiro?.endereco || 'N/A',
+        parceiroCep: parceiro?.cep || 'N/A',
+        parceiroCidade: parceiro?.cidade || 'N/A',
+        parceiroEstado: parceiro?.estado || 'N/A',
+        parceiroTelefone: parceiro?.telefone || 'N/A',
         // 13-16: Motorista
-        motoristaNome: cargaData.motorista?.nome || 'N/A',
-        motoristaCpf: cargaData.motorista?.cpf || 'N/A',
-        motoristaTelefone: cargaData.motorista?.telefone || 'N/A',
-        motoristaCnh: cargaData.motorista?.cnh || 'N/A',
+        motoristaNome: motorista?.nome || 'N/A',
+        motoristaCpf: motorista?.cpf || 'N/A',
+        motoristaTelefone: motorista?.telefone || 'N/A',
+        motoristaCnh: motorista?.cnh || 'N/A',
         // 17-22, 27-30: Carga Detalhes
-        cargaOrigem: cargaData.origem,
-        cargaDataColeta: cargaData.data_coleta,
-        cargaCrt: cargaData.crt || 'N/A',
-        cargaDestino: cargaData.destino,
-        cargaDataEntrega: cargaData.data_entrega,
+        cargaOrigem: carga.origem,
+        cargaDataColeta: carga.data_coleta,
+        cargaCrt: carga.crt || 'N/A',
+        cargaDestino: carga.destino,
+        cargaDataEntrega: carga.data_entrega,
         cargaValor: cargaValorTotal, // 22
-        cargaObservacoes: '', // Setado como vazio, pois não estamos buscando
-        cargaClienteNome: cargaData.cliente?.nome || 'N/A', // 29
-        cargaPeso: cargaData.peso || 0, // 30
+        cargaObservacoes: carga.observacoes || '', // 27
+        cargaClienteNome: cliente?.nome || 'N/A', // 29
+        cargaPeso: carga.peso || 0, // 30
         // 23-26: Financeiro
         financeiroAdiantamento: adiantamento, // 23
         financeiroDespesasAdicionais: despesasAdicionais, // 24
         financeiroDiarias: diarias, // 25
         financeiroSaldo: saldo, // 26
         // 31-32: Vinculação
-        cargaParceiroNome: cargaData.parceiro?.nome || 'N/A', // 31
-        cargaMotoristaNome: cargaData.motorista?.nome || 'N/A', // 32
+        cargaParceiroNome: parceiro?.nome || 'N/A', // 31
+        cargaMotoristaNome: motorista?.nome || 'N/A', // 32
         // 33-34: Contrato Metadata
         contratoNumeroSequencial: contractNumber, // 33
         contratoDataEmissao: date.toISOString(), // 34
     };
 
-    // 8. Simular preenchimento do PDF (retorna Base64 do conteúdo)
+    // 9. Simular preenchimento do PDF (retorna Base64 do conteúdo)
     const pdfContentBase64 = simulatePdfFilling(contractData);
-    const pdfFileName = `contrato_${cargaData.crt || cargaId}.pdf`;
+    const pdfFileName = `contrato_${carga.crt || cargaId}.pdf`;
     
-    // 9. Salvar no Supabase Storage
-    // Nota: O bucket 'contratos' deve ser criado manualmente no Supabase Storage.
-    const { data: storageData, error: storageError } = await supabaseClient.storage
+    // 10. Salvar no Supabase Storage
+    const { error: storageError } = await supabaseClient.storage
       .from('contratos')
       .upload(pdfFileName, new TextEncoder().encode(pdfContentBase64), {
         contentType: 'application/pdf',
@@ -226,16 +249,16 @@ serve(async (req) => {
     // CORREÇÃO: Usar o URL base do Supabase para construir o link público
     const publicUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/contratos/${pdfFileName}`;
 
-    // 10. Registrar/Atualizar na tabela contratos_frete
+    // 11. Registrar/Atualizar na tabela contratos_frete
     const { data: contractRecord, error: recordError } = await supabaseClient
       .from('contratos_frete')
       .upsert({
         carga_id: cargaId,
         user_id: userId,
         pdf_url: publicUrl,
-        motorista_nome: cargaData.motorista?.nome,
-        parceiro_nome: cargaData.parceiro?.nome,
-        crt: cargaData.crt,
+        motorista_nome: motorista?.nome,
+        parceiro_nome: parceiro?.nome,
+        crt: carga.crt,
         updated_at: new Date().toISOString()
       })
       .select()
