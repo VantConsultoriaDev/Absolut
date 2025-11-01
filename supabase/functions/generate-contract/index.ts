@@ -46,6 +46,8 @@ serve(async (req) => {
   try {
     const { cargaId, userId } = await req.json()
     
+    console.log(`[GENERATE_CONTRACT] Received request for Carga ID: ${cargaId} by User ID: ${userId}`);
+    
     if (!cargaId || !userId) {
       return new Response(JSON.stringify({ error: 'Missing cargaId or userId' }), {
         status: 400,
@@ -54,7 +56,6 @@ serve(async (req) => {
     }
 
     // 1. Buscar dados da Carga e todas as relações necessárias
-    // Usando .eq('id', cargaId).single() para garantir que apenas uma linha seja retornada
     const { data: cargaData, error: cargaError } = await supabaseClient
       .from('cargas')
       .select(`
@@ -68,9 +69,11 @@ serve(async (req) => {
       .single()
     
     if (cargaError) {
-        console.error('Erro ao buscar carga:', cargaError.message);
+        console.error(`[GENERATE_CONTRACT] Erro ao buscar carga ${cargaId}:`, cargaError.message);
         throw new Error('Carga não encontrada no banco de dados Supabase. Certifique-se de que a carga foi sincronizada.');
     }
+    
+    console.log(`[GENERATE_CONTRACT] Carga encontrada: ${cargaData.id}`);
     
     // 2. Buscar Permisso Internacional (se houver veículo)
     let permissoData = null;
@@ -82,7 +85,7 @@ serve(async (req) => {
             .single();
         
         if (pError && pError.code !== 'PGRST116') { // PGRST116 = No rows found
-            console.warn('Error fetching permisso:', pError.message);
+            console.warn('[GENERATE_CONTRACT] Error fetching permisso:', pError.message);
         }
         permissoData = pData;
     }
@@ -94,6 +97,7 @@ serve(async (req) => {
       .eq('carga_id', cargaId)
 
     if (movError) {
+      console.error('[GENERATE_CONTRACT] Erro ao buscar movimentações:', movError.message);
       throw new Error(movError.message)
     }
 
@@ -215,6 +219,7 @@ serve(async (req) => {
       })
 
     if (storageError) {
+      console.error('[GENERATE_CONTRACT] Erro ao salvar no Storage:', storageError.message);
       throw new Error(storageError.message)
     }
     
@@ -237,6 +242,7 @@ serve(async (req) => {
       .single()
 
     if (recordError) {
+      console.error('[GENERATE_CONTRACT] Erro ao registrar contrato:', recordError.message);
       throw new Error(recordError.message)
     }
 
