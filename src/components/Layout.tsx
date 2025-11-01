@@ -201,7 +201,12 @@ const Layout: React.FC = () => {
           </nav>
 
           {/* Footer - User Info & Logout (Desktop only) */}
-          <div className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}>
+          <div 
+            className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}
+            // Adiciona onMouseEnter/onMouseLeave para anular o hover do pai no modo automático
+            onMouseEnter={() => isAutoMode && setIsHovering(false)}
+            onMouseLeave={() => isAutoMode && setIsHovering(false)}
+          >
             <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center`}>
               
               {/* Botão Pin/Fixar */}
