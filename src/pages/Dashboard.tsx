@@ -28,8 +28,7 @@ export default function Dashboard() {
   const handleResetData = () => {
     if (window.confirm('ATENÇÃO: Você tem certeza que deseja resetar todos os dados de demonstração? Esta ação é irreversível e apagará todas as alterações locais.')) {
       resetDemoData();
-      // Força um refresh para garantir que todos os estados sejam re-inicializados
-      window.location.reload();
+      // Removido: window.location.reload();
     }
   }
 
