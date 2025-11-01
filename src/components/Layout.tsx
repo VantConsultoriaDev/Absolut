@@ -142,18 +142,6 @@ const Layout: React.FC = () => {
       {/* Desktop Sidebar */}
       <div 
         className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-y-hidden`}
-        onMouseEnter={() => {
-          if (isAutoMode) {
-            setIsHovering(true);
-            setSidebarCollapsed(false);
-          }
-        }}
-        onMouseLeave={() => {
-          if (isAutoMode) {
-            setIsHovering(false);
-            // O useEffect cuidará do colapso
-          }
-        }}
       >
         <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 overflow-hidden">
           {/* Logo e Botão de Toggle Manual */}
@@ -169,7 +157,21 @@ const Layout: React.FC = () => {
           </div>
           
           {/* Navigation */}
-          <nav className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+          <nav 
+            className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            onMouseEnter={() => {
+              if (isAutoMode) {
+                setIsHovering(true);
+                setSidebarCollapsed(false);
+              }
+            }}
+            onMouseLeave={() => {
+              if (isAutoMode) {
+                setIsHovering(false);
+                // O useEffect cuidará do colapso
+              }
+            }}
+          >
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
               
@@ -203,9 +205,6 @@ const Layout: React.FC = () => {
           {/* Footer - User Info & Logout (Desktop only) */}
           <div 
             className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}
-            // Adiciona onMouseEnter/onMouseLeave para anular o hover do pai no modo automático
-            onMouseEnter={() => isAutoMode && setIsHovering(false)}
-            onMouseLeave={() => isAutoMode && setIsHovering(false)}
           >
             <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center`}>
               
