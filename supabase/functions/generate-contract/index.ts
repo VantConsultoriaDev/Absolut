@@ -47,8 +47,7 @@ serve(async (req) => {
     }
 
     // 1. Buscar dados da Carga e todas as relações necessárias
-    // A coluna 'observacoes' foi removida da seleção para evitar erros de esquema.
-    const { data: cargaData, error: cargaError } = await supabaseClient
+    const { data: cargaResult, error: cargaError } = await supabaseClient
       .from('cargas')
       .select(`
         id, crt, origem, destino, valor, peso, data_coleta, data_entrega,
@@ -58,12 +57,18 @@ serve(async (req) => {
         veiculo:veiculos(id, placa, placa_cavalo, placa_carreta, tipo, fabricante, ano, carretas_vinculadas)
       `)
       .eq('id', cargaId)
-      .single()
-
-    if (cargaError || !cargaData) {
-      throw new Error(cargaError?.message || 'Carga não encontrada.')
+      // .single() REMOVIDO
+    
+    if (cargaError) {
+        throw new Error(cargaError.message);
     }
     
+    if (!cargaResult || cargaResult.length === 0) {
+        throw new Error('Carga não encontrada no banco de dados Supabase. Certifique-se de que a carga foi sincronizada.');
+    }
+    
+    const cargaData = cargaResult[0]; // Pega o primeiro resultado
+
     // 2. Buscar Permisso Internacional (se houver veículo)
     let permissoData = null;
     if (cargaData.veiculo?.id) {
