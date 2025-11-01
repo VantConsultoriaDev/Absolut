@@ -15,6 +15,7 @@ const Contratos: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null); // Estado para rastrear qual contrato está sendo regerado
   
   // Filtros de período (Data de Geração)
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -62,13 +63,13 @@ const Contratos: React.FC = () => {
 
   // 2. Funções de Ação
   
-  const handleRegenerate = async (cargaId: string) => {
-    if (!confirm('Tem certeza que deseja REGERAR este contrato? O PDF existente será substituído com os dados atuais da carga.')) {
+  const handleRegenerate = async (cargaId: string, contratoId: string) => {
+    if (!window.confirm('Tem certeza que deseja REGERAR este contrato? O PDF existente será substituído com os dados atuais da carga.')) {
       return;
     }
-    setLoading(true);
+    setRegeneratingId(contratoId);
     await generateContract(cargaId);
-    setLoading(false);
+    setRegeneratingId(null);
   };
 
   const handleDownload = (url: string, crt: string) => {
@@ -222,7 +223,10 @@ const Contratos: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredContratos.map((contrato) => (
+                filteredContratos.map((contrato) => {
+                  const isRegenerating = regeneratingId === contrato.id;
+                  
+                  return (
                   <tr key={contrato.id} className="table-body-row">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {contrato.crt || '-'}
@@ -259,18 +263,17 @@ const Contratos: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleRegenerate(contrato.cargaId)}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          onClick={() => handleRegenerate(contrato.cargaId, contrato.id)}
+                          disabled={isRegenerating}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                           title="Regerar Contrato"
-                          disabled={loading}
                         >
-                          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                          <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                )})}
             </tbody>
           </table>
         </div>

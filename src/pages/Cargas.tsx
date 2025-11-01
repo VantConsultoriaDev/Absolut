@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   Edit,
   Trash2,
+  FileText, // Adicionado para o botão de contrato
+  FileBadge, // Adicionado para o botão de lote
 } from 'lucide-react';
 
 // Importar componentes modulares e constantes
@@ -90,11 +92,12 @@ const Cargas: React.FC = () => {
     deleteCarga,
     veiculos,
     clientes,
-    createMovimentacao,
     movimentacoes,
+    contratos, // Adicionado
+    generateContract, // Adicionado
+    createMovimentacao,
+    deleteMovimentacao,
     buildMovimentacaoDescription,
-    // generateContract, // Removido
-    deleteMovimentacao, // Adicionado para o undo
   } = useDatabase();
 
   const [showForm, setShowForm] = useState(false);
@@ -144,6 +147,7 @@ const Cargas: React.FC = () => {
   const [showIntegrateModal, setShowIntegrateModal] = useState(false);
   const [integratingCarga, setIntegratingCarga] = useState<Carga | null>(null);
   const [integrateData, setIntegrateData] = useState<IntegrateData>(initialIntegrateData);
+  const [isGeneratingContract, setIsGeneratingContract] = useState(false); // Novo estado para geração
 
   // Delete State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -546,6 +550,44 @@ const Cargas: React.FC = () => {
 
     handleCloseIntegrateModal();
   };
+  
+  // Função para gerar/regerar contrato de uma única carga
+  const handleGenerateContract = async (cargaId: string) => {
+    setIsGeneratingContract(true);
+    await generateContract(cargaId);
+    setIsGeneratingContract(false);
+  };
+  
+  // Função para gerar contratos em lote
+  const handleGeneratePendingContracts = async () => {
+    if (!window.confirm('Deseja gerar contratos para TODAS as cargas que já possuem integração financeira, mas ainda não têm contrato?')) {
+      return;
+    }
+    
+    setIsGeneratingContract(true);
+    
+    const cargasIntegradasSemContrato = cargas.filter(carga => {
+      const isIntegrated = movimentacoes.some(m => m.cargaId === carga.id && m.categoria === 'FRETE');
+      const hasContract = contratos.some(c => c.cargaId === carga.id);
+      return isIntegrated && !hasContract;
+    });
+    
+    if (cargasIntegradasSemContrato.length === 0) {
+      alert('Nenhuma carga integrada sem contrato pendente de geração.');
+      setIsGeneratingContract(false);
+      return;
+    }
+    
+    let successCount = 0;
+    for (const carga of cargasIntegradasSemContrato) {
+      // Usamos generateContract que já faz o upsert (cria ou atualiza)
+      await generateContract(carga.id);
+      successCount++;
+    }
+    
+    alert(`${successCount} contratos gerados com sucesso!`);
+    setIsGeneratingContract(false);
+  };
 
   // Filtering logic
   const filteredCargas = useMemo(() => {
@@ -609,6 +651,17 @@ const Cargas: React.FC = () => {
     }
     return localCompleto;
   };
+  
+  // Função para verificar se a carga está integrada financeiramente
+  const isCargaIntegrated = (cargaId: string) => {
+    // Verifica se existe pelo menos uma movimentação de FRETE associada
+    return movimentacoes.some(m => m.cargaId === cargaId && m.categoria === 'FRETE');
+  };
+  
+  // Função para verificar se o contrato existe
+  const hasContract = (cargaId: string) => {
+    return contratos.some(c => c.cargaId === cargaId);
+  };
 
   return (
     <div className="space-y-6">
@@ -619,6 +672,24 @@ const Cargas: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">Gestão de cargas e transportes</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleGeneratePendingContracts}
+            disabled={isGeneratingContract}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:bg-gray-400"
+            title="Gera contratos para todas as cargas integradas que ainda não possuem contrato."
+          >
+            {isGeneratingContract ? (
+              <>
+                <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                Gerando em Lote...
+              </>
+            ) : (
+              <>
+                <FileBadge className="h-5 w-5 mr-2" />
+                Gerar Contratos Pendentes
+              </>
+            )}
+          </button>
           <button
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
@@ -843,13 +914,7 @@ const Cargas: React.FC = () => {
                   Data Coleta
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Data Entrega
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Valor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Veículo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
@@ -862,12 +927,16 @@ const Cargas: React.FC = () => {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredCargas.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Nenhuma carga encontrada
                   </td>
                 </tr>
               ) : (
-                filteredCargas.map((carga) => (
+                filteredCargas.map((carga) => {
+                  const integrated = isCargaIntegrated(carga.id);
+                  const contractExists = hasContract(carga.id);
+                  
+                  return (
                   <tr key={carga.id} className="table-body-row">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                       {carga.crt || '-'}
@@ -882,29 +951,7 @@ const Cargas: React.FC = () => {
                       {carga.dataColeta ? format(new Date(carga.dataColeta), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                      {carga.dataEntrega ? format(new Date(carga.dataEntrega), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       {formatCurrency(carga.valor || 0)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                      {carga.veiculoId ? 
-                        (() => {
-                          const veiculo = veiculos.find(v => v.id === carga.veiculoId);
-                          if (!veiculo) return 'Veículo não encontrado';
-                          
-                          let placaPrincipal = veiculo.tipo === 'Truck' 
-                            ? veiculo.placa 
-                            : (veiculo.placaCavalo || veiculo.placa);
-                          
-                          if (carga.carretasSelecionadas && carga.carretasSelecionadas.length > 0) {
-                            placaPrincipal += ` + ${carga.carretasSelecionadas.length} Carreta(s)`;
-                          }
-                          
-                          return placaPrincipal;
-                        })() 
-                        : '-'
-                      }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_CONFIG[carga.status as keyof typeof STATUS_CONFIG].color}`}>
@@ -946,14 +993,42 @@ const Cargas: React.FC = () => {
                         >
                           <Link className="h-4 w-4" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleIntegrateFinanceiro(carga)}
-                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
-                          title="Integrar Financeiro"
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </button>
+                        
+                        {/* Botão de Integração Financeira / Contrato */}
+                        {integrated && !contractExists ? (
+                          // Integrado, mas sem contrato: Gerar Contrato
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateContract(carga.id)}
+                            disabled={isGeneratingContract}
+                            className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
+                            title="Gerar Contrato de Frete"
+                          >
+                            <FileText className={`h-4 w-4 ${isGeneratingContract ? 'animate-spin' : ''}`} />
+                          </button>
+                        ) : contractExists ? (
+                          // Contrato existe: Regerar Contrato
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateContract(carga.id)}
+                            disabled={isGeneratingContract}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                            title="Regerar Contrato (Atualizar dados)"
+                          >
+                            <FileText className={`h-4 w-4 ${isGeneratingContract ? 'animate-spin' : ''}`} />
+                          </button>
+                        ) : (
+                          // Não integrado: Integrar Financeiro
+                          <button
+                            type="button"
+                            onClick={() => handleIntegrateFinanceiro(carga)}
+                            className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 p-1 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                            title="Integrar Financeiro"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                          </button>
+                        )}
+                        
                         <button
                           type="button"
                           onClick={() => handleDelete(carga.id)}
@@ -965,8 +1040,7 @@ const Cargas: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                )})}
             </tbody>
           </table>
         </div>
