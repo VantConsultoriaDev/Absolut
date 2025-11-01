@@ -1165,7 +1165,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       // Fallback para dados locais em caso de erro de API
       return contratos;
     }
-  }, [contratos, user]);
+  }, [contratos, user]); // Depende de 'contratos' e 'user'
 
   const generateContract = useCallback(async (cargaId: string) => {
     if (!supabase || !user) {
