@@ -12,16 +12,25 @@ import {
   AlertTriangle,
   DollarSign,
   FileText,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react'
 
 export default function Dashboard() {
-  const { cargas, parceiros, clientes, movimentacoes } = useDatabase()
+  const { cargas, parceiros, clientes, movimentacoes, resetDemoData } = useDatabase()
   const navigate = useNavigate()
 
   const handleStatusClick = (status: string) => {
     // Navegar para a página de cargas com filtro de status
     navigate('/cargas', { state: { filterStatus: status } })
+  }
+  
+  const handleResetData = () => {
+    if (window.confirm('ATENÇÃO: Você tem certeza que deseja resetar todos os dados de demonstração? Esta ação é irreversível e apagará todas as alterações locais.')) {
+      resetDemoData();
+      // Força um refresh para garantir que todos os estados sejam re-inicializados
+      window.location.reload();
+    }
   }
 
   const cargoStats = useMemo(() => {
@@ -73,13 +82,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
-          Dashboard
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Visão geral do seu sistema de gestão
-        </p>
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-50">
+            Dashboard
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Visão geral do seu sistema de gestão
+          </p>
+        </div>
+        
+        {/* Botão de Reset de Dados */}
+        <button
+          onClick={handleResetData}
+          className="btn-danger text-sm px-3 py-2 flex items-center gap-2"
+          title="Resetar todos os dados de demonstração"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Resetar Dados
+        </button>
       </div>
 
       {/* KPI Cards */}
