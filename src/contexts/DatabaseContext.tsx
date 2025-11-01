@@ -650,15 +650,18 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       const results = await Promise.all([
         syncTable('clientes', clientes, (c: Cliente) => ({
           id: c.id, tipo: c.tipo, nome: c.nome, documento: c.documento, email: c.email, telefone: c.telefone, endereco: c.endereco, cidade: c.cidade, estado: c.estado, cep: c.cep, observacoes: c.observacoes, is_active: c.isActive,
+          // Removido avatarUrl, pois não existe no esquema do Supabase
         })),
         syncTable('parceiros', parceiros, (p: Parceiro) => ({
           id: p.id, tipo: p.tipo, nome: p.nome, documento: p.documento, cnh: p.cnh, email: p.email, telefone: p.telefone, endereco: p.endereco, cidade: p.cidade, estado: p.estado, cep: p.cep, observacoes: p.observacoes, is_motorista: p.isMotorista, is_active: p.isActive,
         })),
         syncTable('motoristas', motoristas, (m: Motorista) => ({
           id: m.id, parceiro_id: m.parceiroId, nome: m.nome, cpf: m.cpf, cnh: m.cnh, categoria_cnh: m.categoriaCnh, validade_cnh: m.validadeCnh?.toISOString().split('T')[0], telefone: m.telefone, is_active: m.isActive,
+          // Removido nacionalidade, pois não existe no esquema do Supabase
         })),
         syncTable('permisso_internacional', permissoes, (p: PermissoInternacional) => ({
-          id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, nome_fantasia: p.nomeFantasia, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(), simulado: p.simulado,
+          id: p.id, veiculo_id: p.veiculoId, razao_social: p.razaoSocial, cnpj: p.cnpj, endereco_completo: p.enderecoCompleto, data_consulta: p.dataConsulta.toISOString(),
+          // Removido nome_fantasia e simulado, pois não existem no esquema do Supabase
         })),
         syncTable('veiculos', veiculos, (v: Veiculo) => ({
           id: v.id, parceiro_id: v.parceiroId, placa: v.placa, placa_cavalo: v.placaCavalo, placa_carreta: v.placaCarreta, placa_carreta1: v.placaCarreta1, placa_carreta2: v.placaCarreta2, placa_dolly: v.placaDolly, modelo: v.modelo, fabricante: v.fabricante, ano: v.ano, capacidade: v.capacidade, chassis: v.chassis, carroceria: v.carroceria, tipo: v.tipo, quantidade_carretas: v.quantidadeCarretas, possui_dolly: v.possuiDolly, motorista_vinculado: v.motoristaVinculado, carretas_vinculadas: v.carretasVinculadas, is_active: v.isActive,
@@ -742,7 +745,18 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [contratos])
   
   useEffect(() => {
-    localStorage.setItem('absolut_permissoes', JSON.stringify(permissoes))
+    // Salva apenas os campos que existem no Supabase
+    const permissoesToSave = permissoes.map(p => ({
+        id: p.id,
+        veiculoId: p.veiculoId,
+        razaoSocial: p.razaoSocial,
+        cnpj: p.cnpj,
+        enderecoCompleto: p.enderecoCompleto,
+        dataConsulta: p.dataConsulta,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+    }));
+    localStorage.setItem('absolut_permissoes', JSON.stringify(permissoesToSave))
     
     // Sincroniza permisso com veículos
     setVeiculos(prevVeiculos => prevVeiculos.map(v => ({
