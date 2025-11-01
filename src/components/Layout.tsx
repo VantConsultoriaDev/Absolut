@@ -49,18 +49,26 @@ const Layout: React.FC = () => {
 
   // Handler para o botão Pin (Alterna entre modo Manual e Automático)
   const handlePinToggle = () => {
-    toggleMenuManual(); // Alterna o estado persistente
+    const wasManual = isMenuManual; // Estado antes do toggle
+    const wasExpanded = isExpanded; // Estado visual antes do toggle
+
+    toggleMenuManual(); // Toggles isMenuManual (agora é !wasManual)
     
-    if (isMenuManual) {
-      // Se estava em Manual (isMenuManual=true), vai para Auto (isMenuManual=false)
-      // Deve colapsar
-      setSidebarOpen(false); // Colapsa o estado manual
-      setSidebarCollapsed(true); // Garante que o estado auto comece colapsado
+    if (wasManual) {
+      // Transição: Manual -> Auto (Sempre colapsa e entra em modo hover)
+      setSidebarOpen(false); 
+      setSidebarCollapsed(true); 
     } else {
-      // Se estava em Auto (isMenuManual=false), vai para Manual (isMenuManual=true)
-      // Deve expandir e fixar
-      setSidebarOpen(true); // Expande o estado manual
-      setSidebarCollapsed(false); // Desabilita o colapso automático
+      // Transição: Auto -> Manual (Fixar)
+      if (wasExpanded) {
+        // Se estava expandido (por hover), fixa expandido.
+        setSidebarOpen(true); 
+        setSidebarCollapsed(false); 
+      } else {
+        // Se estava retraído, fixa retraído.
+        setSidebarOpen(false); // Mantém retraído no modo manual
+        setSidebarCollapsed(false); // Desabilita o colapso automático
+      }
     }
   };
 
@@ -206,24 +214,26 @@ const Layout: React.FC = () => {
           <div 
             className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300 ${!isExpanded ? 'flex flex-col items-center' : ''}`}
           >
-            <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center`}>
+            <div className={`w-full flex ${isExpanded ? 'justify-between' : 'justify-center'} items-center flex-col`}>
               
               {/* Botão Pin/Fixar */}
               <button
                 onClick={handlePinToggle}
-                className={`btn-ghost p-2 flex-shrink-0`}
+                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : ''}`}
                 title={isMenuManual ? 'Desafixar Menu (Modo Automático)' : 'Fixar Menu (Modo Manual)'}
               >
                 <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
+                {isExpanded && <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Fixar Menu</span>}
               </button>
               
               {/* Botão de Sair */}
               <button
                 onClick={handleLogout}
-                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? '' : 'ml-auto'}`}
+                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : ''}`}
                 title="Sair"
               >
                 <LogOut className="h-5 w-5" />
+                {isExpanded && <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Sair</span>}
               </button>
             </div>
           </div>
