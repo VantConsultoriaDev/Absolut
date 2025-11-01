@@ -15,7 +15,7 @@ import {
   Briefcase,
   FileBadge,
   Menu as MenuIcon,
-  Pin // Importando o novo ícone
+  Pin 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -139,7 +139,7 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-x-hidden`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50`}
         onMouseEnter={() => {
           if (isAutoMode) {
             setIsHovering(true);
@@ -191,7 +191,7 @@ const Layout: React.FC = () => {
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+          <nav className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}>
             {filteredNavigation.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
               
