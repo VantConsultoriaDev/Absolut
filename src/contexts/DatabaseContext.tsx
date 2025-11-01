@@ -612,10 +612,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         console.error('Supabase ou usuário não estão prontos para sincronização.');
         return false;
     }
-    if (isSynced && !force) {
-        console.log('Sincronização já realizada. Use force=true para forçar.');
-        return true;
-    }
+    // Remove a verificação isSynced && !force para garantir que os dados de demonstração sejam sempre enviados
+    // O upsert garante que apenas as alterações sejam aplicadas.
     
     setIsSyncing(true);
     console.log('Iniciando sincronização de dados de demonstração para o Supabase...');
@@ -700,7 +698,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     } finally {
         setIsSyncing(false);
     }
-  }, [user, isSynced, clientes, parceiros, motoristas, veiculos, permissoes, cargas, movimentacoes, contratos]);
+  }, [user, clientes, parceiros, motoristas, veiculos, permissoes, cargas, movimentacoes, contratos]);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -709,11 +707,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }, [])
 
   // Efeito para sincronizar dados após o login
+  // REMOVIDA A DEPENDÊNCIA isSynced para forçar a sincronização inicial se o usuário estiver logado
   useEffect(() => {
-    if (isAuthenticated && user && !isSynced) {
+    if (isAuthenticated && user) {
       syncDemoDataToSupabase();
     }
-  }, [isAuthenticated, user, isSynced, syncDemoDataToSupabase]);
+  }, [isAuthenticated, user, syncDemoDataToSupabase]);
 
   // Save data to localStorage whenever state changes
   useEffect(() => {
