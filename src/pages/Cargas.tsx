@@ -18,8 +18,6 @@ import {
   AlertTriangle,
   Edit,
   Trash2,
-  // FileText, // Removido
-  // FileBadge, // Removido
 } from 'lucide-react';
 
 // Importar componentes modulares e constantes
@@ -66,7 +64,7 @@ const initialFormData: CargaFormData = {
   status: 'a_coletar'
 };
 
-const initialIntegrateData: IntegrateData = {
+export const initialIntegrateData: IntegrateData = {
   adiantamentoEnabled: false,
   adiantamentoPercentual: '70',
   dataVencimentoAdiantamento: '',
@@ -93,8 +91,6 @@ const Cargas: React.FC = () => {
     veiculos,
     clientes,
     movimentacoes,
-    // contratos, // Removido
-    // generateContract, // Removido
     createMovimentacao,
     deleteMovimentacao,
     buildMovimentacaoDescription,
@@ -551,12 +547,6 @@ const Cargas: React.FC = () => {
     handleCloseIntegrateModal();
   };
   
-  // Função para gerar/regerar contrato de uma única carga (REMOVIDA)
-  // const handleGenerateContract = async (cargaId: string) => { ... };
-  
-  // Função para gerar contratos em lote (REMOVIDA)
-  // const handleGeneratePendingContracts = async () => { ... };
-
   // Filtering logic
   const filteredCargas = useMemo(() => {
     return cargas.filter(carga => {
@@ -626,9 +616,6 @@ const Cargas: React.FC = () => {
     return movimentacoes.some(m => m.cargaId === cargaId && m.categoria === 'FRETE');
   };
   
-  // Função para verificar se o contrato existe (REMOVIDA)
-  // const hasContract = (cargaId: string) => { ... };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -882,7 +869,6 @@ const Cargas: React.FC = () => {
               ) : (
                 filteredCargas.map((carga) => {
                   const integrated = isCargaIntegrated(carga.id);
-                  // const contractExists = hasContract(carga.id); // Removido
                   
                   return (
                   <tr key={carga.id} className="table-body-row">

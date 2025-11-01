@@ -3,6 +3,7 @@ import { X, AlertTriangle } from 'lucide-react';
 import StandardCheckbox from '../StandardCheckbox';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Carga, MovimentacaoFinanceira } from '../../types';
+import { initialIntegrateData } from '../../pages/Cargas'; // Importando a constante
 
 interface IntegrateData {
   adiantamentoEnabled: boolean;
