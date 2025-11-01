@@ -31,9 +31,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
   
+  // Cria o cliente Supabase usando a Service Role Key para ignorar RLS
   const supabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', // Usando Service Role Key para acesso seguro
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', 
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+        }
+    }
   )
 
   try {
@@ -47,7 +54,8 @@ serve(async (req) => {
     }
 
     // 1. Buscar dados da Carga e todas as relações necessárias
-    const { data: cargaResult, error: cargaError } = await supabaseClient
+    // Usando .eq('id', cargaId).single() para garantir que apenas uma linha seja retornada
+    const { data: cargaData, error: cargaError } = await supabaseClient
       .from('cargas')
       .select(`
         id, crt, origem, destino, valor, peso, data_coleta, data_entrega,
@@ -57,18 +65,13 @@ serve(async (req) => {
         veiculo:veiculos(id, placa, placa_cavalo, placa_carreta, tipo, fabricante, ano, carretas_vinculadas)
       `)
       .eq('id', cargaId)
-      // .single() REMOVIDO
+      .single()
     
     if (cargaError) {
-        throw new Error(cargaError.message);
-    }
-    
-    if (!cargaResult || cargaResult.length === 0) {
+        console.error('Erro ao buscar carga:', cargaError.message);
         throw new Error('Carga não encontrada no banco de dados Supabase. Certifique-se de que a carga foi sincronizada.');
     }
     
-    const cargaData = cargaResult[0]; // Pega o primeiro resultado
-
     // 2. Buscar Permisso Internacional (se houver veículo)
     let permissoData = null;
     if (cargaData.veiculo?.id) {
@@ -215,6 +218,7 @@ serve(async (req) => {
       throw new Error(storageError.message)
     }
     
+    // CORREÇÃO: Usar o URL base do Supabase para construir o link público
     const publicUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/contratos/${pdfFileName}`;
 
     // 10. Registrar/Atualizar na tabela contratos_frete
