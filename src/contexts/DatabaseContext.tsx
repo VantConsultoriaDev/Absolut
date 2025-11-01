@@ -504,7 +504,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       case 'veiculos':
         return {
           ...base,
-          parceiro_id: item.parceiroId, placa: item.placa, placa_cavalo: item.placaCavalo, placa_carreta: item.placaCarreta, placa_carreta1: item.placaCarreta1, placa_carreta2: item.placaCarreta2, placa_dolly: item.placaDolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidade_carretas: item.quantidadeCarretas, possui_dolly: item.possuiDolly, motorista_vinculado: item.motoristaVinculado, carretas_vinculadas: item.carretasVinculadas || [], is_active: item.isActive,
+          parceiro_id: item.parceiroId, placa: item.placa, placa_cavalo: item.placaCavalo, placa_carreta: item.placaCarreta, placa_carreta1: item.placaCarreta1, placa_carreta2: item.placaCarreta2, placa_dolly: item.placaDolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidade_carretas: item.quantidadeCarretas, possui_dolly: item.possuiDolly, motorista_vinculado: item.motoristaVinculado, carretas_vinculadas: item.carretasSelecionadas || [], is_active: item.isActive,
         };
       case 'permisso_internacional':
         return {
@@ -558,7 +558,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       case 'veiculos':
         return {
           ...base,
-          parceiroId: item.parceiro_id, placa: item.placa, placaCavalo: item.placa_cavalo, placaCarreta: item.placa_carreta, placaCarreta1: item.placa_carreta1, placaCarreta2: item.placa_carreta2, placaDolly: item.placa_dolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidadeCarretas: item.quantidade_carretas, possuiDolly: item.possui_dolly, motoristaVinculado: item.motorista_vinculado, carretasVinculadas: item.carretas_vinculadas || [], isActive: item.is_active,
+          parceiroId: item.parceiro_id, placa: item.placa, placaCavalo: item.placa_cavalo, placaCarreta: item.placa_carreta, placaCarreta1: item.placa_carreta1, placaCarreta2: item.placa_carreta2, placaDolly: item.placa_dolly, modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, quantidadeCarretas: item.quantidade_carretas, possuiDolly: item.possui_dolly, motoristaVinculado: item.motorista_vinculado, carretasSelecionadas: item.carretas_selecionadas || [], isActive: item.is_active,
         } as Veiculo;
       case 'permisso_internacional':
         return {
@@ -1446,10 +1446,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     const deletedContrato = contratos.find(c => c.id === id);
     setContratos(prev => prev.filter(contrato => contrato.id !== id));
     if (deletedContrato) {
-      // Não há necessidade de syncItemToSupabase('contratos_frete', deletedContrato, 'DELETE')
-      // pois a Edge Function não cria o registro no Supabase, apenas o PDF.
-      // No entanto, se o registro for criado no Supabase, precisamos deletá-lo.
-      // Como o registro é criado na Edge Function, vamos assumir que ele deve ser deletado do Supabase.
       syncItemToSupabase('contratos_frete', deletedContrato, 'DELETE');
     }
     return true;
