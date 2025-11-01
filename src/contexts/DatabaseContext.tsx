@@ -67,6 +67,21 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         isActive: true,
         createdAt: new Date('2024-01-18'),
         updatedAt: new Date('2024-01-18')
+      },
+      {
+        id: 'cliente-3',
+        tipo: 'INTERNACIONAL',
+        nome: 'Global Imports S.A.',
+        documento: '30-71000000-7', // Exemplo CUIT
+        email: 'global@imports.com',
+        telefone: '+54 11 4567-8901',
+        endereco: 'Av. Libertador, 1000',
+        cidade: 'Buenos Aires',
+        estado: 'AR',
+        cep: '1001',
+        isActive: true,
+        createdAt: new Date('2024-01-25'),
+        updatedAt: new Date('2024-01-25')
       }
     ]
 
@@ -92,6 +107,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         nome: 'Carlos Oliveira',
         tipo: 'PF',
         documento: '123.456.789-01',
+        cnh: '98765432101',
         email: 'carlos@email.com',
         telefone: '(11) 9876-5432',
         endereco: 'Av. Paulista, 456',
@@ -102,6 +118,22 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         isMotorista: true,
         createdAt: new Date('2024-01-20'),
         updatedAt: new Date('2024-01-20')
+      },
+      // Parceiro completo para teste de contrato
+      {
+        id: 'parceiro-3',
+        nome: 'Transportes Internacionais LTDA',
+        tipo: 'PJ',
+        documento: '99.888.777/0001-66',
+        email: 'internacional@transporte.com',
+        telefone: '(51) 3333-4444',
+        endereco: 'Av. do Porto, 500',
+        cidade: 'Porto Alegre',
+        estado: 'RS',
+        cep: '90000-000',
+        isActive: true,
+        createdAt: new Date('2024-02-01'),
+        updatedAt: new Date('2024-02-01')
       }
     ]
 
@@ -113,19 +145,46 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         nome: 'José da Silva',
         cpf: '98765432100',
         cnh: '12345678901',
+        nacionalidade: 'Brasileiro',
         categoriaCnh: 'D',
         validadeCnh: new Date('2025-12-31'),
         telefone: '(11) 9999-8888',
         isActive: true,
-        nacionalidade: 'Brasileiro',
         createdAt: new Date('2024-01-12'),
         updatedAt: new Date('2024-01-12')
       },
-      // Carlos Oliveira (parceiro-2) é motorista, mas não está duplicado aqui
+      // Motorista para Parceiro 3
+      {
+        id: 'motorista-2',
+        parceiroId: 'parceiro-3',
+        nome: 'Ricardo Almeida',
+        cpf: '11122233344',
+        cnh: '99887766554',
+        nacionalidade: 'Brasileiro',
+        categoriaCnh: 'E',
+        validadeCnh: new Date('2026-06-15'),
+        telefone: '(51) 98888-7777',
+        isActive: true,
+        createdAt: new Date('2024-02-05'),
+        updatedAt: new Date('2024-02-05')
+      }
     ]
     
-    // Demo permisso (vazio inicialmente)
-    const demoPermissoes: PermissoInternacional[] = [];
+    // Demo permisso
+    const demoPermissoes: PermissoInternacional[] = [
+      {
+        id: 'permisso-1',
+        veiculoId: 'veiculo-3', // Vinculado ao Cavalo
+        razaoSocial: 'TRANSPORTES INTERNACIONAIS LTDA',
+        nomeFantasia: 'TransInter',
+        cnpj: '99888777000166',
+        enderecoCompleto: 'Av. do Porto, 500 - Centro - Porto Alegre - RS - Brasil',
+        dataConsulta: new Date('2024-07-25'),
+        simulado: false,
+        createdAt: new Date('2024-07-25'),
+        updatedAt: new Date('2024-07-25')
+      }
+    ];
 
     // Demo veículos
     const demoVeiculos: Veiculo[] = [
@@ -154,6 +213,37 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         isActive: true,
         createdAt: new Date('2024-01-20'),
         updatedAt: new Date('2024-01-20')
+      },
+      // Veículo Cavalo para teste de contrato
+      {
+        id: 'veiculo-3',
+        parceiroId: 'parceiro-3',
+        placaCavalo: 'IJK9012',
+        placa: 'IJK9012',
+        fabricante: 'Scania',
+        modelo: 'R450',
+        ano: 2022,
+        capacidade: 40000,
+        tipo: 'Cavalo',
+        isActive: true,
+        createdAt: new Date('2024-02-05'),
+        updatedAt: new Date('2024-02-05'),
+        permisso: demoPermissoes[0] // Vincula o permisso
+      },
+      // Carreta 1 para teste de contrato
+      {
+        id: 'carreta-1',
+        parceiroId: 'parceiro-3',
+        placaCarreta: 'MNO3456',
+        placa: 'MNO3456',
+        fabricante: 'Randon',
+        modelo: 'SR FG',
+        ano: 2021,
+        capacidade: 20000,
+        tipo: 'Carreta',
+        isActive: true,
+        createdAt: new Date('2024-02-05'),
+        updatedAt: new Date('2024-02-05')
       }
     ]
 
@@ -199,6 +289,63 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         isPago: false,
         createdAt: new Date('2024-01-22'),
         updatedAt: new Date('2024-01-22')
+      },
+      // Movimentações para Carga de Contrato (Split 70/30 + Extras)
+      {
+        id: 'mov-4',
+        tipo: 'despesa',
+        valor: 7000.00, // 70% de 10000
+        descricao: 'Adto - CRT-INT - Buenos Aires - Ricardo Almeida',
+        categoria: 'FRETE',
+        data: new Date('2024-07-20'),
+        status: 'pendente',
+        parceiroId: 'parceiro-3',
+        cargaId: 'carga-3',
+        isPago: false,
+        createdAt: new Date('2024-07-20'),
+        updatedAt: new Date('2024-07-20')
+      },
+      {
+        id: 'mov-5',
+        tipo: 'despesa',
+        valor: 3000.00, // 30% de 10000
+        descricao: 'Saldo - CRT-INT - Buenos Aires - Ricardo Almeida',
+        categoria: 'FRETE',
+        data: new Date('2024-07-30'),
+        status: 'pendente',
+        parceiroId: 'parceiro-3',
+        cargaId: 'carga-3',
+        isPago: false,
+        createdAt: new Date('2024-07-20'),
+        updatedAt: new Date('2024-07-20')
+      },
+      {
+        id: 'mov-6',
+        tipo: 'despesa',
+        valor: 500.00, // Diárias
+        descricao: 'Diárias - CRT-INT - Buenos Aires - Ricardo Almeida',
+        categoria: 'DIARIA',
+        data: new Date('2024-07-20'),
+        status: 'pendente',
+        parceiroId: 'parceiro-3',
+        cargaId: 'carga-3',
+        isPago: false,
+        createdAt: new Date('2024-07-20'),
+        updatedAt: new Date('2024-07-20')
+      },
+      {
+        id: 'mov-7',
+        tipo: 'despesa',
+        valor: 200.00, // Despesas Adicionais
+        descricao: 'Despesas Adicionais - CRT-INT - Buenos Aires - Ricardo Almeida',
+        categoria: 'OUTRAS DESPESAS',
+        data: new Date('2024-07-20'),
+        status: 'pendente',
+        parceiroId: 'parceiro-3',
+        cargaId: 'carga-3',
+        isPago: false,
+        createdAt: new Date('2024-07-20'),
+        updatedAt: new Date('2024-07-20')
       }
     ]
 
@@ -209,7 +356,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         descricao: 'Produtos eletrônicos',
         origem: 'São Paulo - SP',
         destino: 'Rio de Janeiro - RJ',
-        peso: 5000,
+        peso: 5.0, // 5 toneladas
         valor: 25000.00,
         dataColeta: new Date('2024-01-15'),
         dataEntrega: new Date('2024-01-16'),
@@ -226,7 +373,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         descricao: 'Materiais de construção',
         origem: 'São Paulo - SP',
         destino: 'Campinas - SP',
-        peso: 3200,
+        peso: 3.2, // 3.2 toneladas
         valor: 8500.00,
         dataColeta: new Date('2024-01-22'),
         dataEntrega: new Date('2024-01-22'),
@@ -237,6 +384,27 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         crt: 'BR723',
         createdAt: new Date('2024-01-21'),
         updatedAt: new Date('2024-01-22')
+      },
+      // Carga Internacional completa para teste de contrato
+      {
+        id: 'carga-3',
+        descricao: 'Carga de Exportação para Argentina',
+        origem: 'Porto Alegre - RS',
+        destino: 'Buenos Aires', // Destino Internacional
+        peso: 25.5, // 25.5 toneladas
+        valor: 10000.00, // Valor base do frete
+        dataColeta: new Date('2024-07-20'),
+        dataEntrega: new Date('2024-07-25'),
+        status: 'em_transito',
+        clienteId: 'cliente-3',
+        parceiroId: 'parceiro-3',
+        motoristaId: 'motorista-2',
+        veiculoId: 'veiculo-3',
+        carretasSelecionadas: ['carreta-1'],
+        crt: 'CRT-INT',
+        observacoes: 'Carga de alto valor, requer atenção especial na fronteira.',
+        createdAt: new Date('2024-07-19'),
+        updatedAt: new Date('2024-07-20')
       }
     ]
     
@@ -416,7 +584,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return '';
   };
 
-  const buildMovimentacaoDescription = (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete'): string => {
+  const buildMovimentacaoDescription = useCallback((carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete'): string => {
     const localDisplay = carga.destino.toLowerCase() === 'internacional' 
       ? carga.destino 
       : carga.destino.includes(' - ') 
@@ -430,7 +598,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
 
     // Formato: "{Tipo} - {CRT} - {Cidade Destino} - {Motorista Vinculado}"
     return `${prefix} - ${crtDisplay} - ${localDisplay}${motoristaSufixo}`;
-  };
+  }, [getMotoristaName]);
 
   // Função de sincronização refatorada para usar o estado atualizado
   const syncMovimentacoesForCarga = useCallback((cargaId: string, currentCargas: Carga[], currentMovimentacoes: MovimentacaoFinanceira[]) => {
