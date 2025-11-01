@@ -53,31 +53,35 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
 }) => {
   if (!isOpen || !integratingCarga) return null;
 
-  const { hasAdiantamento, hasSaldo, isFullyIntegrated } = useMemo(() => {
-    const relatedMovs = movimentacoes.filter(m => m.cargaId === integratingCarga.id);
+  const { hasAdiantamento, hasSaldo, hasFreteUnico, isFullyIntegrated } = useMemo(() => {
+    const relatedMovs = movimentacoes.filter(m => m.cargaId === integratingCarga.id && m.categoria === 'FRETE');
     const adto = relatedMovs.some(m => m.descricao.startsWith('Adto -'));
     const saldo = relatedMovs.some(m => m.descricao.startsWith('Saldo -'));
-    const frete = relatedMovs.some(m => m.descricao.startsWith('Frete -'));
+    const freteUnico = relatedMovs.some(m => m.descricao.startsWith('Frete -'));
     
-    // Se houver Adiantamento E Saldo, está totalmente integrado (split)
-    if (adto && saldo) return { hasAdiantamento: true, hasSaldo: true, isFullyIntegrated: true };
+    // Considera totalmente integrado se houver Frete Único OU Adto E Saldo
+    const fullyIntegrated = freteUnico || (adto && saldo);
     
-    // Se houver apenas Frete (lançamento único), está totalmente integrado (sem split)
-    if (frete) return { hasAdiantamento: false, hasSaldo: false, isFullyIntegrated: true };
-    
-    return { hasAdiantamento: adto, hasSaldo: saldo, isFullyIntegrated: false };
+    return { hasAdiantamento: adto, hasSaldo: saldo, hasFreteUnico: freteUnico, isFullyIntegrated: fullyIntegrated };
   }, [movimentacoes, integratingCarga]);
 
   // Ajusta o estado inicial da modal com base no que já foi lançado
   React.useEffect(() => {
     if (isOpen && integratingCarga) {
-      if (hasAdiantamento && !hasSaldo) {
+      if (hasFreteUnico) {
+        // Se já tem Frete Único, desabilita tudo
+        setIntegrateData(prev => ({
+          ...prev,
+          adiantamentoEnabled: false,
+          despesasEnabled: false,
+          diariasEnabled: false,
+        }));
+      } else if (hasAdiantamento && !hasSaldo) {
         // Se só tem Adiantamento, força o lançamento de Saldo
         setIntegrateData(prev => ({
           ...prev,
           adiantamentoEnabled: true,
           splitOption: 'saldo',
-          // Mantém o percentual original para cálculo do saldo
         }));
       } else if (hasSaldo && !hasAdiantamento) {
         // Se só tem Saldo, força o lançamento de Adiantamento
@@ -86,17 +90,21 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
           adiantamentoEnabled: true,
           splitOption: 'adiantamento',
         }));
-      } else if (isFullyIntegrated) {
-        // Se já está totalmente integrado (Adto+Saldo ou Frete Único), desabilita o formulário
+      } else if (hasAdiantamento && hasSaldo) {
+        // Se já tem Adiantamento E Saldo, desabilita tudo
         setIntegrateData(prev => ({
           ...prev,
-          adiantamentoEnabled: false,
+          adiantamentoEnabled: true, // Mantém habilitado para mostrar os valores
+          splitOption: 'ambos',
           despesasEnabled: false,
           diariasEnabled: false,
         }));
+      } else {
+        // Estado inicial (nada lançado)
+        setIntegrateData(initialIntegrateData);
       }
     }
-  }, [isOpen, integratingCarga, hasAdiantamento, hasSaldo, isFullyIntegrated, setIntegrateData]);
+  }, [isOpen, integratingCarga, hasAdiantamento, hasSaldo, hasFreteUnico, setIntegrateData]);
 
 
   const calcularValorBRL = useMemo(() => {
@@ -171,10 +179,10 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
     if (integrateData.splitOption === 'ambos' && (hasAdiantamento || hasSaldo)) return true;
     
     // Se for lançamento único (sem adiantamento habilitado), mas já existe qualquer lançamento
-    if (!integrateData.adiantamentoEnabled && (hasAdiantamento || hasSaldo)) return true;
+    if (!integrateData.adiantamentoEnabled && (hasAdiantamento || hasSaldo || hasFreteUnico)) return true;
     
     return false;
-  }, [isFullyIntegrated, integrateData.splitOption, integrateData.adiantamentoEnabled, hasAdiantamento, hasSaldo]);
+  }, [isFullyIntegrated, integrateData.splitOption, integrateData.adiantamentoEnabled, hasAdiantamento, hasSaldo, hasFreteUnico]);
 
 
   return (
@@ -192,7 +200,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
         <div className="p-6">
           {isFullyIntegrated && (
             <div className="p-4 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-3" />
+              <AlertTriangle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
               <p className="text-sm text-red-700 dark:text-red-400">
                 Esta carga já está totalmente integrada ao financeiro.
               </p>
@@ -202,7 +210,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
           {/* Aviso de Lançamento Parcial */}
           {(hasAdiantamento && !hasSaldo) && (
             <div className="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
               <p className="text-sm text-yellow-700 dark:text-yellow-400">
                 Apenas o Adiantamento foi lançado. Você pode lançar o Saldo agora.
               </p>
@@ -210,7 +218,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
           )}
           {(hasSaldo && !hasAdiantamento) && (
             <div className="p-4 mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
               <p className="text-sm text-yellow-700 dark:text-yellow-400">
                 Apenas o Saldo foi lançado. Você pode lançar o Adiantamento agora.
               </p>
@@ -231,6 +239,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                         handleDataChange('splitOption', 'ambos');
                     }
                   }}
+                  disabled={hasFreteUnico} // Não pode habilitar se já tem frete único
                 />
               </div>
               
@@ -360,6 +369,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                   label="Despesas Adicionais (Incluir despesas em pesos argentinos com conversão automática)"
                   checked={integrateData.despesasEnabled}
                   onChange={(checked) => handleDataChange('despesasEnabled', checked)}
+                  disabled={hasFreteUnico}
                 />
               </div>
               
@@ -444,6 +454,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
                   label="Diárias (Incluir valor de diárias em reais)"
                   checked={integrateData.diariasEnabled}
                   onChange={(checked) => handleDataChange('diariasEnabled', checked)}
+                  disabled={hasFreteUnico}
                 />
               </div>
               

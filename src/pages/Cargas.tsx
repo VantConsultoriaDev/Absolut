@@ -567,9 +567,13 @@ const Cargas: React.FC = () => {
     setIsGeneratingContract(true);
     
     const cargasIntegradasSemContrato = cargas.filter(carga => {
+      // Verifica se existe pelo menos uma movimentação de FRETE associada
       const isIntegrated = movimentacoes.some(m => m.cargaId === carga.id && m.categoria === 'FRETE');
-      const hasContract = contratos.some(c => c.cargaId === carga.id);
-      return isIntegrated && !hasContract;
+      // Verifica se o contrato não existe ou se o PDF URL está vazio (simulando exclusão)
+      const hasContractRecord = contratos.some(c => c.cargaId === carga.id);
+      
+      // Se estiver integrado E não tiver registro de contrato, ou se o registro existir mas o PDF estiver 'vazio' (não podemos verificar o URL aqui, então confiamos no hasContract)
+      return isIntegrated && !hasContractRecord;
     });
     
     if (cargasIntegradasSemContrato.length === 0) {
@@ -995,25 +999,14 @@ const Cargas: React.FC = () => {
                         </button>
                         
                         {/* Botão de Integração Financeira / Contrato */}
-                        {integrated && !contractExists ? (
-                          // Integrado, mas sem contrato: Gerar Contrato
+                        {integrated ? (
+                          // Integrado: Gerar/Regerar Contrato
                           <button
                             type="button"
                             onClick={() => handleGenerateContract(carga.id)}
                             disabled={isGeneratingContract}
                             className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
-                            title="Gerar Contrato de Frete"
-                          >
-                            <FileText className={`h-4 w-4 ${isGeneratingContract ? 'animate-spin' : ''}`} />
-                          </button>
-                        ) : contractExists ? (
-                          // Contrato existe: Regerar Contrato
-                          <button
-                            type="button"
-                            onClick={() => handleGenerateContract(carga.id)}
-                            disabled={isGeneratingContract}
-                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                            title="Regerar Contrato (Atualizar dados)"
+                            title={contractExists ? "Regerar Contrato (Atualizar dados)" : "Gerar Contrato de Frete"}
                           >
                             <FileText className={`h-4 w-4 ${isGeneratingContract ? 'animate-spin' : ''}`} />
                           </button>
