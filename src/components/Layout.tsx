@@ -233,7 +233,7 @@ const Layout: React.FC = () => {
                 title={isMenuManual ? 'Desafixar Menu (Modo Automático)' : 'Fixar Menu (Modo Manual)'}
               >
                 <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
-                {isExpanded && <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">Fixar Menu</span>}
+                {/* Texto removido */}
               </button>
               
               {/* Botão de Sair */}
