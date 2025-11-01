@@ -15,7 +15,8 @@ import {
   Users,
   RotateCcw,
   Cloud,
-  Loader2
+  Loader2,
+  RefreshCw // Adicionado
 } from 'lucide-react'
 
 export default function Dashboard() {
