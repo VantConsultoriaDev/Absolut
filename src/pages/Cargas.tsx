@@ -19,7 +19,7 @@ import {
   Edit,
   Trash2,
   FileText, // Adicionado para o botão de contrato
-  FileBadge, // Adicionado para o botão de lote
+  // FileBadge, // Removido
 } from 'lucide-react';
 
 // Importar componentes modulares e constantes
@@ -558,40 +558,8 @@ const Cargas: React.FC = () => {
     setIsGeneratingContract(false);
   };
   
-  // Função para gerar contratos em lote
-  const handleGeneratePendingContracts = async () => {
-    if (!window.confirm('Deseja gerar contratos para TODAS as cargas que já possuem integração financeira, mas ainda não têm contrato?')) {
-      return;
-    }
-    
-    setIsGeneratingContract(true);
-    
-    const cargasIntegradasSemContrato = cargas.filter(carga => {
-      // Verifica se existe pelo menos uma movimentação de FRETE associada
-      const isIntegrated = movimentacoes.some(m => m.cargaId === carga.id && m.categoria === 'FRETE');
-      // Verifica se o contrato não existe ou se o PDF URL está vazio (simulando exclusão)
-      const hasContractRecord = contratos.some(c => c.cargaId === carga.id);
-      
-      // Se estiver integrado E não tiver registro de contrato, ou se o registro existir mas o PDF estiver 'vazio' (não podemos verificar o URL aqui, então confiamos no hasContract)
-      return isIntegrated && !hasContractRecord;
-    });
-    
-    if (cargasIntegradasSemContrato.length === 0) {
-      alert('Nenhuma carga integrada sem contrato pendente de geração.');
-      setIsGeneratingContract(false);
-      return;
-    }
-    
-    let successCount = 0;
-    for (const carga of cargasIntegradasSemContrato) {
-      // Usamos generateContract que já faz o upsert (cria ou atualiza)
-      await generateContract(carga.id);
-      successCount++;
-    }
-    
-    alert(`${successCount} contratos gerados com sucesso!`);
-    setIsGeneratingContract(false);
-  };
+  // Função para gerar contratos em lote (REMOVIDA DAQUI)
+  // const handleGeneratePendingContracts = async () => { ... };
 
   // Filtering logic
   const filteredCargas = useMemo(() => {
@@ -676,24 +644,7 @@ const Cargas: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400">Gestão de cargas e transportes</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={handleGeneratePendingContracts}
-            disabled={isGeneratingContract}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:bg-gray-400"
-            title="Gera contratos para todas as cargas integradas que ainda não possuem contrato."
-          >
-            {isGeneratingContract ? (
-              <>
-                <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                Gerando em Lote...
-              </>
-            ) : (
-              <>
-                <FileBadge className="h-5 w-5 mr-2" />
-                Gerar Contratos Pendentes
-              </>
-            )}
-          </button>
+          {/* Botão de lote removido daqui */}
           <button
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
@@ -751,7 +702,7 @@ const Cargas: React.FC = () => {
             <button
               type="button"
               onClick={(e) => {
-                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                const rect = e.currentTarget.getBoundingClientRect();
                 setColetaCalendarPosition({
                   top: rect.bottom + window.scrollY + 5,
                   left: rect.left + window.scrollX
@@ -782,7 +733,7 @@ const Cargas: React.FC = () => {
             <button
               type="button"
               onClick={(e) => {
-                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                const rect = e.currentTarget.getBoundingClientRect();
                 setEntregaCalendarPosition({
                   top: rect.bottom + window.scrollY + 5,
                   left: rect.left + window.scrollX

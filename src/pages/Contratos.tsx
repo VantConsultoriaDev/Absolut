@@ -2,13 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, RefreshCw, Search, AlertTriangle, Download, Calendar } from 'lucide-react';
+import { FileText, RefreshCw, Search, AlertTriangle, Download, Calendar, FileBadge } from 'lucide-react';
 import { PDFService } from '../services/pdfService';
 import RangeCalendar from '../components/RangeCalendar';
 
 const Contratos: React.FC = () => {
   const { 
     contratos, 
+    cargas, // Necessário para verificar integração
+    movimentacoes, // Necessário para verificar integração
     getContracts, 
     generateContract,
   } = useDatabase();
@@ -16,6 +18,7 @@ const Contratos: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null); // Estado para rastrear qual contrato está sendo regerado
+  const [isGeneratingContract, setIsGeneratingContract] = useState(false); // Estado para geração em lote
   
   // Filtros de período (Data de Geração)
   const [filterStartDate, setFilterStartDate] = useState('');
@@ -79,6 +82,43 @@ const Contratos: React.FC = () => {
   const handleView = (url: string) => {
     window.open(url, '_blank');
   };
+  
+  // Função para gerar contratos em lote (MOVIDA PARA CÁ)
+  const handleGeneratePendingContracts = async () => {
+    if (!window.confirm('Deseja gerar contratos para TODAS as cargas que já possuem integração financeira, mas ainda não têm contrato?')) {
+      return;
+    }
+    
+    setIsGeneratingContract(true);
+    
+    const cargasIntegradasSemContrato = cargas.filter(carga => {
+      // 1. Verifica se existe pelo menos uma movimentação de FRETE associada (Integrada)
+      const isIntegrated = movimentacoes.some(m => m.cargaId === carga.id && m.categoria === 'FRETE');
+      
+      // 2. Verifica se o contrato NÃO existe
+      const hasContractRecord = contratos.some(c => c.cargaId === carga.id);
+      
+      // Se estiver integrado E não tiver registro de contrato
+      return isIntegrated && !hasContractRecord;
+    });
+    
+    if (cargasIntegradasSemContrato.length === 0) {
+      alert('Nenhuma carga integrada sem contrato pendente de geração.');
+      setIsGeneratingContract(false);
+      return;
+    }
+    
+    let successCount = 0;
+    for (const carga of cargasIntegradasSemContrato) {
+      // Usamos generateContract que já faz o upsert (cria ou atualiza)
+      await generateContract(carga.id);
+      successCount++;
+    }
+    
+    alert(`${successCount} contratos gerados com sucesso!`);
+    setIsGeneratingContract(false);
+  };
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -88,6 +128,26 @@ const Contratos: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contratos de Frete</h1>
           <p className="text-gray-600 dark:text-gray-400">Contratos gerados automaticamente após a integração financeira das cargas.</p>
         </div>
+        
+        {/* Botão de Geração em Lote */}
+        <button
+            onClick={handleGeneratePendingContracts}
+            disabled={isGeneratingContract}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:bg-gray-400"
+            title="Gera contratos para todas as cargas integradas que ainda não possuem contrato."
+          >
+            {isGeneratingContract ? (
+              <>
+                <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                Gerando em Lote...
+              </>
+            ) : (
+              <>
+                <FileBadge className="h-5 w-5 mr-2" />
+                Gerar Contratos Pendentes
+              </>
+            )}
+          </button>
       </div>
 
       {/* Filtros */}
