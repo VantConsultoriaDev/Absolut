@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { useModal } from '../hooks/useModal';
 import { XCircle, CheckCircle, AlertTriangle, X, Plus, Edit, Trash2, User, Truck, Briefcase, Mail, Phone, MapPin, Calendar, FileText } from 'lucide-react';
@@ -36,6 +37,7 @@ const getInitials = (name: string) => {
 };
 
 export default function Parceiros() {
+  const location = useLocation();
   const { 
     parceiros, 
     motoristas, 
@@ -199,6 +201,30 @@ export default function Parceiros() {
     isOpen: showVeiculoForm,
     onClose: resetVeiculoForm
   });
+
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      // Fechar modais e limpar formulários
+      resetParceiroForm();
+      resetMotoristaForm();
+      resetVeiculoForm();
+
+      // Fechar modal de permisso e limpar estados relacionados
+      setShowPermissoModal(false);
+      setPermissoTargetVeiculo(null);
+      setExistingPermisso(null);
+
+      // Resetar seleção e aba ativa
+      setSelectedParceiro(null);
+      setActiveTab('motoristas');
+
+      // Limpar filtros e busca
+      setSearchTerm('');
+      setFilterTipo('');
+      setFilterStatus('');
+    }
+  }, [location.state]);
 
   // Filtrar parceiros
   const filteredParceiros = useMemo(() => {
@@ -1290,9 +1316,9 @@ export default function Parceiros() {
                         <input
                           type="text"
                           value={parceiroForm.telefone}
-                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: e.target.value })}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: formatContact(e.target.value) })}
                           className="input-field"
-                          placeholder="(00) 00000-0000"
+                          placeholder="Ex: +55 11 9 8765-4321 ou (11) 98765-4321"
                         />
                       </div>
 
@@ -1421,9 +1447,9 @@ export default function Parceiros() {
                         <input
                           type="text"
                           value={parceiroForm.telefone}
-                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: e.target.value })}
+                          onChange={(e) => setParceiroForm({ ...parceiroForm, telefone: formatContact(e.target.value) })}
                           className="input-field"
-                          placeholder="(00) 00000-0000"
+                          placeholder="Ex: +55 11 9 8765-4321 ou (11) 98765-4321"
                         />
                       </div>
 

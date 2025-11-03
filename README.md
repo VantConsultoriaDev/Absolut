@@ -118,6 +118,38 @@ O sistema utiliza a autenticação padrão do Supabase (email/senha). O acesso �
 ## 🌙 Tema Escuro
 
 - Suporte completo a tema escuro
+
+## ⚙️ Configuração do Supabase
+
+### 1) Variáveis de ambiente
+- Crie `/.env.local` na raiz (já incluído) e preencha:
+  - `VITE_SUPABASE_URL=https://<seu-project-ref>.supabase.co`
+  - `VITE_SUPABASE_ANON_KEY=<sua-anon-public-key>`
+- Reinicie o dev server após salvar.
+
+### 2) Banco de dados e Storage
+- Acesse o SQL Editor do Supabase e execute `supabase_tables.sql` (incluso no repositório). Esse script cria:
+  - Tabelas principais (`clientes`, `parceiros`, `motoristas`, `veiculos`, `movimentacoes_financeiras`, `cargas`)
+  - Tabela `contratos_frete` com RLS e trigger de `updated_at`
+  - Bucket de Storage público `contratos` para PDFs
+
+### 3) Edge Function de contratos
+- Pré-requisitos: Supabase CLI instalado
+  - `npm i -g supabase`
+  - `supabase login` (abre o navegador)
+- Deploy:
+  - `cd supabase/functions/generate-contract`
+  - `supabase functions deploy generate-contract --project-ref <seu-project-ref>`
+- A app chama via SDK: `supabase.functions.invoke('generate-contract', ...)`.
+
+### 4) Validação
+- Faça login com credenciais do Supabase na página `Login`.
+- No `Dashboard`, clique em “Sincronizar” para fazer o PULL.
+- Na página `Contratos`, teste “Gerar Contratos Pendentes”, “Regenerar”, “Visualizar” e “Baixar”.
+
+### 5) Dicas
+- Use uma única porta do dev server (ex.: `http://localhost:3002`). Sessões/estado são por origem.
+- Em produção, recomenda-se RLS por usuário: `USING (user_id = auth.uid())` nas tabelas.
 - Transições suaves entre temas
 - Persistência da preferência do usuário
 - Cores otimizadas para ambos os temas

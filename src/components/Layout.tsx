@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
@@ -14,11 +14,47 @@ import {
   FileText,
   Briefcase,
   FileBadge,
-  Pin 
+  Pin, 
+  UserCircle,
+  User 
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import ProfileModal from './ProfileModal';
 // StandardCheckbox não é mais necessário aqui
+
+// Label com rolagem horizontal (marquee) quando texto estiver truncado
+const MarqueeLabel: React.FC<{ text: string; isExpanded: boolean }> = ({ text, isExpanded }) => {
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const [distance, setDistance] = useState(0);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const el = spanRef.current;
+    if (!el) return;
+    // Calcula o quanto o texto ultrapassa a largura disponível
+    const diff = el.scrollWidth - el.clientWidth;
+    if (diff > 2) {
+      setDistance(diff);
+      setActive(true);
+    } else {
+      setDistance(0);
+      setActive(false);
+    }
+  }, [text, isExpanded]);
+
+  return (
+    <div className={`transition-all duration-300 ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'} marquee-container`}> 
+      <span
+        ref={spanRef}
+        className={`marquee-text ${active ? 'marquee-active' : ''}`}
+        style={{ ['--marquee-distance' as any]: `${distance}px` }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+};
 
 const Layout: React.FC = () => {
   // sidebarOpen: Usado para Mobile E para o estado de expansão no MODO MANUAL (Desktop)
@@ -30,6 +66,8 @@ const Layout: React.FC = () => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme, isMenuManual, toggleMenuManual } = useTheme(); 
   const location = useLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // Determina se o menu está no modo automático (expansão por hover)
   const isAutoMode = !isMenuManual;
@@ -97,6 +135,7 @@ const Layout: React.FC = () => {
   };
   
   return (
+    <>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -135,6 +174,7 @@ const Layout: React.FC = () => {
               <Link
                 key={item.name}
                 to={item.href}
+                state={{ resetModule: true }}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
@@ -153,7 +193,7 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-y-hidden`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${menuWidthClass} z-50 overflow-hidden`}
         // O contêiner principal controla a persistência do hover (isHovering)
         onMouseEnter={() => {
           if (isAutoMode) {
@@ -182,7 +222,7 @@ const Layout: React.FC = () => {
           
           {/* Navigation - Gatilho de Expansão */}
           <nav 
-            className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            className={`flex-1 space-y-1 px-3 py-4 ${isExpanded ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden'}`}
             onMouseEnter={() => {
               // Expande apenas se estiver no modo automático E colapsado
               if (isAutoMode && sidebarCollapsed) {
@@ -203,17 +243,16 @@ const Layout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
+                  state={{ resetModule: true }}
                   title={!isExpanded ? item.name : undefined}
                   className={`group flex items-center rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-red-50 dark:bg-red-900/30'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-                  } ${!isExpanded ? 'justify-center p-3' : 'px-4 py-3 gap-3'}`}
+                  } px-4 py-3 gap-3 justify-start`}
                 >
                   <IconComponent className={`h-5 w-5 flex-shrink-0 ${iconColorClasses}`} />
-                  <span className={`transition-all duration-300 ${!isExpanded ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 whitespace-nowrap'}`}>
-                    {item.name}
-                  </span>
+                  <MarqueeLabel text={item.name} isExpanded={isExpanded} />
                   {isExpanded && isActive && <ChevronRight className="h-4 w-4 ml-auto text-red-700 dark:text-red-300" />}
                 </Link>
               );
@@ -224,25 +263,15 @@ const Layout: React.FC = () => {
           <div 
             className={`border-t border-slate-200 dark:border-slate-800 p-4 transition-all duration-300`}
           >
-            <div className={`w-full flex flex-col ${!isExpanded ? 'items-center' : 'items-start'}`}>
+            <div className={`w-full flex flex-col items-start`}>
               
               {/* Botão Pin/Fixar */}
               <button
                 onClick={handlePinToggle}
-                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : 'justify-center'}`}
+                className={`btn-ghost p-2 flex-shrink-0 w-full flex justify-start`}
                 title={isMenuManual ? 'Desafixar Menu (Modo Automático)' : 'Fixar Menu (Modo Manual)'}
               >
                 <Pin className={`h-5 w-5 ${isMenuManual ? 'text-red-600' : 'text-slate-400'}`} />
-              </button>
-              
-              {/* Botão de Sair */}
-              <button
-                onClick={handleLogout}
-                className={`btn-ghost p-2 flex-shrink-0 ${isExpanded ? 'w-full flex justify-start' : 'justify-center'}`}
-                title="Sair"
-              >
-                <LogOut className="h-5 w-5" />
-                {/* Removido o texto 'Sair' */}
               </button>
             </div>
           </div>
@@ -267,30 +296,80 @@ const Layout: React.FC = () => {
             {/* Conteúdo removido */}
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-2 lg:gap-4">
-            {/* Theme Toggle */}
+          {/* Right Actions: Avatar com menu */}
+          <div className="relative">
             <button
-              onClick={toggleTheme}
-              className="btn-ghost p-2"
-              aria-label="Toggle theme"
-              title={isDark ? 'Modo claro' : 'Modo escuro'}
+              onClick={() => setProfileOpen((v) => !v)}
+              className="btn-ghost p-1 rounded-full"
+              aria-label="Abrir menu do perfil"
+              title={user?.name || user?.email || 'Perfil'}
             >
-              {isDark ? (
-                <Sun className="h-5 w-5 text-amber-500" />
+              {user && (user as any)?.avatarUrl ? (
+                <img
+                  src={(user as any).avatarUrl}
+                  alt="Avatar"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
               ) : (
-                <Moon className="h-5 w-5 text-slate-600" />
+                <UserCircle className="h-8 w-8" />
               )}
             </button>
 
-            {/* User Menu (Mobile/Desktop) */}
-            <button
-              onClick={handleLogout}
-              className="btn-ghost p-2"
-              title="Sair"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
+            {profileOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40"
+                  onClick={() => setProfileOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 z-50 card w-56 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{user?.name || 'Usuário'}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || ''}</p>
+                  </div>
+                  <div className="py-2">
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 text-sm flex items-center gap-2"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setProfileModalOpen(true);
+                      }}
+                    >
+                      <User className="h-4 w-4" />
+                      Meus Dados
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 text-sm flex items-center gap-2"
+                      onClick={() => {
+                        toggleTheme();
+                        setProfileOpen(false);
+                      }}
+                    >
+                      {isDark ? (
+                        <>
+                          <Sun className="h-4 w-4" />
+                          Tema Claro
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="h-4 w-4" />
+                          Tema Escuro
+                        </>
+                      )}
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 text-sm text-red-600 dark:text-red-400 flex items-center gap-2"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        handleLogout();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -304,6 +383,9 @@ const Layout: React.FC = () => {
         </main>
       </div>
     </div>
+    {/* Modal Meus Dados */}
+    <ProfileModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
+    </>
   );
 };
 

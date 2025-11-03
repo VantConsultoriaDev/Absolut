@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
-import { formatDocument } from '../utils/formatters'
+import { formatDocument, formatContact } from '../utils/formatters'
 import { Plus, Edit, Trash2, Search, Building2, User, Globe, Mail, Phone, Image, X as CloseIcon } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { useModal } from '../hooks/useModal' // Importando useModal
 
 const Clientes: React.FC = () => {
+  const location = useLocation()
   const { clientes, createCliente, updateCliente, deleteCliente } = useDatabase()
 
   const [showForm, setShowForm] = useState(false)
@@ -41,6 +43,21 @@ const Clientes: React.FC = () => {
       resetForm()
     }
   })
+
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      // Fechar modal e limpar estados
+      setShowForm(false)
+      setEditingId(null)
+      resetForm()
+      setQuery('')
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      setConsultandoCNPJ(false)
+      setCnpjConsultado(false)
+    }
+  }, [location.state])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -458,8 +475,9 @@ const Clientes: React.FC = () => {
                   <input
                     type="text"
                     value={form.telefone}
-                    onChange={(e) => setForm(prev => ({ ...prev, telefone: e.target.value }))}
+                    onChange={(e) => setForm(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
                     className="input-field"
+                    placeholder="Ex: +55 11 9 8765-4321 ou (11) 98765-4321"
                   />
                 </div>
               </div>

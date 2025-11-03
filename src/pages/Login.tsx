@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Eye, EyeOff, Sun, Moon, Truck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { isSupabaseEnabled } from '../lib/supabaseClient'
 import { useTheme } from '../contexts/ThemeContext'
 
 const Login: React.FC = () => {
@@ -11,7 +12,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   
-  const { login, isAuthenticated } = useAuth()
+  const { login, loginDemo, isAuthenticated } = useAuth()
   const { isDark, toggleTheme } = useTheme()
 
   useEffect(() => {
@@ -39,8 +40,23 @@ const Login: React.FC = () => {
     }
   }
 
+  const handleDemoLogin = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      const ok = await loginDemo()
+      if (!ok) {
+        setError('Falha ao entrar no modo demonstração')
+      }
+    } catch (err) {
+      setError('Erro ao iniciar modo demonstração.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200 flex flex-col">
+    <div className="no-uppercase min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200 flex flex-col">
       {/* Theme Toggle */}
       <div className="absolute top-6 right-6 z-10">
         <button
@@ -148,6 +164,23 @@ const Login: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Demo Mode */}
+          <div className="space-y-3">
+            {!isSupabaseEnabled && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+                Supabase não configurado. Você pode usar o modo demonstração.
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="btn-secondary w-full justify-center text-base py-3"
+            >
+              {loading ? 'Entrando...' : 'Entrar em modo demonstração'}
+            </button>
+          </div>
 
           {/* Footer Info */}
           <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-800">

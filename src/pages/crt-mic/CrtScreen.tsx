@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FileText, Download, Search, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,6 +16,7 @@ const mockCrts = [
 ];
 
 const CrtScreen: React.FC = () => {
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAll, setShowAll] = useState(false);
 
@@ -35,6 +37,14 @@ const CrtScreen: React.FC = () => {
     const pendentes = total - emitidos;
     return { total, emitidos, pendentes };
   }, []);
+
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      setSearchTerm('');
+      setShowAll(false);
+    }
+  }, [location.state]);
 
   const handleDownload = (pdfUrl: string, numero: string) => {
     // Simulação de download

@@ -231,7 +231,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Adiantamento (Habilitar cálculo de adiantamento sobre o valor total)"
+                  label="Adiantamento"
                   checked={integrateData.adiantamentoEnabled}
                   onChange={(checked) => {
                     handleDataChange('adiantamentoEnabled', checked);
@@ -367,7 +367,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Despesas Adicionais (Incluir despesas em pesos argentinos com conversão automática)"
+                  label="Despesas Adicionais"
                   checked={integrateData.despesasEnabled}
                   onChange={(checked) => handleDataChange('despesasEnabled', checked)}
                   disabled={hasFreteUnico}
@@ -452,7 +452,7 @@ const CargaIntegrateModal: React.FC<CargaIntegrateModalProps> = ({
             <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
               <div className="mb-4">
                 <StandardCheckbox
-                  label="Diárias (Incluir valor de diárias em reais)"
+                  label="Diárias"
                   checked={integrateData.diariasEnabled}
                   onChange={(checked) => handleDataChange('diariasEnabled', checked)}
                   disabled={hasFreteUnico}

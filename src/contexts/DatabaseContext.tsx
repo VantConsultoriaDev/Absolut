@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional } from '../types'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext' // Necessário para obter o userId
-import { parseDocument } from '../utils/formatters'
+import { parseDocument, forceUpperCase } from '../utils/formatters'
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
 
@@ -588,27 +588,35 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- AUTO-SYNC (R1) ---
   const syncItemToSupabase = useCallback(async (tableName: string, item: any, operation: 'INSERT' | 'UPDATE' | 'DELETE') => {
     if (!supabase || !user) return false;
-    
+
+    // Proteção contra alterações indevidas nas tabelas críticas
+    const PROTECTED_SUPABASE_TABLES = new Set(['cargas', 'movimentacoes_financeiras']);
+    const allowProtectedWrites = (import.meta as any)?.env?.VITE_ALLOW_PROTECTED_WRITES === 'true';
+    if (PROTECTED_SUPABASE_TABLES.has(tableName) && !allowProtectedWrites) {
+      console.warn(`[AUTO-SYNC SKIPPED] Escrita bloqueada para tabela protegida: ${tableName}. Defina VITE_ALLOW_PROTECTED_WRITES=true para autorizar.`);
+      return true; // Considera sucesso local sem alterar o remoto
+    }
+
     try {
       if (operation === 'DELETE') {
         const { error } = await supabase
           .from(tableName)
           .delete()
           .eq('id', item.id);
-        
+
         if (error) throw error;
         console.log(`[AUTO-SYNC DELETE] ${tableName} ${item.id} excluído.`);
         return true;
       }
 
       const payload = mapToSupabase(tableName, item);
-      
+
       const { error } = await supabase
         .from(tableName)
         .upsert(payload, { onConflict: 'id' });
 
       if (error) throw error;
-      
+
       console.log(`[AUTO-SYNC ${operation}] ${tableName} ${item.id} sincronizado.`);
       return true;
 
@@ -998,6 +1006,55 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     setMovimentacoes(prev => prev.filter(mov => mov.cargaId !== cargaId));
   };
 
+  // --- Normalization helpers (uppercase for key text fields) ---
+  const upper = (v?: string) => (typeof v === 'string' ? forceUpperCase(v) : v);
+  const normalizeCliente = (d: Partial<Cliente>) => ({
+    ...d,
+    nome: d.nome ? upper(d.nome) : d.nome,
+    endereco: d.endereco ? upper(d.endereco) : d.endereco,
+    cidade: d.cidade ? upper(d.cidade) : d.cidade,
+    estado: d.estado ? upper(d.estado) : d.estado,
+    observacoes: d.observacoes ? upper(d.observacoes) : d.observacoes,
+  });
+  const normalizeParceiro = (d: Partial<Parceiro>) => ({
+    ...d,
+    nome: d.nome ? upper(d.nome) : d.nome,
+    endereco: d.endereco ? upper(d.endereco) : d.endereco,
+    cidade: d.cidade ? upper(d.cidade) : d.cidade,
+    estado: d.estado ? upper(d.estado) : d.estado,
+    observacoes: d.observacoes ? upper(d.observacoes) : d.observacoes,
+  });
+  const normalizeMotorista = (d: Partial<Motorista>) => ({
+    ...d,
+    nome: d.nome ? upper(d.nome) : d.nome,
+  });
+  const normalizeVeiculo = (d: Partial<Veiculo>) => ({
+    ...d,
+    fabricante: d.fabricante ? upper(d.fabricante) : d.fabricante,
+    modelo: d.modelo ? upper(d.modelo) : d.modelo,
+    carroceria: (d as any).carroceria ? upper((d as any).carroceria) : (d as any).carroceria,
+    placa: d.placa ? upper(d.placa) : d.placa,
+    placaCavalo: d.placaCavalo ? upper(d.placaCavalo) : d.placaCavalo,
+    placaCarreta: d.placaCarreta ? upper(d.placaCarreta) : d.placaCarreta,
+    placaCarreta1: d.placaCarreta1 ? upper(d.placaCarreta1) : d.placaCarreta1,
+    placaCarreta2: d.placaCarreta2 ? upper(d.placaCarreta2) : d.placaCarreta2,
+    placaDolly: d.placaDolly ? upper(d.placaDolly) : d.placaDolly,
+    chassis: d.chassis ? upper(d.chassis) : d.chassis,
+  });
+  const normalizeCarga = (d: Partial<Carga>) => ({
+    ...d,
+    descricao: d.descricao ? upper(d.descricao) : d.descricao,
+    origem: d.origem ? upper(d.origem) : d.origem,
+    destino: d.destino ? upper(d.destino) : d.destino,
+    observacoes: d.observacoes ? upper(d.observacoes) : d.observacoes,
+  });
+  const normalizePermisso = (d: Partial<PermissoInternacional>) => ({
+    ...d,
+    razaoSocial: (d as any).razaoSocial ? upper((d as any).razaoSocial) : (d as any).razaoSocial,
+    nomeFantasia: (d as any).nomeFantasia ? upper((d as any).nomeFantasia) : (d as any).nomeFantasia,
+    enderecoCompleto: (d as any).enderecoCompleto ? upper((d as any).enderecoCompleto) : (d as any).enderecoCompleto,
+  });
+
   // --- CLIENTE OPERATIONS (Com validação de duplicidade e Auto-Sync) ---
   const createCliente = (clienteData: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>): Cliente => {
     const cleanDocument = parseDocument(clienteData.documento || '');
@@ -1006,7 +1063,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
     
     const newCliente: Cliente = {
-      ...clienteData,
+      ...normalizeCliente(clienteData),
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
@@ -1027,7 +1084,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           throw new Error('Cliente com este documento já cadastrado.');
         }
         
-        updatedCliente = { ...cliente, ...clienteData, updatedAt: new Date() };
+        updatedCliente = { ...cliente, ...normalizeCliente(clienteData), updatedAt: new Date() };
         syncItemToSupabase('clientes', updatedCliente, 'UPDATE');
         return updatedCliente;
       }
@@ -1083,7 +1140,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
     
     const newParceiro: Parceiro = {
-      ...parceiroData,
+      ...normalizeParceiro(parceiroData),
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
@@ -1104,7 +1161,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           throw new Error('Parceiro com este documento já cadastrado.');
         }
         
-        updatedParceiro = { ...parceiro, ...parceiroData, updatedAt: new Date() };
+        updatedParceiro = { ...parceiro, ...normalizeParceiro(parceiroData), updatedAt: new Date() };
         syncItemToSupabase('parceiros', updatedParceiro, 'UPDATE');
         return updatedParceiro;
       }
@@ -1141,7 +1198,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
     
     const newMotorista: Motorista = {
-      ...motoristaData,
+      ...normalizeMotorista(motoristaData),
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
@@ -1165,7 +1222,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           throw new Error('Motorista com esta CNH já cadastrada.');
         }
         
-        updatedMotorista = { ...motorista, ...motoristaData, updatedAt: new Date() };
+        updatedMotorista = { ...motorista, ...normalizeMotorista(motoristaData), updatedAt: new Date() };
         syncItemToSupabase('motoristas', updatedMotorista, 'UPDATE');
         return updatedMotorista;
       }
@@ -1203,7 +1260,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     checkPlaca(veiculoData.placaDolly);
 
     const newVeiculo: Veiculo = {
-      ...veiculoData,
+      ...normalizeVeiculo(veiculoData),
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
@@ -1232,7 +1289,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         checkPlacaEdit(veiculoData.placaCarreta2 || veiculo.placaCarreta2);
         checkPlacaEdit(veiculoData.placaDolly || veiculo.placaDolly);
 
-        updatedVeiculo = { ...veiculo, ...veiculoData, updatedAt: new Date() };
+        updatedVeiculo = { ...veiculo, ...normalizeVeiculo(veiculoData), updatedAt: new Date() };
         syncItemToSupabase('veiculos', updatedVeiculo, 'UPDATE');
         return updatedVeiculo;
       }
@@ -1258,7 +1315,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- PERMISSO OPERATIONS (Auto-Sync) ---
   const createPermisso = (permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'>, veiculoId: string): PermissoInternacional => {
     const newPermisso: PermissoInternacional = {
-      ...permissoData,
+      ...normalizePermisso(permissoData),
       id: generateId(),
       veiculoId: veiculoId,
       dataConsulta: new Date(),
@@ -1276,7 +1333,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       if (permisso.id === id) {
         updatedPermisso = { 
           ...permisso, 
-          ...permissoData, 
+          ...normalizePermisso(permissoData), 
           updatedAt: new Date(), 
           dataConsulta: new Date() 
         };
@@ -1330,7 +1387,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- CARGA OPERATIONS (Auto-Sync) ---
   const createCarga = (cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>): Carga => {
     const newCarga: Carga = {
-      ...cargaData,
+      ...normalizeCarga(cargaData),
       id: generateId(),
       createdAt: new Date(),
       updatedAt: new Date()
@@ -1345,7 +1402,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     
     setCargas(prev => prev.map(carga => {
       if (carga.id === id) {
-        updatedCarga = { ...carga, ...cargaData, updatedAt: new Date() };
+        updatedCarga = { ...carga, ...normalizeCarga(cargaData), updatedAt: new Date() };
         syncItemToSupabase('cargas', updatedCarga, 'UPDATE');
         return updatedCarga;
       }
@@ -1364,8 +1421,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     // 2. Exclui a carga
     setCargas(prev => prev.filter(carga => carga.id !== id))
     
-    // 3. Exclui o contrato associado (se existir)
+    // 3. Exclui o contrato associado (se existir) no estado e no Supabase
+    const relatedContratos = contratos.filter(contrato => contrato.cargaId === id);
     setContratos(prev => prev.filter(contrato => contrato.cargaId !== id))
+    relatedContratos.forEach(rc => {
+      syncItemToSupabase('contratos_frete', rc, 'DELETE');
+    });
     
     if (deletedCarga) {
       syncItemToSupabase('cargas', deletedCarga, 'DELETE');
@@ -1407,39 +1468,28 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       alert('Erro: Supabase não está pronto ou usuário não autenticado.');
       return;
     }
-    
+
     // Garante que a carga esteja sincronizada antes de gerar o contrato
     const cargaToSync = cargas.find(c => c.id === cargaId);
     if (cargaToSync) {
-        await syncItemToSupabase('cargas', cargaToSync, 'UPDATE');
+      await syncItemToSupabase('cargas', cargaToSync, 'UPDATE');
     }
-    
-    const projectRef = 'qoeocxprlioianbordjt'; // Supabase Project ID
-    const edgeFunctionUrl = `https://${projectRef}.supabase.co/functions/v1/generate-contract`;
-    
+
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ cargaId, userId: user.id }),
+      // Usa o SDK do Supabase para invocar a Edge Function com a URL correta do ambiente
+      const { data, error } = await supabase.functions.invoke('generate-contract', {
+        body: { cargaId, userId: user.id },
       });
-      
-      const result = await response.json();
-      
-      if (!response.ok || result.error) {
-        throw new Error(result.error || 'Falha ao gerar contrato na Edge Function.');
+
+      if (error) {
+        throw new Error(error.message || 'Falha ao gerar contrato na Edge Function.');
       }
-      
+
       // Após a geração, puxa a lista atualizada
       await getContracts();
-      
-      alert(`Contrato gerado/regenerado com sucesso! URL: ${result.pdfUrl}`);
-      
+
+      // data pode conter { pdfUrl } retornado pela função
+      alert(`Contrato gerado/regenerado com sucesso! URL: ${data?.pdfUrl ?? 'PDF gerado'}`);
     } catch (error) {
       console.error('Erro na geração do contrato:', error);
       alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);

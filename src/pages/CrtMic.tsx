@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FileText, FileBadge } from 'lucide-react';
 import CrtScreen from './crt-mic/CrtScreen';
 import MicScreen from './crt-mic/MicScreen';
 
 const CrtMic: React.FC = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'crt' | 'mic'>('crt');
+
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      setActiveTab('crt');
+    }
+  }, [location.state]);
 
   return (
     <div className="space-y-6 animate-fade-in">

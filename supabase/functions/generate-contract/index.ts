@@ -1,54 +1,128 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-
+// Biblioteca para manipular PDFs (Deno/ESM)
+import { PDFDocument, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1'
+  
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função auxiliar para simular o preenchimento do PDF
-function simulatePdfFilling(data: any): string {
-  // Em uma implementação real, você usaria uma biblioteca como pdf-lib (Deno)
-  // ou chamaria um serviço externo para preencher o PDF modelo.
-  
-  const content = `
-    CONTRATO DE FRETE GERADO AUTOMATICAMENTE
-    NÚMERO SEQUENCIAL (33): ${data.contratoNumeroSequencial}
-    DATA DE EMISSÃO (34): ${data.contratoDataEmissao}
-    
-    --- DADOS DO PROPRIETÁRIO (PARCEIRO) ---
-    1. Permisso Razão Social: ${data.permissoRazaoSocial}
-    2. Permisso CNPJ: ${data.permissoCnpj}
-    6. Nome Parceiro: ${data.parceiroNome}
-    7. Documento Parceiro: ${data.parceiroDocumento}
-    12. Contato: ${data.parceiroTelefone}
-    
-    --- DADOS DO VEÍCULO ---
-    3. Placas: ${data.placasVeiculoPrincipal} ${data.placasCarretas ? `+ Carretas: ${data.placasCarretas}` : ''}
-    4. Marca: ${data.veiculoMarca}
-    5. Ano: ${data.veiculoAno}
-    
-    --- DADOS DO MOTORISTA ---
-    13. Nome Motorista: ${data.motoristaNome}
-    14. CPF: ${data.motoristaCpf}
-    16. CNH: ${data.motoristaCnh}
-    
-    --- DADOS DA CARGA ---
-    17. Origem: ${data.cargaOrigem}
-    20. Destino: ${data.cargaDestino}
-    22. Valor Total Carga: ${data.cargaValor}
-    29. Cliente: ${data.cargaClienteNome}
-    30. Peso: ${data.cargaPeso}
-    
-    --- VALORES FINANCEIROS ---
-    23. Adiantamento: ${data.financeiroAdiantamento}
-    26. Saldo a Receber: ${data.financeiroSaldo}
-    
-    [FIM DA SIMULAÇÃO]
-  `;
-  
-  // Retorna o conteúdo como um Blob simulado (Base64 ou texto)
-  return btoa(content); // Retorna Base64 do conteúdo
+// Função auxiliar: cria um PDF fallback com texto dos dados
+async function createFallbackPdf(data: any): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const { width, height } = page.getSize();
+  const fontSize = 10;
+  const margin = 40;
+  page.setFont(font);
+  page.setFontSize(fontSize);
+  let cursorY = height - margin;
+  const lines = [
+    `CONTRATO DE FRETE (CRT: ${data.cargaCrt || 'N/A'})`,
+    `NÚMERO SEQUENCIAL (33): ${data.contratoNumeroSequencial}`,
+    `DATA DE EMISSÃO (34): ${data.contratoDataEmissao}`,
+    ``,
+    `--- DADOS DO PROPRIETÁRIO (PARCEIRO) ---`,
+    `1. Razão Social (Permisso): ${data.permissoRazaoSocial}`,
+    `2. CNPJ (Permisso): ${data.permissoCnpj}`,
+    `6. Nome Parceiro: ${data.parceiroNome}`,
+    `7. Documento Parceiro: ${data.parceiroDocumento}`,
+    `12. Contato: ${data.parceiroTelefone}`,
+    ``,
+    `--- DADOS DO VEÍCULO ---`,
+    `3. Placas: ${data.placasVeiculoPrincipal}${data.placasCarretas ? `, Carretas: ${data.placasCarretas}` : ''}`,
+    `4. Marca: ${data.veiculoMarca}`,
+    `5. Ano: ${data.veiculoAno}`,
+    ``,
+    `--- DADOS DO MOTORISTA ---`,
+    `13. Nome: ${data.motoristaNome}`,
+    `14. CPF: ${data.motoristaCpf}`,
+    `16. CNH: ${data.motoristaCnh}`,
+    ``,
+    `--- DADOS DA CARGA ---`,
+    `17. Origem: ${data.cargaOrigem}`,
+    `20. Destino: ${data.cargaDestino}`,
+    `22. Valor Total: ${data.cargaValor}`,
+    `29. Cliente: ${data.cargaClienteNome}`,
+    `30. Peso: ${data.cargaPeso}`,
+    ``,
+    `--- VALORES FINANCEIROS ---`,
+    `23. Adiantamento: ${data.financeiroAdiantamento}`,
+    `26. Saldo a Receber: ${data.financeiroSaldo}`,
+  ];
+  for (const line of lines) {
+    page.drawText(line, { x: margin, y: cursorY });
+    cursorY -= fontSize + 6;
+  }
+  return await pdfDoc.save();
+}
+
+// Função auxiliar: baixa template e mapeamento do Storage
+async function getTemplateAndMap(supabaseClient: any): Promise<{ templateBytes: Uint8Array | null, fieldMap: Record<string, string> | null }> {
+  // Bucket e caminhos padrão (você pode tornar isso configurável por env)
+  const bucket = 'contratos_modelos';
+  const templatePath = 'modelo_contrato.pdf';
+  const mapPath = 'modelo_contrato.json';
+
+  // Tenta baixar o PDF template
+  const tplRes = await supabaseClient.storage.from(bucket).download(templatePath);
+  let templateBytes: Uint8Array | null = null;
+  if (tplRes?.data) {
+    const ab = await tplRes.data.arrayBuffer();
+    templateBytes = new Uint8Array(ab);
+  }
+
+  // Tenta baixar JSON de mapeamento de campos
+  const mapRes = await supabaseClient.storage.from(bucket).download(mapPath);
+  let fieldMap: Record<string, string> | null = null;
+  if (mapRes?.data) {
+    try {
+      const text = new TextDecoder().decode(new Uint8Array(await mapRes.data.arrayBuffer()));
+      fieldMap = JSON.parse(text);
+    } catch (_) {
+      fieldMap = null;
+    }
+  }
+
+  return { templateBytes, fieldMap };
+}
+
+// Preenche o template PDF usando pdf-lib e mapeamento de campos
+async function fillContratoTemplate(templateBytes: Uint8Array, data: Record<string, any>, fieldMap?: Record<string, string> | null): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const form = pdfDoc.getForm();
+
+  // Se não houver mapeamento, tenta nome idêntico (campo PDF == chave data)
+  const entries = fieldMap ? Object.entries(fieldMap) : Object.keys(data).map((k) => [k, k]);
+
+  for (const [pdfFieldName, dataKey] of entries) {
+    const value = data[dataKey];
+    const text = value == null ? '' : String(value);
+    try {
+      // Tenta como campo de texto
+      const tf = form.getTextField(pdfFieldName);
+      tf.setText(text);
+      continue;
+    } catch (_) {}
+    try {
+      // Tenta como checkbox (marca quando valor "truthy")
+      const cb = form.getCheckBox(pdfFieldName);
+      if (value) cb.check(); else cb.uncheck();
+      continue;
+    } catch (_) {}
+    try {
+      // Tenta como radio group (seleciona valor)
+      const rg = form.getRadioGroup(pdfFieldName);
+      if (text) rg.select(text);
+      continue;
+    } catch (_) {}
+    // Silenciosamente ignora se campo não existir; evita quebra
+  }
+
+  form.updateFieldAppearances();
+  return await pdfDoc.save();
 }
 
 serve(async (req) => {
@@ -56,10 +130,23 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
   
+  // Valida segredos obrigatórios
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    const msg = 'Edge Function misconfigured: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.'
+    console.error('[GENERATE_CONTRACT] ' + msg)
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   // Cria o cliente Supabase usando a Service Role Key para ignorar RLS
   const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', 
+    supabaseUrl,
+    serviceRoleKey, 
     {
         auth: {
             autoRefreshToken: false,
@@ -229,14 +316,42 @@ serve(async (req) => {
         contratoDataEmissao: date.toISOString(), // 34
     };
 
-    // 9. Simular preenchimento do PDF (retorna Base64 do conteúdo)
-    const pdfContentBase64 = simulatePdfFilling(contractData);
+    // 9. Tentar preencher o PDF modelo do Storage; caso não exista, gerar fallback
+    const { templateBytes, fieldMap } = await getTemplateAndMap(supabaseClient);
+    let finalPdfBytes: Uint8Array;
+    try {
+      if (templateBytes) {
+        finalPdfBytes = await fillContratoTemplate(templateBytes, contractData, fieldMap);
+      } else {
+        finalPdfBytes = await createFallbackPdf(contractData);
+      }
+    } catch (e) {
+      console.warn('[GENERATE_CONTRACT] Falha ao preencher template, usando fallback:', e?.message || e);
+      finalPdfBytes = await createFallbackPdf(contractData);
+    }
+
     const pdfFileName = `contrato_${carga.crt || cargaId}.pdf`;
-    
-    // 10. Salvar no Supabase Storage
+
+    // 10. Garantir que o bucket 'contratos' exista e seja público
+    try {
+      const { data: bucketInfo, error: getBucketError } = await supabaseClient.storage.getBucket('contratos')
+      if (getBucketError || !bucketInfo) {
+        const { error: createBucketError } = await supabaseClient.storage.createBucket('contratos', { public: true })
+        if (createBucketError) {
+          console.warn('[GENERATE_CONTRACT] Falha ao criar bucket contratos:', createBucketError.message)
+        } else {
+          console.log('[GENERATE_CONTRACT] Bucket contratos criado com sucesso')
+        }
+      }
+    } catch (e) {
+      console.warn('[GENERATE_CONTRACT] Erro ao garantir bucket contratos:', (e as any)?.message || e)
+    }
+
+    // 11. Salvar no Supabase Storage (como Blob)
+    const pdfBlob = new Blob([finalPdfBytes], { type: 'application/pdf' })
     const { error: storageError } = await supabaseClient.storage
       .from('contratos')
-      .upload(pdfFileName, new TextEncoder().encode(pdfContentBase64), {
+      .upload(pdfFileName, pdfBlob, {
         contentType: 'application/pdf',
         upsert: true, // Permite substituir ao regerar
       })
@@ -246,10 +361,29 @@ serve(async (req) => {
       throw new Error(storageError.message)
     }
     
-    // CORREÇÃO: Usar o URL base do Supabase para construir o link público
-    const publicUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/contratos/${pdfFileName}`;
+    // 11.1 Verificar arquivo após upload
+    try {
+      const verify = await supabaseClient.storage.from('contratos').download(pdfFileName)
+      if (!verify?.data) {
+        throw new Error('Arquivo não disponível após upload.')
+      }
+      const buf = new Uint8Array(await verify.data.arrayBuffer())
+      const header = new TextDecoder().decode(buf.slice(0, 5))
+      console.log('[GENERATE_CONTRACT] PDF salvo. Tamanho(bytes):', buf.length, 'Header:', header)
+      if (!header.startsWith('%PDF')) {
+        console.warn('[GENERATE_CONTRACT] Header inesperado; o arquivo pode estar corrompido.')
+      }
+    } catch (e) {
+      console.warn('[GENERATE_CONTRACT] Falha ao verificar PDF após upload:', (e as any)?.message || e)
+    }
+    
+    // 12. Obter URL pública via SDK (evita construir manualmente)
+    const { data: publicUrlData } = supabaseClient.storage
+      .from('contratos')
+      .getPublicUrl(pdfFileName)
+    const publicUrl = publicUrlData.publicUrl
 
-    // 11. Registrar/Atualizar na tabela contratos_frete
+    // 13. Registrar/Atualizar na tabela contratos_frete
     const { data: contractRecord, error: recordError } = await supabaseClient
       .from('contratos_frete')
       .upsert({
@@ -279,8 +413,9 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Edge Function Error:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    const msg = (error as any)?.message || String(error)
+    console.error('[GENERATE_CONTRACT] Edge Function Error:', msg)
+    return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

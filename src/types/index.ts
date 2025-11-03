@@ -158,9 +158,15 @@ export interface ContratoFrete {
 export interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<boolean>
+  loginDemo: () => Promise<boolean>
   logout: () => void
   isAuthenticated: boolean
   isLoading: boolean // Adicionado
+  updateProfile: (name: string) => Promise<boolean>
+  changePassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<{ ok: boolean; error?: string }>
 }
 
 export interface ThemeContextType {

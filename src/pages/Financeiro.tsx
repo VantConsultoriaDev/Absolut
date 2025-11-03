@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
 import { format } from 'date-fns'
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react'
 
 const Financeiro: React.FC = () => {
+  const location = useLocation()
   const { 
     movimentacoes, 
     createMovimentacao, 
@@ -102,6 +104,47 @@ const Financeiro: React.FC = () => {
     pago: { label: 'Pago', color: 'badge-success', icon: CheckCircle },
     cancelado: { label: 'Adiado', color: 'badge-danger', icon: AlertTriangle }
   }
+
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      // Fechar modais e limpar estados auxiliares
+      setShowForm(false)
+      setEditingMovimentacao(null)
+      setShowDeleteConfirm(false)
+      setDeleteTarget(null)
+      setShowPaymentModal(false)
+      setPaymentTarget(null)
+      setPaymentDate(format(new Date(), 'yyyy-MM-dd'))
+
+      // Limpar filtros e busca
+      setSearchTerm('')
+      setFilterType('')
+      setFilterStatus('')
+      setFilterVencStartDate('')
+      setFilterVencEndDate('')
+      setFilterPayStartDate('')
+      setFilterPayEndDate('')
+
+      // Fechar calendários e dropdowns
+      setShowVencCalendar(false)
+      setShowPayCalendar(false)
+      setShowStatusDropdown(null)
+      setDropdownPosition({ top: 0, left: 0 })
+      setFormAnchor(null)
+
+      // Resetar formulário
+      setFormData({
+        descricao: '',
+        valor: '',
+        tipo: 'despesa',
+        categoria: '',
+        data: format(new Date(), 'yyyy-MM-dd'),
+        status: 'pendente',
+        observacoes: ''
+      })
+    }
+  }, [location.state])
 
   // Componente de calendário para seleção de intervalo (Mantido, mas RangeCalendar foi movido para componente separado)
   const RangeCalendar: React.FC<{

@@ -156,6 +156,44 @@ const Cargas: React.FC = () => {
     }
   }, [location.state]);
 
+  // Reset para tela inicial quando navegado via menu lateral
+  useEffect(() => {
+    if (location.state?.resetModule) {
+      // Fechar e limpar formulário
+      performReset();
+
+      // Fechar modais auxiliares
+      setShowLinkModal(false);
+      setLinkingCarga(null);
+      setSelectedParceiro('');
+      setSelectedMotorista('');
+      setSelectedVeiculo('');
+      setSelectedCarretas([]);
+
+      setShowIntegrateModal(false);
+      setIntegratingCarga(null);
+      setIntegrateData(initialIntegrateData);
+
+      setShowImportModal(false);
+
+      // Fechar dropdown de status
+      setShowStatusDropdown(null);
+      setDropdownPosition(null);
+
+      // Limpar filtros e busca
+      setSearchTerm('');
+      setFilterStatus('');
+      setFilterColetaStartDate('');
+      setFilterColetaEndDate('');
+      setFilterEntregaStartDate('');
+      setFilterEntregaEndDate('');
+
+      // Fechar calendários
+      setShowColetaCalendar(false);
+      setShowEntregaCalendar(false);
+    }
+  }, [location.state]);
+
   // Função auxiliar para extrair UF e cidade de uma string (Corrigida)
   const extrairUfECidade = (localCompleto: string) => {
     if (localCompleto.toLowerCase() === 'internacional') {
@@ -401,6 +439,7 @@ const Cargas: React.FC = () => {
     setIntegratingCarga(null);
     setIntegrateData(initialIntegrateData);
   };
+
 
   const handleIntegrateSubmit = () => {
     if (!integratingCarga) return;
