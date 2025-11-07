@@ -923,14 +923,14 @@ const Cargas: React.FC = () => {
         const startDate = createLocalDate(filterColetaStartDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // FIX TS2322: Garante que o resultado seja um booleano
+        // CORREÇÃO TS: Garante que a comparação só ocorra se d não for null
         matchesColetaRange = matchesColetaRange && (d ? d >= startDate : false);
       }
       if (filterColetaEndDate) {
         const endDate = createLocalDate(filterColetaEndDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // FIX TS2322: Garante que o resultado seja um booleano
+        // CORREÇÃO TS: Garante que a comparação só ocorra se d não for null
         matchesColetaRange = matchesColetaRange && (d ? d <= endDate : false);
       }
 
