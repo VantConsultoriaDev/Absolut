@@ -63,13 +63,14 @@ const AgendaContent: React.FC = () => {
     // --- Handlers ---
     
     const handleOpenForm = (date?: Date) => {
+        // 1. Limpa o item de edição
         setEditingItem(null);
-        setShowForm(true);
         
-        // Preenche a data se vier do calendário
+        // 2. Se uma data for fornecida, pré-preenche o formulário com essa data
         if (date) {
-            // Se a data vier do calendário, define a data selecionada e pré-preenche o formulário
+            // Define a data selecionada
             setSelectedDate(date);
+            // Cria um item temporário para preencher o formulário
             setEditingItem({
                 ...initialAgendaItem,
                 id: '', // ID temporário
@@ -79,11 +80,18 @@ const AgendaContent: React.FC = () => {
                 dueDate: date,
             } as AgendaItem);
         }
+        
+        // 3. Abre o formulário
+        setShowForm(true);
     };
     
     const handleEdit = (item: AgendaItem) => {
         setEditingItem(item);
         setShowForm(true);
+        
+        // Fecha modais de visualização se estiverem abertos
+        setShowTaskDetailModal(false);
+        setShowCalendarDayModal(false);
     };
     
     const handleDelete = (id: string, title: string) => {
@@ -100,7 +108,7 @@ const AgendaContent: React.FC = () => {
     };
 
     const handleSubmit = (data: Omit<AgendaItem, 'id' | 'createdAt' | 'updatedAt' | 'isCompleted'>) => {
-        if (editingItem) {
+        if (editingItem && editingItem.id) {
             updateItem(editingItem.id, data);
         } else {
             addItem(data);
@@ -270,7 +278,7 @@ const AgendaContent: React.FC = () => {
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
                             <ListTodo className="h-5 w-5" />
                             Tarefas e Pendências
-                        </h2>
+                        </h2 >
                         <AgendaList 
                             onEdit={handleEdit} 
                             onDelete={handleDelete} 
@@ -333,6 +341,10 @@ const AgendaContent: React.FC = () => {
                         handleEdit(item); // Abre o modal de formulário para edição
                     }}
                     onToggleCompletion={toggleCompletion}
+                    onAdd={(date) => {
+                        setShowCalendarDayModal(false); // Fecha o modal do dia
+                        handleOpenForm(date); // Abre o modal de formulário para criação
+                    }}
                 />
             )}
             

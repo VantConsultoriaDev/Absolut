@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { X, Calendar, Clock, ListTodo, Check, Edit } from 'lucide-react';
+import { X, Calendar, Clock, ListTodo, Check, Edit, Plus } from 'lucide-react';
 import { useModal } from '../hooks/useModal';
 import { AgendaItem } from './types';
 import { format, isSameDay, isToday } from 'date-fns';
@@ -12,6 +12,7 @@ interface CalendarDayModalProps {
   onClose: () => void;
   onEdit: (item: AgendaItem) => void;
   onToggleCompletion: (id: string) => void;
+  onAdd: (date: Date) => void; // NOVO: Handler para adicionar item
 }
 
 const urgencyConfig = {
@@ -27,6 +28,7 @@ const CalendarDayModal: React.FC<CalendarDayModalProps> = ({
   onClose,
   onEdit,
   onToggleCompletion,
+  onAdd, // NOVO
 }) => {
   const { modalRef } = useModal({ isOpen, onClose });
 
@@ -76,7 +78,14 @@ const CalendarDayModal: React.FC<CalendarDayModalProps> = ({
                     <Clock className="h-3 w-3" /> {item.dueTime}
                 </span>
             )}
-            <button onClick={() => onEdit(item)} className="text-blue-500 hover:text-blue-700 p-1" title="Editar">
+            <button 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(item);
+                }} 
+                className="text-blue-500 hover:text-blue-700 p-1" 
+                title="Editar"
+            >
                 <Edit className="h-4 w-4" />
             </button>
           </div>
@@ -116,9 +125,15 @@ const CalendarDayModal: React.FC<CalendarDayModalProps> = ({
             )}
           </div>
           
-          <div className="pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
-            <button onClick={onClose} className="btn-secondary w-full justify-center">
+          <div className="pt-6 border-t border-gray-200 dark:border-gray-700 mt-6 flex gap-3">
+            <button onClick={onClose} className="btn-secondary flex-1">
                 Fechar
+            </button>
+            <button 
+                onClick={() => onAdd(date)} 
+                className="btn-primary flex-1"
+            >
+                <Plus className="h-5 w-5 mr-1" /> Adicionar Item
             </button>
           </div>
         </div>
