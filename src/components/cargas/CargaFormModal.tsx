@@ -264,6 +264,12 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   const handleSubmitWrapper = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // ALTERADO: Aumentando o limite para 11 caracteres
+    if (fullCrt.length > 11) {
+      showError('CRT deve ter no máximo 11 caracteres');
+      return;
+    }
+    
     const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
     
     // VALIDAÇÃO 1: Transbordo SIM, mas apenas 1 trajeto
@@ -679,7 +685,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             }}
                             placeholder={shouldGenerateCrt ? 'XXXXXX' : 'CRT Manual'}
                             className={`input-field font-mono ${shouldGenerateCrt ? 'rounded-l-none' : ''}`}
-                            maxLength={shouldGenerateCrt ? 6 : 10}
+                            maxLength={shouldGenerateCrt ? 6 : 11}
                             disabled={!shouldGenerateCrt && editingCarga} // Desabilita edição manual se já existe CRT
                         />
                     </div>
@@ -687,7 +693,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         <p className="text-xs text-gray-500 mt-1">CRT Completo: {fullCrt}</p>
                     )}
                     {!shouldGenerateCrt && (
-                        <p className="text-xs text-gray-500 mt-1">CRT Manual (Máx. 10 caracteres)</p>
+                        <p className="text-xs text-gray-500 mt-1">CRT Manual (Máx. 11 caracteres)</p>
                     )}
                 </div>
               </div>
