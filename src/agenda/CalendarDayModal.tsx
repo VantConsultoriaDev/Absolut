@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { X, Calendar, Clock, ListTodo, Check, Edit, Plus } from 'lucide-react';
+import { X, Calendar, Clock, Check, Edit, Plus } from 'lucide-react';
 import { useModal } from '../hooks/useModal';
 import { AgendaItem } from './types';
 import { format, isSameDay, isToday } from 'date-fns';

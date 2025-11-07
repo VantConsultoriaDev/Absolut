@@ -11,7 +11,7 @@ interface AgendaListProps {
   onOpenDetail: (item: AgendaItem) => void; // NOVO: Handler para abrir o modal de detalhes
 }
 
-const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete, onOpenDetail }) => {
+const AgendaList: React.FC<AgendaListProps> = ({ onOpenDetail }) => {
   const { items, toggleCompletion, addItem } = useAgenda();
   const [filterUrgency, setFilterUrgency] = useState<'Todos' | AgendaItem['urgency']>('Todos');
   const [quickTitle, setQuickTitle] = useState('');
