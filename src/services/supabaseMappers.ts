@@ -47,6 +47,12 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         pix_key_type: cleanedItem.pixKeyType, // NOVO
         pix_key: cleanedItem.pixKey, // NOVO
         pix_titular: cleanedItem.pixTitular, // NOVO
+        
+        // Novos campos de identificação
+        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        rg: cleanedItem.rg,
+        orgao_emissor: cleanedItem.orgaoEmissor,
+        
         endereco: cleanedItem.endereco, 
         numero: cleanedItem.numero, // NOVO
         complemento: cleanedItem.complemento, // NOVO
@@ -149,6 +155,12 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         pixKeyType: item.pix_key_type, // NOVO
         pixKey: item.pix_key, // NOVO
         pixTitular: item.pix_titular, // NOVO
+        
+        // Novos campos de identificação
+        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        rg: item.rg,
+        orgaoEmissor: item.orgao_emissor,
+        
         endereco: item.endereco, numero: item.numero, complemento: item.complemento, cidade: item.cidade, uf: item.uf, cep: item.cep, observacoes: item.observacoes, isMotorista: item.is_motorista, isActive: item.is_active,
       } as Parceiro;
     case 'motoristas':

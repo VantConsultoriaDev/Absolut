@@ -32,6 +32,12 @@ export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | '
   nome: d.nome,
   nomeFantasia: d.nomeFantasia,
   responsavel: d.responsavel, // NOVO
+  
+  // Novos campos de identificação
+  dataNascimento: d.dataNascimento,
+  rg: d.rg,
+  orgaoEmissor: d.orgaoEmissor,
+  
   endereco: d.endereco,
   numero: d.numero, // NOVO
   complemento: d.complemento, // NOVO

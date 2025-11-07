@@ -51,12 +51,20 @@ export interface Parceiro {
   pixKeyType?: 'CPF' | 'CNPJ' | 'Celular' | 'E-mail' | 'Chave aleatória' | '' // NOVO: Incluindo string vazia
   pixKey?: string // NOVO
   pixTitular?: string // NOVO: Titular da chave Pix
+  
+  // Novos campos de identificação para PF
+  dataNascimento?: Date // NOVO
+  rg?: string // NOVO
+  orgaoEmissor?: string // NOVO
+  
+  // Campos de endereço (já são opcionais, mas garantimos que sejam tratados como tal)
   endereco?: string
   numero?: string // NOVO CAMPO
   complemento?: string // NOVO CAMPO
   cidade?: string
   uf?: string // RENOMEADO
   cep?: string
+  
   observacoes?: string
   isMotorista?: boolean
   isActive?: boolean // Mantido como opcional
