@@ -108,7 +108,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
     } catch (err) {
       console.error('Erro ao consultar CPF:', err);
       setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
-      setLastConsultandoCPF(false);
+      setConsultandoCPF(false); // CORRIGIDO: setLastConsultandoCPF -> setConsultandoCPF
     } finally {
       setConsultandoCPF(false);
     }
@@ -123,18 +123,11 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
         return;
     }
     
-    // 1. Converte data de nascimento de volta para Date
-    const dataNascimentoDate = formData.dataNascimentoStr 
-        ? createLocalDate(formData.dataNascimentoStr) 
-        : undefined;
-        
+    // 1. Converte data de nascimento de volta para Date (REMOVIDO: Variável não utilizada)
+    
     // 2. Prepara o payload final (Motorista)
     // A variável finalPayload não precisa ser declarada se não for usada, mas o código de submissão
     // precisa ser ajustado para usar o payload correto.
-    
-    // O payload final é construído implicitamente no `onSubmit` do componente pai,
-    // mas para fins de validação e tipagem, o MotoristaFormModal deve garantir que
-    // o `formData` contenha os dados limpos antes de chamar `onSubmit`.
     
     // Ajustamos o `formData` antes de chamar `onSubmit`
     setFormData(prev => ({
