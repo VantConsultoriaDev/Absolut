@@ -95,11 +95,11 @@ export class CNPJService {
 
       // --- NOVO MAPEAMENTO DE CAMPOS (ESTRITO) ---
       
-      // 1. Razão Social: APENAS 'razao_social'
-      const razaoSocialFinal = payload.razao_social || '';
+      // 1. Razão Social: APENAS payload.empresa.razao_social
+      const razaoSocialFinal = payload.empresa?.razao_social || '';
       
-      // 2. Nome Fantasia: APENAS 'nome_fantasia'
-      const nomeFantasiaFinal = payload.nome_fantasia || '';
+      // 2. Nome Fantasia: APENAS payload.response.nome_fantasia
+      const nomeFantasiaFinal = payload.response?.nome_fantasia || '';
       
       // 3. Email: APENAS 'correio_eletronico'
       const emailFinal = payload.correio_eletronico || '';
@@ -143,9 +143,6 @@ export class CNPJService {
       const cepFinal = payload.cep || '';
       
       // --- FIM NOVO MAPEAMENTO ---
-      
-      // Se a Razão Social for vazia, usamos o Nome Fantasia como fallback para o campo obrigatório 'nome'
-      // Mas mantemos o mapeamento estrito acima.
       
       const resultado: CNPJData = {
         razaoSocial: razaoSocialFinal,
