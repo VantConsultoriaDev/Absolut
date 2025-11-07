@@ -13,7 +13,6 @@ import {
   Upload,
   CreditCard,
   Calendar,
-  AlertTriangle,
   Edit,
   Trash2,
   ArrowUp, // Ícone de ordenação
