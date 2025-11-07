@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { formatDocument, formatContact, parseDocument, createLocalDate, isValidCPF } from '../utils/formatters'
-import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle, RefreshCw, Calendar } from 'lucide-react'
+import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { CPFService, CPFData } from '../services/cpfService' // Importando CPFService e CPFData
 import { useModal } from '../hooks/useModal'

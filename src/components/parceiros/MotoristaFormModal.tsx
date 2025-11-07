@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, User, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, User, AlertTriangle } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista } from '../../types';
 import { formatDocument, formatContact, parseDocument, isValidCPF, createLocalDate } from '../../utils/formatters';
-import { CPFService, CPFData } from '../../services/cpfService'; // Importando CPFService
+import { CPFService, CPFData } from '../../services/cpfService';
+import { showError } from '../../utils/toast'; // Importando showError
 
 // Tipagem para o formulário (string para validadeCnh)
 export interface MotoristaFormData extends Omit<Motorista, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'validadeCnh' | 'dataNascimento'> {
@@ -107,7 +108,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
     } catch (err) {
       console.error('Erro ao consultar CPF:', err);
       setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
-      setLastConsultedCpf('');
+      setLastConsultandoCPF(false);
     } finally {
       setConsultandoCPF(false);
     }
@@ -128,19 +129,25 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
         : undefined;
         
     // 2. Prepara o payload final (Motorista)
-    const finalPayload: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'> = {
-        ...formData,
-        cpf: cleanCpf,
-        telefone: parseDocument(formData.telefone || ''),
-        validadeCnh: formData.validadeCnh ? createLocalDate(formData.validadeCnh) : undefined,
-        
-        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
-        dataNascimento: dataNascimentoDate,
-        rg: formData.rg,
-        orgaoEmissor: formData.orgaoEmissor,
-    };
+    // A variável finalPayload não precisa ser declarada se não for usada, mas o código de submissão
+    // precisa ser ajustado para usar o payload correto.
     
-    // Chama o submit original com o payload final
+    // O payload final é construído implicitamente no `onSubmit` do componente pai,
+    // mas para fins de validação e tipagem, o MotoristaFormModal deve garantir que
+    // o `formData` contenha os dados limpos antes de chamar `onSubmit`.
+    
+    // Ajustamos o `formData` antes de chamar `onSubmit`
+    setFormData(prev => ({
+        ...prev,
+        cpf: cleanCpf,
+        telefone: parseDocument(prev.telefone || ''),
+        validadeCnh: prev.validadeCnh, // Mantido como string para o submit do pai
+        dataNascimentoStr: prev.dataNascimentoStr, // Mantido como string para o submit do pai
+    }));
+    
+    // O componente pai (Parceiros.tsx) fará a conversão final para o objeto Motorista
+    // e chamará o update/create.
+    
     onSubmit(e);
   };
 

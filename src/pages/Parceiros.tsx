@@ -31,7 +31,7 @@ import { showError } from '../utils/toast';
 import { CNPJService } from '../services/cnpjService'; // Importando CNPJService
 import { VehicleService } from '../services/vehicleService'; // Importando VehicleService
 import { PlacaData } from '../services/vehicleService'; // Importando PlacaData
-import { CPFService, CPFData } from '../services/cpfService'; // NOVO: Importando CPFService
+import { CPFService } from '../services/cpfService'; // NOVO: Importando CPFService
 
 // Tipagem para o formulário de Veículo (corrigida)
 interface VeiculoFormData extends Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'permisso' | 'ano' | 'capacidade'> {
@@ -269,7 +269,7 @@ const Parceiros: React.FC = () => {
       numero: (parceiro as any).numero || '',
       complemento: (parceiro as any).complemento || '',
       
-      // NOVOS CAMPOS DE IDENTIFICAÇÃO
+      // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
       rg: parceiro.rg || undefined,
       orgaoEmissor: parceiro.orgaoEmissor || undefined,
       dataNascimento: parceiro.dataNascimento,
@@ -417,6 +417,13 @@ const Parceiros: React.FC = () => {
           : '',
       telefone: formatContact(motorista.telefone || ''),
       isActive: motorista.isActive ?? true,
+      
+      // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+      dataNascimentoStr: motorista.dataNascimento && isValid(motorista.dataNascimento) 
+          ? format(motorista.dataNascimento, 'yyyy-MM-dd') 
+          : undefined,
+      rg: motorista.rg,
+      orgaoEmissor: motorista.orgaoEmissor,
     });
     setEditingMotoristaId(motorista.id);
     setShowMotoristaForm(true);
@@ -433,12 +440,22 @@ const Parceiros: React.FC = () => {
         return;
     }
     
+    // 1. Converte data de nascimento de volta para Date
+    const dataNascimentoDate = motoristaFormData.dataNascimentoStr 
+        ? createLocalDate(motoristaFormData.dataNascimentoStr) 
+        : undefined;
+        
     const payload: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'> = {
       ...motoristaFormData,
       cpf: cleanCpf,
       telefone: cleanTelefone,
       validadeCnh: motoristaFormData.validadeCnh ? createLocalDate(motoristaFormData.validadeCnh) : undefined,
       isActive: true, // Força como ativo (não há controle de status na UI)
+      
+      // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+      dataNascimento: dataNascimentoDate,
+      rg: motoristaFormData.rg,
+      orgaoEmissor: motoristaFormData.orgaoEmissor,
     };
 
     try {
@@ -1094,7 +1111,7 @@ const Parceiros: React.FC = () => {
                   )}
                 </div>
                 
-                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO (PF) - ATUALIZADO */}
+                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (PF) - ATUALIZADO */}
                 {parceiroFormData.tipo === 'PF' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
                         <div className="md:col-span-3">
