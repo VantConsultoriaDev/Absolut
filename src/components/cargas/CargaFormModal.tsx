@@ -5,6 +5,7 @@ import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
 import StandardCheckbox from '../StandardCheckbox'; // Importando o StandardCheckbox
 import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants'; // Importando listas de UF
+import CityAutocompleteInput from '../CityAutocompleteInput'; // NOVO: Importando CityAutocompleteInput
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
 export interface TrajetoForm extends Omit<Trajeto, 'valor' | 'dataColeta' | 'dataEntrega'> {
@@ -244,7 +245,12 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                 />
                 
                 {/* Renderização Dinâmica dos Trajetos */}
-                {formData.trajetos.map((trajeto, index) => (
+                {formData.trajetos.map((trajeto, index) => {
+                  const isOrigemForeign = isForeignCountry(trajeto.ufOrigem);
+                  const isDestinoForeign = isForeignCountry(trajeto.ufDestino);
+                  const isOrigemDisabled = isTransbordoEnabled && index > 0;
+                  
+                  return (
                   <div key={trajeto.index} className={`p-4 border rounded-lg ${index > 0 ? 'mt-4 border-blue-200 dark:border-blue-700' : 'border-gray-100 dark:border-gray-700'}`}>
                     
                     {/* Cabeçalho do Trajeto (Mostra índice apenas se Transbordo estiver ativo) */}
@@ -277,11 +283,13 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             value={trajeto.ufOrigem}
                             onChange={(e) => {
                               onTrajetoChange(index, 'ufOrigem', e.target.value);
+                              // Limpa a cidade se a UF mudar
+                              onTrajetoChange(index, 'cidadeOrigem', '');
                             }}
                             className="input-field"
                             required
                             // A UF de origem só pode ser alterada no primeiro trajeto
-                            disabled={isTransbordoEnabled && index > 0} 
+                            disabled={isOrigemDisabled} 
                           >
                             <option value="">Selecione a UF de origem</option>
                             {filteredUfOrigemOptions.map((uf) => (
@@ -295,16 +303,27 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         {trajeto.ufOrigem && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {isForeignCountry(trajeto.ufOrigem) ? 'Cidade/Local Origem' : 'Cidade Origem'}
+                              {isOrigemForeign ? 'Cidade/Local Origem' : 'Cidade Origem'}
                             </label>
-                            <input
-                              type="text"
-                              value={trajeto.cidadeOrigem}
-                              onChange={(e) => onTrajetoChange(index, 'cidadeOrigem', e.target.value)}
-                              placeholder={isForeignCountry(trajeto.ufOrigem) ? 'Digite a cidade/local' : 'Digite a cidade'}
-                              className="input-field"
-                              disabled={isTransbordoEnabled && index > 0} // Origem de transbordo é preenchida automaticamente
-                            />
+                            
+                            {isOrigemForeign ? (
+                                <input
+                                  type="text"
+                                  value={trajeto.cidadeOrigem}
+                                  onChange={(e) => onTrajetoChange(index, 'cidadeOrigem', e.target.value)}
+                                  placeholder={'Digite a cidade/local'}
+                                  className="input-field"
+                                  disabled={isOrigemDisabled}
+                                />
+                            ) : (
+                                <CityAutocompleteInput
+                                    uf={trajeto.ufOrigem}
+                                    value={trajeto.cidadeOrigem}
+                                    onChange={(city) => onTrajetoChange(index, 'cidadeOrigem', city)}
+                                    placeholder={'Digite a cidade'}
+                                    disabled={isOrigemDisabled}
+                                />
+                            )}
                           </div>
                         )}
                       </div>
@@ -317,7 +336,11 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                           </label>
                           <select
                             value={trajeto.ufDestino}
-                            onChange={(e) => onTrajetoChange(index, 'ufDestino', e.target.value)}
+                            onChange={(e) => {
+                                onTrajetoChange(index, 'ufDestino', e.target.value);
+                                // Limpa a cidade se a UF mudar
+                                onTrajetoChange(index, 'cidadeDestino', '');
+                            }}
                             className="input-field"
                             required
                           >
@@ -334,15 +357,26 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         {trajeto.ufDestino && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {isForeignCountry(trajeto.ufDestino) ? 'Cidade/Local Destino' : 'Cidade Destino'}
+                              {isDestinoForeign ? 'Cidade/Local Destino' : 'Cidade Destino'}
                             </label>
-                            <input
-                              type="text"
-                              value={trajeto.cidadeDestino}
-                              onChange={(e) => onTrajetoChange(index, 'cidadeDestino', e.target.value)}
-                              placeholder={isForeignCountry(trajeto.ufDestino) ? 'Digite a cidade/local' : 'Digite a cidade'}
-                              className="input-field"
-                            />
+                            
+                            {isDestinoForeign ? (
+                                <input
+                                  type="text"
+                                  value={trajeto.cidadeDestino}
+                                  onChange={(e) => onTrajetoChange(index, 'cidadeDestino', e.target.value)}
+                                  placeholder={'Digite a cidade/local'}
+                                  className="input-field"
+                                />
+                            ) : (
+                                <CityAutocompleteInput
+                                    uf={trajeto.ufDestino}
+                                    value={trajeto.cidadeDestino}
+                                    onChange={(city) => onTrajetoChange(index, 'cidadeDestino', city)}
+                                    placeholder={'Digite a cidade'}
+                                    disabled={false}
+                                />
+                            )}
                           </div>
                         )}
                       </div>
@@ -394,7 +428,8 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                         </div>
                     </div>
                   </div>
-                ))}
+                );
+                })}
                 
                 {/* Botão Adicionar Trajeto */}
                 {isTransbordoEnabled && (
