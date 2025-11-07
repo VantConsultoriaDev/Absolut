@@ -93,24 +93,24 @@ export const normalizePermissoCreate = (d: Omit<PermissoInternacional, 'id' | 'c
   enderecoCompleto: d.enderecoCompleto,
 });
 
-export const normalizeCompromissoCreate = (d: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>) => ({
+export const normalizeCompromissoCreate = (d: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => ({
   ...d,
   titulo: d.titulo,
   descricao: d.descricao,
-  data_hora: d.data_hora,
-  duracao_minutos: d.duracao_minutos,
+  dataHora: d.dataHora, // ALTERADO
+  duracaoMinutos: d.duracaoMinutos, // ALTERADO
   local: d.local,
   notificacao: d.notificacao,
 });
 
-export const normalizeTarefaCreate = (d: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>) => ({
+export const normalizeTarefaCreate = (d: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => ({
   ...d,
   titulo: d.titulo,
   descricao: d.descricao,
   prioridade: d.prioridade,
   status: d.status,
-  data_vencimento: d.data_vencimento,
-  vincular_ao_calendario: d.vincular_ao_calendario,
+  dataVencimento: d.dataVencimento, // ALTERADO
+  vincularAoCalendario: d.vincularAoCalendario, // ALTERADO
 });
 
 // --- APLICADORES DE ATUALIZAÇÃO ---

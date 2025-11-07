@@ -54,7 +54,7 @@ export interface Parceiro {
   cnh?: string
   email?: string
   telefone?: string
-  responsavel?: string // NOVO CAMPO
+  responsavel?: string // NOVO CAMsPO
   pixKeyType?: 'CPF' | 'CNPJ' | 'Celular' | 'E-mail' | 'Chave aleatória' | '' // NOVO: Incluindo string vazia
   pixKey?: string // NOVO
   pixTitular?: string // NOVO: Titular da chave Pix
@@ -210,28 +210,28 @@ export interface ContratoFrete {
 
 export interface Compromisso {
   id: string;
-  user_id: string;
+  userId: string; // ALTERADO: user_id -> userId
   titulo: string;
   descricao?: string;
-  data_hora: Date; // Data e hora do compromisso
-  duracao_minutos: number;
+  dataHora: Date; // ALTERADO: data_hora -> dataHora
+  duracaoMinutos: number; // ALTERADO: duracao_minutos -> duracaoMinutos
   local?: string;
   notificacao: boolean;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date; // ALTERADO: created_at -> createdAt
+  updatedAt: Date; // ALTERADO: updated_at -> updatedAt
 }
 
 export interface Tarefa {
   id: string;
-  user_id: string;
+  userId: string; // ALTERADO: user_id -> userId
   titulo: string;
   descricao?: string;
   prioridade: string; // Ex: 'alta', 'media', 'baixa'
   status: string; // Ex: 'pendente', 'concluida'
-  data_vencimento?: Date;
-  vincular_ao_calendario: boolean;
-  created_at: Date;
-  updated_at: Date;
+  dataVencimento?: Date; // ALTERADO: data_vencimento -> dataVencimento
+  vincularAoCalendario: boolean; // ALTERADO: vincular_ao_calendario -> vincularAoCalendario
+  createdAt: Date; // ALTERADO: created_at -> createdAt
+  updatedAt: Date; // ALTERADO: updated_at -> updatedAt
 }
 
 // Tipo para as opções de split de extras

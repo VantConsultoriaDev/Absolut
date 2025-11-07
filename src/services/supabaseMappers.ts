@@ -144,8 +144,8 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         ...base,
         titulo: cleanedItem.titulo,
         descricao: cleanedItem.descricao,
-        data_hora: cleanedItem.data_hora?.toISOString(),
-        duracao_minutos: cleanedItem.duracaoMinutos,
+        data_hora: cleanedItem.dataHora?.toISOString(), // ALTERADO
+        duracao_minutos: cleanedItem.duracaoMinutos, // ALTERADO
         local: cleanedItem.local,
         notificacao: cleanedItem.notificacao,
       };
@@ -156,8 +156,8 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         descricao: cleanedItem.descricao,
         prioridade: cleanedItem.prioridade,
         status: cleanedItem.status,
-        data_vencimento: cleanedItem.dataVencimento?.toISOString().split('T')[0],
-        vincular_ao_calendario: cleanedItem.vincularAoCalendario,
+        data_vencimento: cleanedItem.dataVencimento?.toISOString().split('T')[0], // ALTERADO
+        vincular_ao_calendario: cleanedItem.vincularAoCalendario, // ALTERADO
       };
     default:
       return base;
@@ -166,6 +166,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
 
 // Mapeia o objeto Supabase (snake_case) para o formato local (camelCase)
 export const mapFromSupabase = (tableName: string, item: any) => {
+  // Garante que created_at e updated_at sejam mapeados para camelCase
   const base = {
     id: item.id,
     createdAt: new Date(item.created_at ?? item.createdAt),
@@ -283,22 +284,24 @@ export const mapFromSupabase = (tableName: string, item: any) => {
     case 'compromissos':
       return {
         ...base,
+        userId: item.user_id, // ALTERADO
         titulo: item.titulo,
         descricao: item.descricao,
-        data_hora: new Date(item.data_hora),
-        duracao_minutos: item.duracao_minutos,
+        dataHora: new Date(item.data_hora), // ALTERADO
+        duracaoMinutos: item.duracao_minutos, // ALTERADO
         local: item.local,
         notificacao: item.notificacao,
       } as Compromisso;
     case 'tarefas':
       return {
         ...base,
+        userId: item.user_id, // ALTERADO
         titulo: item.titulo,
         descricao: item.descricao,
         prioridade: item.prioridade,
         status: item.status,
-        data_vencimento: item.data_vencimento ? new Date(item.data_vencimento) : undefined,
-        vincular_ao_calendario: item.vincular_ao_calendario,
+        dataVencimento: item.data_vencimento ? new Date(item.data_vencimento) : undefined, // ALTERADO
+        vincularAoCalendario: item.vincular_ao_calendario, // ALTERADO
       } as Tarefa;
     default:
       return base;
