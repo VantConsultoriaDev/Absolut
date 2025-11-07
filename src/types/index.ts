@@ -22,6 +22,7 @@ export interface Cliente {
   nome: string
   nomeFantasia?: string // Novo campo para Nome Fantasia
   documento?: string
+  cnh?: string // Adicionado CNH para Cliente PF (se necessário)
   email?: string
   telefone?: string
   responsavel?: string // NOVO CAMPO
@@ -34,6 +35,12 @@ export interface Cliente {
   observacoes?: string
   isActive?: boolean
   avatarUrl?: string | null // Novo campo para a imagem - AGORA ACEITA NULL
+  
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (REPLICADOS DE PARCEIRO PF)
+  dataNascimento?: Date 
+  rg?: string 
+  orgaoEmissor?: string 
+  
   createdAt: Date
   updatedAt: Date
 }
@@ -84,6 +91,12 @@ export interface Motorista {
   telefone?: string
   veiculoVinculado?: string
   isActive?: boolean // Mantido como opcional
+  
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (REPLICADOS DE PARCEIRO PF)
+  dataNascimento?: Date 
+  rg?: string 
+  orgaoEmissor?: string 
+  
   createdAt: Date
   updatedAt: Date
 }

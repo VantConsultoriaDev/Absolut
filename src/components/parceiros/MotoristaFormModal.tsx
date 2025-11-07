@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react';
-import { X, User } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { X, User, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista } from '../../types';
-import { formatDocument, formatContact } from '../../utils/formatters';
+import { formatDocument, formatContact, parseDocument, isValidCPF, createLocalDate } from '../../utils/formatters';
+import { CPFService, CPFData } from '../../services/cpfService'; // Importando CPFService
 
 // Tipagem para o formulário (string para validadeCnh)
-export interface MotoristaFormData extends Omit<Motorista, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'validadeCnh'> {
+export interface MotoristaFormData extends Omit<Motorista, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'validadeCnh' | 'dataNascimento'> {
   parceiroId: string;
   validadeCnh: string; // String format YYYY-MM-DD
+  dataNascimentoStr?: string; // String format YYYY-MM-DD
 }
 
 interface MotoristaFormModalProps {
@@ -34,6 +36,114 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
   const { modalRef } = useModal({ isOpen, onClose });
   
   const parceiroProprietario = useMemo(() => parceiros.find(p => p.id === parceiroId), [parceiros, parceiroId]);
+  
+  // NOVO: Estados para consulta de CPF
+  const [consultandoCPF, setConsultandoCPF] = useState(false);
+  const [cpfConsultado, setCpfConsultado] = useState(false);
+  const [cpfError, setCpfError] = useState('');
+  const [lastConsultedCpf, setLastConsultedCpf] = useState('');
+
+  // Efeito para resetar estados de consulta ao abrir/fechar
+  useEffect(() => {
+    if (isOpen) {
+        const cleanCpf = parseDocument(formData.cpf || '');
+        if (cleanCpf.length === 11) {
+            setCpfConsultado(true);
+            setLastConsultedCpf(cleanCpf);
+        } else {
+            setCpfConsultado(false);
+            setLastConsultedCpf('');
+        }
+        setCpfError('');
+        setConsultandoCPF(false);
+    }
+  }, [isOpen, formData.cpf]);
+  
+  // --- CONSULTA API CPF ---
+  const handleCPFConsultation = async (cpf: string) => {
+    const cpfLimpo = parseDocument(cpf);
+    setCpfError('');
+    
+    if (cpfLimpo.length !== 11) return;
+    
+    if (!isValidCPF(cpfLimpo)) {
+        setCpfError('CPF inválido. Verifique os dígitos.');
+        return;
+    }
+    
+    if (cpfLimpo === lastConsultedCpf && cpfConsultado && !consultandoCPF) {
+        return;
+    }
+    
+    if (consultandoCPF) return;
+
+    setConsultandoCPF(true);
+    setCpfConsultado(false);
+    
+    try {
+      const dados: CPFData | null = await CPFService.consultarCPF(cpf); 
+      
+      if (dados) {
+        setFormData(prev => ({
+          ...prev,
+          nome: dados.nome || prev.nome,
+          telefone: dados.telefone || prev.telefone,
+          
+          // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+          dataNascimentoStr: dados.dataNascimento || prev.dataNascimentoStr,
+          rg: dados.rg || prev.rg,
+          orgaoEmissor: dados.orgaoEmissor || prev.orgaoEmissor,
+        }));
+        setCpfConsultado(true);
+        setLastConsultedCpf(cpfLimpo);
+        setCpfError('');
+        if (dados.simulado) {
+          showError('Não foi possível conectar com a API de CPF. Usando dados simulados como fallback.');
+        }
+      } else {
+        setCpfError('CPF válido, mas não encontrado na base de dados externa.');
+        setLastConsultedCpf('');
+      }
+    } catch (err) {
+      console.error('Erro ao consultar CPF:', err);
+      setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
+      setLastConsultedCpf('');
+    } finally {
+      setConsultandoCPF(false);
+    }
+  };
+  
+  const handleSubmitWrapper = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const cleanCpf = parseDocument(formData.cpf);
+    if (!isValidCPF(cleanCpf)) {
+        setCpfError('CPF inválido. Verifique os dígitos.');
+        return;
+    }
+    
+    // 1. Converte data de nascimento de volta para Date
+    const dataNascimentoDate = formData.dataNascimentoStr 
+        ? createLocalDate(formData.dataNascimentoStr) 
+        : undefined;
+        
+    // 2. Prepara o payload final (Motorista)
+    const finalPayload: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'> = {
+        ...formData,
+        cpf: cleanCpf,
+        telefone: parseDocument(formData.telefone || ''),
+        validadeCnh: formData.validadeCnh ? createLocalDate(formData.validadeCnh) : undefined,
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+        dataNascimento: dataNascimentoDate,
+        rg: formData.rg,
+        orgaoEmissor: formData.orgaoEmissor,
+    };
+    
+    // Chama o submit original com o payload final
+    onSubmit(e);
+  };
+
 
   if (!isOpen) return null;
 
@@ -56,7 +166,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
               </p>
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={handleSubmitWrapper} className="space-y-4">
             
             {/* Nome e CPF */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -71,16 +181,79 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CPF *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    CPF *
+                    {consultandoCPF && (
+                        <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
+                    )}
+                </label>
                 <input
                   type="text"
                   value={formData.cpf}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatDocument(e.target.value, 'PF') }))}
-                  className="input-field"
+                  onChange={(e) => {
+                    const formatted = formatDocument(e.target.value, 'PF');
+                    const limpo = parseDocument(formatted);
+                    
+                    if (limpo !== parseDocument(formData.cpf || '')) {
+                        setCpfConsultado(false);
+                    }
+                    
+                    setFormData(prev => ({ ...prev, cpf: formatted }));
+                    setCpfError('');
+                    
+                    if (limpo.length === 11) {
+                        handleCPFConsultation(formatted);
+                    }
+                  }}
+                  className={`input-field ${consultandoCPF ? 'opacity-50' : ''}`}
                   placeholder="000.000.000-00"
+                  disabled={consultandoCPF}
                   required
                 />
+                {cpfError && (
+                    <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                        <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                        <p className="text-xs text-red-700 dark:text-red-400">{cpfError}</p>
+                    </div>
+                )}
+                {cpfConsultado && !cpfError && (
+                    <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                )}
               </div>
+            </div>
+            
+            {/* NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                <div className="md:col-span-3">
+                    <h4 className="text-md font-semibold text-gray-900 dark:text-white">Identificação Pessoal</h4>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Nasc.</label>
+                    <input
+                        type="date"
+                        value={formData.dataNascimentoStr || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, dataNascimentoStr: e.target.value }))}
+                        className="input-field"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RG</label>
+                    <input
+                        type="text"
+                        value={formData.rg || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, rg: e.target.value }))}
+                        className="input-field"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Órgão Emissor</label>
+                    <input
+                        type="text"
+                        value={formData.orgaoEmissor || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, orgaoEmissor: e.target.value }))}
+                        className="input-field"
+                    />
+                </div>
             </div>
             
             {/* CNH e Categoria */}
@@ -140,31 +313,9 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
               </div>
             </div>
             
-            {/* REMOVIDO: Status Ativo */}
-            {/*
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Motorista Ativo?</label>
-                <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
-                        formData.isActive
-                            ? 'bg-green-600 hover:bg-green-700'
-                            : 'bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-800'
-                    }`}
-                >
-                    <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            formData.isActive ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                    />
-                </button>
-            </div>
-            */}
-
             <div className="flex space-x-4 pt-4">
               <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-              <button type="submit" className="btn-primary flex-1">
+              <button type="submit" className="btn-primary flex-1" disabled={consultandoCPF || !!cpfError}>
                 {editingId ? 'Salvar alterações' : 'Adicionar Motorista'}
               </button>
             </div>

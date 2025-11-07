@@ -38,6 +38,11 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         numero: cleanedItem.numero, // NOVO
         complemento: cleanedItem.complemento, // NOVO
         cidade: cleanedItem.cidade, uf: cleanedItem.uf, cep: cleanedItem.cep, observacoes: cleanedItem.observacoes, is_active: cleanedItem.isActive, avatar_url: cleanedItem.avatarUrl,
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        rg: cleanedItem.rg,
+        orgao_emissor: cleanedItem.orgaoEmissor,
       };
     case 'parceiros':
       return {
@@ -62,6 +67,11 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
       return {
         ...base,
         parceiro_id: cleanedItem.parceiroId, nome: cleanedItem.nome || '', cpf: cleanedItem.cpf || '', cnh: cleanedItem.cnh || '', nacionalidade: cleanedItem.nacionalidade, categoria_cnh: cleanedItem.categoriaCnh, validade_cnh: cleanedItem.validadeCnh?.toISOString().split('T')[0], telefone: cleanedItem.telefone, is_active: cleanedItem.isActive,
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        rg: cleanedItem.rg,
+        orgao_emissor: cleanedItem.orgaoEmissor,
       };
     case 'veiculos':
       // Desestrutura 'permisso' para garantir que não seja enviado ao Supabase
@@ -147,6 +157,11 @@ export const mapFromSupabase = (tableName: string, item: any) => {
       return {
         ...base,
         tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, email: item.email, telefone: item.telefone, responsavel: item.responsavel, endereco: item.endereco, numero: item.numero, complemento: item.complemento, cidade: item.cidade, uf: item.uf, cep: item.cep, observacoes: item.observacoes, isActive: item.is_active, avatarUrl: item.avatar_url,
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        rg: item.rg,
+        orgaoEmissor: item.orgao_emissor,
       } as Cliente;
     case 'parceiros':
       return {
@@ -167,6 +182,11 @@ export const mapFromSupabase = (tableName: string, item: any) => {
       return {
         ...base,
         parceiroId: item.parceiro_id, nome: item.nome, cpf: item.cpf, cnh: item.cnh, nacionalidade: item.nacionalidade, categoriaCnh: item.categoria_cnh, validadeCnh: item.validade_cnh ? new Date(item.validade_cnh) : undefined, telefone: item.telefone, isActive: item.is_active,
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        rg: item.rg,
+        orgaoEmissor: item.orgao_emissor,
       } as Motorista;
     case 'veiculos':
       const veiculo: Veiculo = {

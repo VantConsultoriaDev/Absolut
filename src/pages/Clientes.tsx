@@ -1,13 +1,15 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
-import { formatDocument, formatContact, parseDocument } from '../utils/formatters'
-import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle } from 'lucide-react'
+import { formatDocument, formatContact, parseDocument, createLocalDate, isValidCPF } from '../utils/formatters'
+import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle, RefreshCw, Calendar } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
-import { useModal } from '../hooks/useModal' // Importando useModal
-import ClienteDetailModal from '../components/clientes/ClienteDetailModal' // NOVO IMPORT
-import { Cliente } from '../types' // Importando Cliente para tipagem
-import { showError } from '../utils/toast' // Importando toasts
+import { CPFService, CPFData } from '../services/cpfService' // Importando CPFService e CPFData
+import { useModal } from '../hooks/useModal'
+import ClienteDetailModal from '../components/clientes/ClienteDetailModal'
+import { Cliente } from '../types'
+import { showError } from '../utils/toast'
+import { format } from 'date-fns'
 
 const Clientes: React.FC = () => {
   const location = useLocation()
@@ -16,37 +18,47 @@ const Clientes: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [avatarFile, setAvatarFile] = useState<File | null>(null) // Arquivo temporário
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null) // Preview da imagem
-  const [isSaving, setIsSaving] = useState(false) // Estado de salvamento
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   
-  // Estado para o novo modal de detalhes
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [detailTargetCliente, setDetailTargetCliente] = useState<any>(null)
-
-  const [form, setForm] = useState({
-    tipo: 'PJ' as 'PF' | 'PJ' | 'INTERNACIONAL',
-    nome: '', // Razão Social (PJ) / Nome (PF/INT)
-    nomeFantasia: '', // Novo campo para Nome Fantasia
-    documento: '',
-    email: '',
-    telefone: '',
-    responsavel: '', // NOVO CAMPO
-    endereco: '',
-    numero: '', // NOVO CAMPO
-    complemento: '', // NOVO CAMPO
-    cidade: '',
-    uf: '', // RENOMEADO
-    cep: '',
-    observacoes: '',
-    isActive: true as boolean,
-    avatarUrl: null as string | null // Alterado para aceitar string ou null
-  })
 
   // Estados para consulta de CNPJ (apenas para PJ)
   const [consultandoCNPJ, setConsultandoCNPJ] = useState(false)
   const [cnpjConsultado, setCnpjConsultado] = useState(false)
-  const [cnpjError, setCnpjError] = useState('') // NOVO: Mensagem de erro de CNPJ
+  const [cnpjError, setCnpjError] = useState('')
+  
+  // NOVO: Estados para consulta de CPF (apenas para PF)
+  const [consultandoCPF, setConsultandoCPF] = useState(false)
+  const [cpfConsultado, setCpfConsultado] = useState(false)
+  const [cpfError, setCpfError] = useState('')
+  const [lastConsultedCpf, setLastConsultedCpf] = useState('')
+
+  const [form, setForm] = useState({
+    tipo: 'PJ' as 'PF' | 'PJ' | 'INTERNACIONAL',
+    nome: '',
+    nomeFantasia: '',
+    documento: '',
+    email: '',
+    telefone: '',
+    responsavel: '',
+    endereco: '',
+    numero: '',
+    complemento: '',
+    cidade: '',
+    uf: '',
+    cep: '',
+    observacoes: '',
+    isActive: true as boolean,
+    avatarUrl: null as string | null,
+    
+    // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (PF)
+    dataNascimentoStr: '' as string | undefined, // String para o input date
+    rg: '' as string | undefined,
+    orgaoEmissor: '' as string | undefined,
+  })
 
   // Hook useModal
   const { modalRef } = useModal({
@@ -60,7 +72,6 @@ const Clientes: React.FC = () => {
   // Reset para tela inicial quando navegado via menu lateral
   useEffect(() => {
     if (location.state?.resetModule) {
-      // Fechar modal e limpar estados
       setShowForm(false)
       setEditingId(null)
       resetForm()
@@ -71,6 +82,12 @@ const Clientes: React.FC = () => {
       setCnpjConsultado(false)
       setShowDetailModal(false)
       setDetailTargetCliente(null)
+      
+      // NOVO: Reset de estados de CPF
+      setConsultandoCPF(false)
+      setCpfConsultado(false)
+      setCpfError('')
+      setLastConsultedCpf('')
     }
   }, [location.state])
 
@@ -88,59 +105,97 @@ const Clientes: React.FC = () => {
     setForm({
       tipo: 'PJ',
       nome: '',
-      nomeFantasia: '', // NOVO
+      nomeFantasia: '',
       documento: '',
       email: '',
       telefone: '',
-      responsavel: '', // NOVO CAMPO
+      responsavel: '',
       endereco: '',
-      numero: '', // NOVO CAMPO
-      complemento: '', // NOVO CAMPO
+      numero: '',
+      complemento: '',
       cidade: '',
-      uf: '', // RENOMEADO
+      uf: '',
       cep: '',
       observacoes: '',
       isActive: true,
-      avatarUrl: null // Reset para null
+      avatarUrl: null,
+      
+      // NOVOS CAMPOS
+      dataNascimentoStr: undefined,
+      rg: undefined,
+      orgaoEmissor: undefined,
     })
     setEditingId(null)
     setConsultandoCNPJ(false)
     setCnpjConsultado(false)
     setAvatarFile(null)
     setAvatarPreview(null)
-    setCnpjError('') // Limpa erro
+    setCnpjError('')
+    
+    // NOVO: Reset de estados de CPF
+    setConsultandoCPF(false)
+    setCpfConsultado(false)
+    setCpfError('')
+    setLastConsultedCpf('')
   }
 
   const startEdit = (cliente: any) => {
     const c = clientes.find(x => x.id === cliente.id)
     if (!c) return
+    
+    const cleanCnpj = parseDocument(c.documento || '');
+    const cleanCpf = parseDocument(c.documento || '');
+    
     setForm({
       tipo: c.tipo,
       nome: c.nome || '',
-      nomeFantasia: c.nomeFantasia || '', // NOVO
-      documento: c.documento || '',
+      nomeFantasia: c.nomeFantasia || '',
+      documento: formatDocument(c.documento || '', c.tipo),
       email: c.email || '',
       telefone: c.telefone || '',
-      responsavel: (c as any).responsavel || '', // NOVO CAMPO
+      responsavel: (c as any).responsavel || '',
       endereco: c.endereco || '',
-      numero: (c as any).numero || '', // NOVO CAMPO
-      complemento: (c as any).complemento || '', // NOVO CAMPO
+      numero: (c as any).numero || '',
+      complemento: (c as any).complemento || '',
       cidade: c.cidade || '',
-      uf: c.uf || '', // RENOMEADO
+      uf: c.uf || '',
       cep: c.cep || '',
       observacoes: c.observacoes || '',
       isActive: c.isActive ?? true,
-      avatarUrl: c.avatarUrl || null // Carrega URL ou null
+      avatarUrl: c.avatarUrl || null,
+      
+      // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (PF)
+      dataNascimentoStr: c.dataNascimento && c.dataNascimento instanceof Date && !isNaN(c.dataNascimento.getTime())
+          ? format(c.dataNascimento, 'yyyy-MM-dd') 
+          : undefined,
+      rg: c.rg || undefined,
+      orgaoEmissor: c.orgaoEmissor || undefined,
     })
-    // Se houver URL, usa como preview (não é um arquivo local)
+    
     setAvatarPreview(c.avatarUrl || null)
-    setAvatarFile(null) // Garante que não há arquivo pendente
+    setAvatarFile(null)
     setEditingId(c.id)
     setShowForm(true)
-    setCnpjError('') // Limpa erro
+    setCnpjError('')
+    setCpfError('')
+    
+    // Lógica de rastreamento CNPJ
+    if (c.tipo === 'PJ' && cleanCnpj.length === 14) {
+        setCnpjConsultado(true);
+    } else {
+        setCnpjConsultado(false);
+    }
+    
+    // Lógica de rastreamento CPF (NOVO)
+    if (c.tipo === 'PF' && cleanCpf.length === 11) {
+        setCpfConsultado(true);
+        setLastConsultedCpf(cleanCpf);
+    } else {
+        setCpfConsultado(false);
+        setLastConsultedCpf('');
+    }
   }
   
-  // Handler para upload de imagem (apenas armazena o arquivo e cria o preview)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -156,7 +211,6 @@ const Clientes: React.FC = () => {
   const handleRemoveImage = () => {
     setAvatarFile(null)
     setAvatarPreview(null)
-    // Se estiver editando, limpa o avatarUrl para NULL para que a função de update remova o arquivo antigo
     setForm(prev => ({ ...prev, avatarUrl: null }))
   }
 
@@ -167,80 +221,74 @@ const Clientes: React.FC = () => {
       return
     }
     
+    const cleanDocument = parseDocument(form.documento || '');
+    
     // Validação final do CNPJ/CPF
-    if (form.tipo === 'PJ' && !CNPJService.validarCNPJ(form.documento)) {
+    if (form.tipo === 'PJ' && !CNPJService.validarCNPJ(cleanDocument)) {
         showError('CNPJ inválido. Verifique os dígitos.');
+        return;
+    }
+    if (form.tipo === 'PF' && !isValidCPF(cleanDocument)) {
+        showError('CPF inválido. Verifique os dígitos.');
         return;
     }
     
     setIsSaving(true)
-    let finalAvatarUrl: string | null | undefined = form.avatarUrl; // Começa com a URL existente ou null
-    
-    // 1. Determinar o ID do cliente. Se for edição, usa o ID existente. Se for criação, gera um ID temporário.
+    let finalAvatarUrl: string | null | undefined = form.avatarUrl;
     const clienteId = editingId || generateUuid(); 
 
     try {
-      // 2. Se houver um novo arquivo, faz o upload usando o ID determinado
       if (avatarFile) {
         const url = await uploadAvatar(avatarFile, clienteId);
         if (!url) {
-          // Se o upload falhar, a função uploadAvatar já deve ter mostrado um toast de erro.
           throw new Error('Falha ao fazer upload da imagem.');
         }
         finalAvatarUrl = url;
       } else if (form.avatarUrl === null) {
-        // 3. Se a URL foi explicitamente limpa (handleRemoveImage), definimos como null
         finalAvatarUrl = null;
       } else if (form.avatarUrl && !avatarFile) {
-        // 4. Mantém a URL existente (sem novo upload)
         finalAvatarUrl = form.avatarUrl;
       } else {
-        // 5. Se não há URL e nem arquivo, garante que seja null
         finalAvatarUrl = null;
       }
       
-      // O payload de atualização/criação deve ser compatível com Partial<Cliente>
+      // 1. Converte data de nascimento de volta para Date
+      const dataNascimentoDate = form.dataNascimentoStr 
+          ? createLocalDate(form.dataNascimentoStr) 
+          : undefined;
+      
+      // 2. Prepara o payload
       const payload: Partial<Cliente> = {
         ...form,
-        documento: parseDocument(form.documento), // Salva documento limpo
+        documento: cleanDocument,
         avatarUrl: finalAvatarUrl,
-        // Adicionando campos de endereço
-        endereco: form.endereco,
-        numero: form.numero,
-        complemento: form.complemento,
-        responsavel: form.responsavel, // NOVO CAMPO
+        telefone: parseDocument(form.telefone || ''),
+        
+        // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL (PF)
+        dataNascimento: form.tipo === 'PF' ? dataNascimentoDate : undefined,
+        rg: form.tipo === 'PF' ? form.rg : undefined,
+        orgaoEmissor: form.tipo === 'PF' ? form.orgaoEmissor : undefined,
+        
+        // Limpa campos PJ se for PF/INTERNACIONAL
+        nomeFantasia: form.tipo === 'PJ' ? form.nomeFantasia : undefined,
+        responsavel: form.tipo === 'PJ' ? form.responsavel : undefined,
       }
       
       if (editingId) {
-        // AGUARDA A ATUALIZAÇÃO DO CONTEXTO (que inclui a exclusão do avatar antigo)
         await updateCliente(editingId, payload)
       } else {
-        // Para criação, precisamos garantir que as propriedades obrigatórias (tipo, nome) estejam presentes
-        // e que o objeto seja do tipo CreateType<Cliente>
         const createPayload: Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'> = {
+            ...payload as Omit<Cliente, 'id' | 'createdAt' | 'updatedAt'>,
             tipo: form.tipo,
             nome: form.nome,
-            nomeFantasia: form.nomeFantasia,
-            documento: parseDocument(form.documento), // Salva documento limpo
-            email: form.email,
-            telefone: form.telefone,
-            responsavel: form.responsavel, // NOVO CAMPO
-            endereco: form.endereco,
-            numero: form.numero, // NOVO CAMPO
-            complemento: form.complemento, // NOVO CAMPO
-            cidade: form.cidade,
-            uf: form.uf, // RENOMEADO
-            cep: form.cep,
-            observacoes: form.observacoes,
+            documento: cleanDocument,
             isActive: form.isActive,
-            avatarUrl: finalAvatarUrl,
         };
         await createCliente({ ...createPayload, id: clienteId })
       }
       
       setShowForm(false)
       resetForm()
-      // showSuccess(`Cliente ${form.nome} salvo com sucesso.`); // REMOVIDO
     } catch (error) {
       console.error('Erro ao salvar cliente:', error);
       showError(error instanceof Error ? error.message : 'Erro ao salvar cliente.');
@@ -249,7 +297,6 @@ const Clientes: React.FC = () => {
     }
   }
   
-  // Função auxiliar para gerar ID (necessária para o handleSubmit)
   const generateUuid = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -260,12 +307,10 @@ const Clientes: React.FC = () => {
   // Consulta automática de CNPJ (PJ)
   const handleCNPJConsultation = async (cnpj: string) => {
     if (form.tipo !== 'PJ') return
-    const cnpjLimpo = cnpj.replace(/\D/g, '')
+    const cnpjLimpo = parseDocument(cnpj)
     setCnpjError('')
     
     if (cnpjLimpo.length !== 14) return
-    
-    // 1. Validação de Dígitos
     if (!CNPJService.validarCNPJ(cnpjLimpo)) {
         setCnpjError('CNPJ inválido. Verifique os dígitos.');
         return;
@@ -275,30 +320,27 @@ const Clientes: React.FC = () => {
 
     setConsultandoCNPJ(true)
     try {
-      // Passa o CNPJ formatado para o serviço, que fará a limpeza/formatação final
       const dados = await CNPJService.consultarCNPJ(cnpj) 
       
       if (dados) {
         setForm(prev => ({
           ...prev,
-          nome: dados.razaoSocial || prev.nome, // Razão Social
-          nomeFantasia: dados.nomeFantasia || prev.nomeFantasia, // Nome Fantasia
+          nome: dados.razaoSocial || prev.nome,
+          nomeFantasia: dados.nomeFantasia || prev.nomeFantasia,
           telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
-          numero: dados.numero || prev.numero, // NOVO CAMPO
-          complemento: dados.complemento || prev.complemento, // NOVO CAMPO
+          numero: dados.numero || prev.numero,
+          complemento: dados.complemento || prev.complemento,
           cidade: dados.cidade || prev.cidade,
-          uf: dados.uf || prev.uf, // RENOMEADO
+          uf: dados.uf || prev.uf,
           cep: dados.cep || prev.cep
         }))
         setCnpjConsultado(true)
         setCnpjError('')
-        // showSuccess('Dados do CNPJ consultados com sucesso!'); // REMOVIDO
         if (dados.simulado) {
           showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.')
         }
       } else {
-        // CNPJ válido, mas não encontrado na base externa
         setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
       }
     } catch (err) {
@@ -308,6 +350,62 @@ const Clientes: React.FC = () => {
       setConsultandoCNPJ(false)
     }
   }
+  
+  // NOVO: Consulta automática de CPF (PF)
+  const handleCPFConsultation = async (cpf: string) => {
+    if (form.tipo !== 'PF') return;
+    const cpfLimpo = parseDocument(cpf);
+    setCpfError('');
+    
+    if (cpfLimpo.length !== 11) return;
+    
+    if (!isValidCPF(cpfLimpo)) {
+        setCpfError('CPF inválido. Verifique os dígitos.');
+        return;
+    }
+    
+    if (cpfLimpo === lastConsultedCpf && cpfConsultado && !consultandoCPF) {
+        return;
+    }
+    
+    if (consultandoCPF) return;
+
+    setConsultandoCPF(true);
+    setCpfConsultado(false);
+    
+    try {
+      const dados: CPFData | null = await CPFService.consultarCPF(cpf); 
+      
+      if (dados) {
+        setForm(prev => ({
+          ...prev,
+          nome: dados.nome || prev.nome,
+          telefone: dados.telefone || prev.telefone,
+          email: dados.email || prev.email,
+          
+          // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+          dataNascimentoStr: dados.dataNascimento || prev.dataNascimentoStr,
+          rg: dados.rg || prev.rg,
+          orgaoEmissor: dados.orgaoEmissor || prev.orgaoEmissor,
+        }));
+        setCpfConsultado(true);
+        setLastConsultedCpf(cpfLimpo);
+        setCpfError('');
+        if (dados.simulado) {
+          showError('Não foi possível conectar com a API de CPF. Usando dados simulados como fallback.');
+        }
+      } else {
+        setCpfError('CPF válido, mas não encontrado na base de dados externa.');
+        setLastConsultedCpf('');
+      }
+    } catch (err) {
+      console.error('Erro ao consultar CPF:', err);
+      setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
+      setLastConsultedCpf('');
+    } finally {
+      setConsultandoCPF(false);
+    }
+  };
   
   // Handler para abrir o modal de detalhes
   const handleOpenDetailModal = (cliente: any) => {
@@ -321,7 +419,6 @@ const Clientes: React.FC = () => {
       deleteCliente(id);
       setShowDetailModal(false);
       setDetailTargetCliente(null);
-      // showSuccess('Cliente excluído com sucesso.'); // REMOVIDO
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao excluir cliente.');
     }
@@ -368,7 +465,6 @@ const Clientes: React.FC = () => {
           </div>
         ) : (
           filtered.map(c => {
-            // Nome principal a ser exibido
             const displayTitle = c.tipo === 'PJ' && c.nomeFantasia ? c.nomeFantasia : c.nome;
             
             return (
@@ -404,7 +500,6 @@ const Clientes: React.FC = () => {
                         c.tipo === 'PF' ? 'Pessoa Física' :
                         'Internacional'}
                       </p>
-                      {/* ADICIONANDO O DOCUMENTO ABAIXO DO TIPO */}
                       {c.documento && (
                         <p className="text-xs text-gray-600 dark:text-gray-300 font-mono tracking-tight leading-tight mt-0.5">
                           {formatDocument(c.documento, c.tipo)}
@@ -499,10 +594,25 @@ const Clientes: React.FC = () => {
                       value={form.tipo}
                       onChange={(e) => {
                         const novoTipo = e.target.value as 'PF' | 'PJ' | 'INTERNACIONAL'
-                        setForm(prev => ({ ...prev, tipo: novoTipo, documento: '', nome: '', nomeFantasia: '', responsavel: '' })) // Reset nomeFantasia e responsavel
+                        setForm(prev => ({ 
+                            ...prev, 
+                            tipo: novoTipo, 
+                            documento: '', 
+                            nome: '', 
+                            nomeFantasia: '', 
+                            responsavel: '',
+                            // Limpa campos PF se mudar para PJ/INTERNACIONAL
+                            dataNascimentoStr: novoTipo !== 'PF' ? undefined : prev.dataNascimentoStr,
+                            rg: novoTipo !== 'PF' ? undefined : prev.rg,
+                            orgaoEmissor: novoTipo !== 'PF' ? undefined : prev.orgaoEmissor,
+                        }))
                         setCnpjConsultado(false)
                         setConsultandoCNPJ(false)
                         setCnpjError('')
+                        setCpfConsultado(false)
+                        setConsultandoCPF(false)
+                        setCpfError('')
+                        setLastConsultedCpf('')
                       }}
                       className="input-field"
                     >
@@ -529,7 +639,7 @@ const Clientes: React.FC = () => {
                             const formatted = formatDocument(e.target.value, 'PJ')
                             const limpo = formatted.replace(/\D/g, '')
                             setForm(prev => ({ ...prev, documento: formatted }))
-                            setCnpjError('') // Limpa erro ao digitar
+                            setCnpjError('')
                             if (cnpjConsultado && limpo.length < 14) setCnpjConsultado(false)
                             if (limpo.length === 14) {
                               handleCNPJConsultation(formatted)
@@ -552,18 +662,44 @@ const Clientes: React.FC = () => {
                       </>
                     ) : form.tipo === 'PF' ? (
                       <>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CPF *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CPF *
+                          {consultandoCPF && (
+                            <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
+                          )}
+                        </label>
                         <input
                           type="text"
                           value={form.documento}
                           onChange={(e) => {
                             const formatted = formatDocument(e.target.value, 'PF')
+                            const limpo = parseDocument(formatted);
+                            
+                            if (limpo !== parseDocument(form.documento || '')) {
+                                setCpfConsultado(false);
+                            }
+                            
                             setForm(prev => ({ ...prev, documento: formatted }))
+                            setCpfError('')
+                            
+                            if (limpo.length === 11) {
+                              handleCPFConsultation(formatted);
+                            }
                           }}
                           placeholder="000.000.000-00"
-                          className="input-field"
+                          className={`input-field ${consultandoCPF ? 'opacity-50' : ''}`}
+                          disabled={consultandoCPF}
                           required
                         />
+                        {cpfError && (
+                            <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                                <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                                <p className="text-xs text-red-700 dark:text-red-400">{cpfError}</p>
+                            </div>
+                        )}
+                        {form.tipo === 'PF' && cpfConsultado && !cpfError && (
+                          <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                        )}
                       </>
                     ) : (
                       <>
@@ -610,6 +746,42 @@ const Clientes: React.FC = () => {
                     </div>
                   )}
                 </div>
+                
+                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO (PF) */}
+                {form.tipo === 'PF' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                        <div className="md:col-span-3">
+                            <h4 className="text-md font-semibold text-gray-900 dark:text-white">Identificação Pessoal</h4>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Nasc.</label>
+                            <input
+                                type="date"
+                                value={form.dataNascimentoStr || ''}
+                                onChange={(e) => setForm(prev => ({ ...prev, dataNascimentoStr: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RG</label>
+                            <input
+                                type="text"
+                                value={form.rg || ''}
+                                onChange={(e) => setForm(prev => ({ ...prev, rg: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Órgão Emissor</label>
+                            <input
+                                type="text"
+                                value={form.orgaoEmissor || ''}
+                                onChange={(e) => setForm(prev => ({ ...prev, orgaoEmissor: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Contato e Responsável */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -661,65 +833,69 @@ const Clientes: React.FC = () => {
                 </div>
 
                 {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
-                  <input
-                    type="text"
-                    value={form.endereco}
-                    onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
-                    className="input-field"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
-                    <input
-                      type="text"
-                      value={form.numero}
-                      onChange={(e) => setForm(prev => ({ ...prev, numero: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
-                    <input
-                      type="text"
-                      value={form.complemento}
-                      onChange={(e) => setForm(prev => ({ ...prev, complemento: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
-                    <input
-                      type="text"
-                      value={form.uf}
-                      onChange={(e) => setForm(prev => ({ ...prev, uf: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
-                    <input
-                      type="text"
-                      value={form.cidade}
-                      onChange={(e) => setForm(prev => ({ ...prev, cidade: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
-                    <input
-                      type="text"
-                      value={form.cep}
-                      onChange={(e) => setForm(prev => ({ ...prev, cep: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
+                {form.tipo !== 'INTERNACIONAL' && (
+                    <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                          <input
+                            type="text"
+                            value={form.endereco}
+                            onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
+                            className="input-field"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
+                            <input
+                              type="text"
+                              value={form.numero}
+                              onChange={(e) => setForm(prev => ({ ...prev, numero: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
+                            <input
+                              type="text"
+                              value={form.complemento}
+                              onChange={(e) => setForm(prev => ({ ...prev, complemento: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                            <input
+                              type="text"
+                              value={form.cidade}
+                              onChange={(e) => setForm(prev => ({ ...prev, cidade: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
+                            <input
+                              type="text"
+                              value={form.uf}
+                              onChange={(e) => setForm(prev => ({ ...prev, uf: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                            <input
+                              type="text"
+                              value={form.cep}
+                              onChange={(e) => setForm(prev => ({ ...prev, cep: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                    </>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
@@ -733,7 +909,7 @@ const Clientes: React.FC = () => {
 
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn-secondary" onClick={() => { setShowForm(false); resetForm() }} disabled={isSaving}>Cancelar</button>
-                  <button type="submit" className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" disabled={isSaving}>
+                  <button type="submit" className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors" disabled={isSaving || consultandoCNPJ || consultandoCPF || !!cnpjError || !!cpfError}>
                     {isSaving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar cliente'}
                   </button>
                 </div>

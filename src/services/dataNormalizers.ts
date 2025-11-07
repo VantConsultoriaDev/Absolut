@@ -25,6 +25,11 @@ export const normalizeClienteCreate = (d: Omit<Cliente, 'id' | 'createdAt' | 'up
   cidade: d.cidade,
   uf: d.uf, // RENOMEADO
   observacoes: d.observacoes,
+  
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+  dataNascimento: d.dataNascimento,
+  rg: d.rg,
+  orgaoEmissor: d.orgaoEmissor,
 });
 
 export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | 'updatedAt'>) => ({
@@ -49,6 +54,11 @@ export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | '
 export const normalizeMotoristaCreate = (d: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'>) => ({
   ...d,
   nome: d.nome,
+  
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+  dataNascimento: d.dataNascimento,
+  rg: d.rg,
+  orgaoEmissor: d.orgaoEmissor,
 });
 
 export const normalizeVeiculoCreate = (d: Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt'>) => ({
