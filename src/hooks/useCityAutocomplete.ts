@@ -74,9 +74,28 @@ export const useCityAutocomplete = (uf: string, query: string): UseCityAutocompl
     }
 
     const q = debouncedQuery.toLowerCase();
-    return listaCidades.filter(c =>
+    
+    // 1. Filtra: A cidade deve conter o texto digitado
+    const results = listaCidades.filter(c =>
       c.nome.toLowerCase().includes(q)
-    ).slice(0, 10); // Limita a 10 resultados
+    );
+    
+    // 2. Ordena: Prioriza as que começam com o texto digitado
+    results.sort((a, b) => {
+      const aName = a.nome.toLowerCase();
+      const bName = b.nome.toLowerCase();
+      
+      const aStarts = aName.startsWith(q);
+      const bStarts = bName.startsWith(q);
+      
+      if (aStarts && !bStarts) return -1; // a vem primeiro
+      if (!aStarts && bStarts) return 1;  // b vem primeiro
+      
+      // Se ambos começam ou nenhum começa, ordena alfabeticamente
+      return aName.localeCompare(bName);
+    });
+
+    return results.slice(0, 10); // Limita a 10 resultados
   }, [debouncedQuery, listaCidades]);
 
   return { listaCidades, filteredCities, isLoading };
