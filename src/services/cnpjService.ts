@@ -34,6 +34,11 @@ export class CNPJService {
     if (cnpjLimpo.length !== 14) {
       throw new Error('CNPJ deve ter 14 dígitos');
     }
+    
+    // NOVO: Valida o CNPJ antes de consultar a API
+    if (!this.validarCNPJ(cnpjLimpo)) {
+        throw new Error('CNPJ inválido (falha na validação de dígitos).');
+    }
 
     // Formata o CNPJ para o padrão XX.XXX.XXX/XXXX-XX
     const cnpjFormatado = cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
@@ -75,8 +80,8 @@ export class CNPJService {
       // NOVO LOG: Exibe o payload bruto para diagnóstico
       console.log('CNPJService: Payload Bruto da API:', payload);
 
-      // Verifica se a resposta contém dados válidos
-      if (!payload || payload.error) {
+      // Verifica se a resposta contém dados válidos ou se há erro explícito
+      if (!payload || payload.error || payload.message?.toLowerCase().includes('não encontrado')) {
         const errorMessage = payload?.message || payload?.error || 'CNPJ não encontrado ou inválido';
         console.error('CNPJService: Erro nos dados da API:', errorMessage);
         
@@ -84,6 +89,7 @@ export class CNPJService {
              throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
         
+        // Se o CNPJ não for encontrado, retorna null
         return null;
       }
 
@@ -131,9 +137,7 @@ export class CNPJService {
       }
       
       // 4. Fallback Cruzado: Se o Nome Fantasia estiver vazio, mas a Razão Social estiver preenchida, usa a Razão Social como Nome Fantasia.
-      if (!nomeFantasiaFinal && razaoSocialFinal) {
-          nomeFantasiaFinal = razaoSocialFinal;
-      }
+      // REMOVIDO: Esta regra não é desejada, pois o Nome Fantasia deve ser opcional.
       
       // --- FIM MAPEAMENTO DE NOMES ---
 

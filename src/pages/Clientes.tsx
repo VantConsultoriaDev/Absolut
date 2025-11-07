@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
-import { formatDocument, formatContact } from '../utils/formatters'
-import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon } from 'lucide-react'
+import { formatDocument, formatContact, parseDocument } from '../utils/formatters'
+import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { useModal } from '../hooks/useModal' // Importando useModal
 import ClienteDetailModal from '../components/clientes/ClienteDetailModal' // NOVO IMPORT
@@ -43,6 +43,7 @@ const Clientes: React.FC = () => {
   // Estados para consulta de CNPJ (apenas para PJ)
   const [consultandoCNPJ, setConsultandoCNPJ] = useState(false)
   const [cnpjConsultado, setCnpjConsultado] = useState(false)
+  const [cnpjError, setCnpjError] = useState('') // NOVO: Mensagem de erro de CNPJ
 
   // Hook useModal
   const { modalRef } = useModal({
@@ -101,6 +102,7 @@ const Clientes: React.FC = () => {
     setCnpjConsultado(false)
     setAvatarFile(null)
     setAvatarPreview(null)
+    setCnpjError('') // Limpa erro
   }
 
   const startEdit = (cliente: any) => {
@@ -126,6 +128,7 @@ const Clientes: React.FC = () => {
     setAvatarFile(null) // Garante que não há arquivo pendente
     setEditingId(c.id)
     setShowForm(true)
+    setCnpjError('') // Limpa erro
   }
   
   // Handler para upload de imagem (apenas armazena o arquivo e cria o preview)
@@ -153,6 +156,12 @@ const Clientes: React.FC = () => {
     if (!form.nome.trim()) {
       alert('Informe o nome/razão social do cliente')
       return
+    }
+    
+    // Validação final do CNPJ/CPF
+    if (form.tipo === 'PJ' && !CNPJService.validarCNPJ(form.documento)) {
+        showError('CNPJ inválido. Verifique os dígitos.');
+        return;
     }
     
     setIsSaving(true)
@@ -184,7 +193,7 @@ const Clientes: React.FC = () => {
       // O payload de atualização/criação deve ser compatível com Partial<Cliente>
       const payload: Partial<Cliente> = {
         ...form,
-        documento: form.documento,
+        documento: parseDocument(form.documento), // Salva documento limpo
         avatarUrl: finalAvatarUrl, 
       }
       
@@ -198,7 +207,7 @@ const Clientes: React.FC = () => {
             tipo: form.tipo,
             nome: form.nome,
             nomeFantasia: form.nomeFantasia,
-            documento: form.documento,
+            documento: parseDocument(form.documento), // Salva documento limpo
             email: form.email,
             telefone: form.telefone,
             endereco: form.endereco,
@@ -235,35 +244,47 @@ const Clientes: React.FC = () => {
   const handleCNPJConsultation = async (cnpj: string) => {
     if (form.tipo !== 'PJ') return
     const cnpjLimpo = cnpj.replace(/\D/g, '')
+    setCnpjError('')
+    
     if (cnpjLimpo.length !== 14) return
+    
+    // 1. Validação de Dígitos
+    if (!CNPJService.validarCNPJ(cnpjLimpo)) {
+        setCnpjError('CNPJ inválido. Verifique os dígitos.');
+        return;
+    }
+    
     if (consultandoCNPJ) return
 
     setConsultandoCNPJ(true)
     try {
       // Passa o CNPJ formatado para o serviço, que fará a limpeza/formatação final
       const dados = await CNPJService.consultarCNPJ(cnpj) 
+      
       if (dados) {
         setForm(prev => ({
           ...prev,
           nome: dados.razaoSocial || prev.nome, // Razão Social
           nomeFantasia: dados.nomeFantasia || prev.nomeFantasia, // Nome Fantasia
-          telefone: dados.telefone || prev.telefone,
+          telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
           cidade: dados.cidade || prev.cidade,
           uf: dados.uf || prev.uf, // RENOMEADO
           cep: dados.cep || prev.cep
         }))
         setCnpjConsultado(true)
+        setCnpjError('')
         // showSuccess('Dados do CNPJ consultados com sucesso!'); // REMOVIDO
         if (dados.simulado) {
           showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.')
         }
       } else {
-        showError('CNPJ não encontrado na base de dados externa.');
+        // CNPJ válido, mas não encontrado na base externa
+        setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
       }
     } catch (err) {
       console.error('Erro ao consultar CNPJ:', err)
-      showError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.')
+      setCnpjError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.')
     } finally {
       setConsultandoCNPJ(false)
     }
@@ -414,7 +435,7 @@ const Clientes: React.FC = () => {
                       {avatarPreview ? (
                         <img 
                           src={avatarPreview} 
-                          alt="Preview" 
+                          alt={form.nome} 
                           className="h-16 w-16 rounded-full object-cover border-2 border-blue-500"
                         />
                       ) : (
@@ -462,11 +483,12 @@ const Clientes: React.FC = () => {
                         setForm(prev => ({ ...prev, tipo: novoTipo, documento: '', nome: '', nomeFantasia: '' })) // Reset nomeFantasia
                         setCnpjConsultado(false)
                         setConsultandoCNPJ(false)
+                        setCnpjError('')
                       }}
                       className="input-field"
                     >
-                      <option value="PF">Pessoa Física</option>
                       <option value="PJ">Pessoa Jurídica</option>
+                      <option value="PF">Pessoa Física</option>
                       <option value="INTERNACIONAL">Internacional</option>
                     </select>
                   </div>
@@ -488,6 +510,7 @@ const Clientes: React.FC = () => {
                             const formatted = formatDocument(e.target.value, 'PJ')
                             const limpo = formatted.replace(/\D/g, '')
                             setForm(prev => ({ ...prev, documento: formatted }))
+                            setCnpjError('') // Limpa erro ao digitar
                             if (cnpjConsultado && limpo.length < 14) setCnpjConsultado(false)
                             if (limpo.length === 14) {
                               handleCNPJConsultation(formatted)
@@ -498,7 +521,13 @@ const Clientes: React.FC = () => {
                           disabled={consultandoCNPJ}
                           required
                         />
-                        {form.tipo === 'PJ' && cnpjConsultado && (
+                        {cnpjError && (
+                            <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                                <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                                <p className="text-xs text-red-700 dark:text-red-400">{cnpjError}</p>
+                            </div>
+                        )}
+                        {form.tipo === 'PJ' && cnpjConsultado && !cnpjError && (
                           <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
                         )}
                       </>

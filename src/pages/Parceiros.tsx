@@ -6,6 +6,7 @@ import {
   Search, 
   X, 
   CreditCard,
+  AlertTriangle, // NOVO
 } from 'lucide-react';
 import { 
   formatDocument, 
@@ -138,12 +139,14 @@ const Parceiros: React.FC = () => {
   // Estados de Consulta de API
   const [consultandoCNPJ, setConsultandoCNPJ] = useState(false);
   const [cnpjConsultado, setCnpjConsultado] = useState(false);
+  const [cnpjError, setCnpjError] = useState(''); // NOVO: Mensagem de erro de CNPJ
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
   const [placaConsultada, setPlacaConsultada] = useState(false);
   const [placaError, setPlacaError] = useState('');
   
   // NOVO: Estado para consulta de CNPJ do PIX
   const [consultandoPixCnpj, setConsultandoPixCnpj] = useState(false);
+  const [pixCnpjError, setPixCnpjError] = useState(''); // NOVO: Mensagem de erro de CNPJ PIX
 
   // Filtros
   const [query, setQuery] = useState('');
@@ -204,6 +207,8 @@ const Parceiros: React.FC = () => {
     setEditingParceiroId(null);
     setCnpjConsultado(false);
     setConsultandoCNPJ(false);
+    setCnpjError(''); // Limpa erro
+    setPixCnpjError(''); // Limpa erro PIX
   };
 
   const resetMotoristaForm = () => {
@@ -230,6 +235,8 @@ const Parceiros: React.FC = () => {
     setEditingParceiroId(parceiro.id);
     setShowParceiroForm(true);
     setShowDetailModal(false);
+    setCnpjError(''); // Limpa erro
+    setPixCnpjError(''); // Limpa erro PIX
   };
 
   const handleSubmitParceiro = (e: React.FormEvent) => {
@@ -238,12 +245,22 @@ const Parceiros: React.FC = () => {
     const cleanDocument = parseDocument(parceiroFormData.documento || '');
     const cleanPixKeyVal = cleanPixKey(parceiroFormData.pixKey || '', parceiroFormData.pixKeyType || '');
 
-    if (parceiroFormData.tipo !== 'PF' && cleanDocument.length !== 14) {
-        showError('CNPJ inválido.');
-        return;
+    // Validação de CNPJ/CPF
+    if (parceiroFormData.tipo === 'PJ') {
+        if (!CNPJService.validarCNPJ(cleanDocument)) {
+            setCnpjError('CNPJ inválido. Verifique os dígitos.');
+            return;
+        }
+    } else if (parceiroFormData.tipo === 'PF') {
+        if (cleanDocument.length !== 11) {
+            showError('CPF deve ter 11 dígitos.');
+            return;
+        }
     }
-    if (parceiroFormData.tipo === 'PF' && cleanDocument.length !== 11) {
-        showError('CPF inválido.');
+    
+    // Validação de PIX CNPJ (se for o caso)
+    if (parceiroFormData.pixKeyType === 'CNPJ' && !CNPJService.validarCNPJ(cleanPixKeyVal)) {
+        setPixCnpjError('CNPJ da chave PIX inválido.');
         return;
     }
     
@@ -508,12 +525,22 @@ const Parceiros: React.FC = () => {
   const handleCNPJConsultation = async (cnpj: string) => {
     if (parceiroFormData.tipo !== 'PJ') return;
     const cnpjLimpo = parseDocument(cnpj);
+    setCnpjError('');
+    
     if (cnpjLimpo.length !== 14) return;
+    
+    // 1. Validação de Dígitos
+    if (!CNPJService.validarCNPJ(cnpjLimpo)) {
+        setCnpjError('CNPJ inválido. Verifique os dígitos.');
+        return;
+    }
+    
     if (consultandoCNPJ) return;
 
     setConsultandoCNPJ(true);
     try {
       const dados = await CNPJService.consultarCNPJ(cnpj);
+      
       if (dados) {
         setParceiroFormData(prev => ({
           ...prev,
@@ -527,15 +554,17 @@ const Parceiros: React.FC = () => {
           cep: dados.cep || prev.cep,
         }));
         setCnpjConsultado(true);
+        setCnpjError('');
         if (dados.simulado) {
           showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.');
         }
       } else {
-        showError('CNPJ não encontrado na base de dados externa.');
+        // CNPJ válido, mas não encontrado na base externa
+        setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
       }
     } catch (err) {
       console.error('Erro ao consultar CNPJ:', err);
-      showError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.');
+      setCnpjError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.');
     } finally {
       setConsultandoCNPJ(false);
     }
@@ -544,7 +573,16 @@ const Parceiros: React.FC = () => {
   // --- CONSULTA API CNPJ (PIX) ---
   const handlePixCnpjConsultation = async (cnpj: string) => {
     const cleanCnpj = parseDocument(cnpj);
+    setPixCnpjError('');
+    
     if (cleanCnpj.length !== 14) return;
+    
+    // 1. Validação de Dígitos
+    if (!CNPJService.validarCNPJ(cleanCnpj)) {
+        setPixCnpjError('CNPJ inválido. Verifique os dígitos.');
+        return;
+    }
+    
     if (consultandoPixCnpj) return;
 
     setConsultandoPixCnpj(true);
@@ -558,15 +596,16 @@ const Parceiros: React.FC = () => {
                 ...prev,
                 pixTitular: razaoSocial,
             }));
+            setPixCnpjError('');
         } else {
-            showError('Razão Social não encontrada para este CNPJ.');
+            setPixCnpjError('Razão Social não encontrada para este CNPJ.');
         }
       } else {
-        showError('CNPJ não encontrado para a chave PIX.');
+        setPixCnpjError('CNPJ não encontrado para a chave PIX.');
       }
     } catch (err) {
       console.error('Erro ao consultar CNPJ do PIX:', err);
-      showError('Falha ao consultar CNPJ do PIX. Tente novamente.');
+      setPixCnpjError('Falha ao consultar CNPJ do PIX. Tente novamente.');
     } finally {
       setConsultandoPixCnpj(false);
     }
@@ -760,6 +799,7 @@ const Parceiros: React.FC = () => {
                         }));
                         setCnpjConsultado(false);
                         setConsultandoCNPJ(false);
+                        setCnpjError('');
                       }}
                       className="input-field"
                       disabled={!!editingParceiroId}
@@ -781,6 +821,7 @@ const Parceiros: React.FC = () => {
                         const formatted = formatDocument(e.target.value, parceiroFormData.tipo);
                         const limpo = formatted.replace(/\D/g, '');
                         setParceiroFormData(prev => ({ ...prev, documento: formatted }));
+                        setCnpjError(''); // Limpa erro ao digitar
                         if (parceiroFormData.tipo === 'PJ' && limpo.length === 14 && !cnpjConsultado) {
                           handleCNPJConsultation(formatted);
                         }
@@ -791,7 +832,13 @@ const Parceiros: React.FC = () => {
                       disabled={consultandoCNPJ}
                       required
                     />
-                    {parceiroFormData.tipo === 'PJ' && cnpjConsultado && (
+                    {cnpjError && (
+                        <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                            <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                            <p className="text-xs text-red-700 dark:text-red-400">{cnpjError}</p>
+                        </div>
+                    )}
+                    {parceiroFormData.tipo === 'PJ' && cnpjConsultado && !cnpjError && (
                       <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
                     )}
                   </div>
@@ -924,6 +971,7 @@ const Parceiros: React.FC = () => {
                                 onChange={(e) => {
                                     const formatted = formatPixKey(e.target.value, parceiroFormData.pixKeyType || '');
                                     setParceiroFormData(prev => ({ ...prev, pixKey: formatted }));
+                                    setPixCnpjError(''); // Limpa erro ao digitar
                                     
                                     // Lógica de consulta de CNPJ para PIX
                                     if (parceiroFormData.pixKeyType === 'CNPJ') {
@@ -936,6 +984,12 @@ const Parceiros: React.FC = () => {
                                 className={`input-field font-mono ${parceiroFormData.pixKeyType === 'CNPJ' && consultandoPixCnpj ? 'opacity-50' : ''}`}
                                 disabled={!parceiroFormData.pixKeyType || consultandoPixCnpj}
                             />
+                            {pixCnpjError && (
+                                <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                                    <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                                    <p className="text-xs text-red-700 dark:text-red-400">{pixCnpjError}</p>
+                                </div>
+                            )}
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titular da Chave (Padrão: Nome/Razão Social)</label>
@@ -997,7 +1051,7 @@ const Parceiros: React.FC = () => {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <button type="button" className="btn-secondary" onClick={() => { setShowParceiroForm(false); resetParceiroForm(); }}>Cancelar</button>
-                  <button type="submit" className="btn-primary" disabled={consultandoCNPJ || consultandoPixCnpj}>
+                  <button type="submit" className="btn-primary" disabled={consultandoCNPJ || consultandoPixCnpj || !!cnpjError || !!pixCnpjError}>
                     {editingParceiroId ? 'Salvar alterações' : 'Adicionar Parceiro'}
                   </button>
                 </div>
