@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { X, User, AlertTriangle } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista } from '../../types';
-import { formatDocument, formatContact, parseDocument, isValidCPF, createLocalDate } from '../../utils/formatters';
+import { formatDocument, formatContact, parseDocument, isValidCPF } from '../../utils/formatters';
 import { CPFService, CPFData } from '../../services/cpfService';
 import { showError } from '../../utils/toast'; // Importando showError
 
@@ -122,12 +122,6 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
         setCpfError('CPF inválido. Verifique os dígitos.');
         return;
     }
-    
-    // 1. Converte data de nascimento de volta para Date (REMOVIDO: Variável não utilizada)
-    
-    // 2. Prepara o payload final (Motorista)
-    // A variável finalPayload não precisa ser declarada se não for usada, mas o código de submissão
-    // precisa ser ajustado para usar o payload correto.
     
     // Ajustamos o `formData` antes de chamar `onSubmit`
     setFormData(prev => ({
