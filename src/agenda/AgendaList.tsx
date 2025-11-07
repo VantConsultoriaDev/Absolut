@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format, isBefore, isToday, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, Clock, AlertTriangle, Calendar, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Check, Clock, AlertTriangle, Calendar, MoreVertical, Trash2, Edit, Plus } from 'lucide-react';
 import { useAgenda } from './AgendaContext';
-import { AgendaItem } from './types';
+import { AgendaItem, initialAgendaItem } from './types';
 
 interface AgendaListProps {
   onEdit: (item: AgendaItem) => void;
@@ -11,11 +11,20 @@ interface AgendaListProps {
 }
 
 const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
-  const { items, toggleCompletion } = useAgenda();
+  const { items, toggleCompletion, addItem } = useAgenda();
+  const [filterUrgency, setFilterUrgency] = useState<'Todos' | AgendaItem['urgency']>('Todos');
+  const [quickTitle, setQuickTitle] = useState('');
+
+  const urgencyOrder = useMemo(() => ({ Urgente: 1, Normal: 2, Leve: 3 }), []);
 
   const sortedItems = useMemo(() => {
-    // Filtra itens não concluídos e ordena por data e urgência
-    const activeItems = items.filter(item => !item.isCompleted);
+    // 1. Filtra itens não concluídos
+    let activeItems = items.filter(item => !item.isCompleted);
+    
+    // 2. Filtra por Urgência
+    if (filterUrgency !== 'Todos') {
+        activeItems = activeItems.filter(item => item.urgency === filterUrgency);
+    }
     
     const itemsWithDate = activeItems.filter(item => item.dueDate);
     const itemsWithoutDate = activeItems.filter(item => !item.dueDate);
@@ -32,11 +41,14 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
       if (!isPastA && isPastB) return 1;
       
       // Ordena por data (mais antiga primeiro)
-      return dateA.getTime() - dateB.getTime();
+      const dateComparison = dateA.getTime() - dateB.getTime();
+      if (dateComparison !== 0) return dateComparison;
+      
+      // Desempate por Urgência
+      return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
     });
     
-    // Ordena itens sem data por urgência (High > Medium > Low)
-    const urgencyOrder = { high: 1, medium: 2, low: 3 };
+    // Ordena itens sem data por urgência (Urgente > Normal > Leve)
     itemsWithoutDate.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
 
     return {
@@ -44,12 +56,24 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
       today: itemsWithDate.filter(item => isToday(item.dueDate!)),
       future: itemsWithDate.filter(item => isFuture(item.dueDate!) && !isToday(item.dueDate!)),
       noDate: itemsWithoutDate,
+      completed: items.filter(i => i.isCompleted).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
     };
-  }, [items]);
+  }, [items, filterUrgency, urgencyOrder]);
+  
+  const handleQuickAdd = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!quickTitle.trim()) return;
+      
+      addItem({
+          ...initialAgendaItem,
+          title: quickTitle.trim(),
+          urgency: 'Normal', // Padrão para Normal
+      });
+      setQuickTitle('');
+  };
 
   const renderItem = (item: AgendaItem) => {
     const isOverdue = item.dueDate && isPast(item.dueDate) && !isToday(item.dueDate);
-    const urgencyColor = item.urgency === 'high' ? 'text-red-500' : item.urgency === 'medium' ? 'text-amber-500' : 'text-blue-500';
     
     const dateDisplay = item.dueDate 
       ? isToday(item.dueDate) 
@@ -58,6 +82,12 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
       : 'Sem Data';
       
     const dateColor = isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400';
+    
+    const urgencyConfig = {
+        Urgente: 'bg-red-500',
+        Normal: 'bg-amber-500',
+        Leve: 'bg-blue-500',
+    };
 
     return (
       <div key={item.id} className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -92,7 +122,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
           
           {/* Urgência (Badge AT) */}
           <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-            item.urgency === 'high' ? 'bg-red-500' : item.urgency === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
+            urgencyConfig[item.urgency]
           }`} title={`Urgência: ${item.urgency}`}>
             {item.urgency.substring(0, 1).toUpperCase()}
           </span>
@@ -159,16 +189,45 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
 
   return (
     <div className="space-y-6">
+        {/* Filtro de Urgência */}
+        <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filtrar por Urgência:</label>
+            <select
+                value={filterUrgency}
+                onChange={(e) => setFilterUrgency(e.target.value as 'Todos' | AgendaItem['urgency'])}
+                className="input-field w-36 h-10 text-sm"
+            >
+                <option value="Todos">Todos</option>
+                <option value="Urgente">Urgente</option>
+                <option value="Normal">Normal</option>
+                <option value="Leve">Leve</option>
+            </select>
+        </div>
+        
+        {/* Input de Criação Rápida */}
+        <form onSubmit={handleQuickAdd} className="flex items-center gap-2">
+            <input
+                type="text"
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                placeholder="Adicionar nova tarefa rápida (padrão: Normal)"
+                className="input-field flex-1"
+            />
+            <button type="submit" className="btn-primary px-4 py-2" disabled={!quickTitle.trim()}>
+                <Plus className="h-5 w-5" />
+            </button>
+        </form>
+
       {renderSection('Atrasadas', sortedItems.overdue, true)}
       {renderSection('Hoje', sortedItems.today)}
       {renderSection('Próximos Compromissos', sortedItems.future)}
       {renderSection('Tarefas Sem Data', sortedItems.noDate)}
       
-      {items.filter(i => i.isCompleted).length > 0 && (
+      {sortedItems.completed.length > 0 && (
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Concluídas</h4>
               <div className="space-y-1">
-                  {items.filter(i => i.isCompleted).map(renderItem)}
+                  {sortedItems.completed.map(renderItem)}
               </div>
           </div>
       )}

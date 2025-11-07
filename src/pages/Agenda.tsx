@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Calendar, ListTodo, Plus, Trash2 } from 'lucide-react';
+import { Calendar, ListTodo, Plus, Trash2, Clock, AlertTriangle, Check } from 'lucide-react';
 import { AgendaProvider, useAgenda } from '../agenda/AgendaContext';
 import AgendaList from '../agenda/AgendaList';
 import AgendaCalendar from '../agenda/AgendaCalendar';
@@ -8,7 +8,8 @@ import AgendaFormModal from '../agenda/AgendaFormModal';
 import NotificationModal from '../agenda/NotificationModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { AgendaItem, initialAgendaItem } from '../agenda/types';
-import { format } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // Componente principal que usa o Provider
 const AgendaPage: React.FC = () => {
@@ -22,13 +23,16 @@ const AgendaPage: React.FC = () => {
 // Componente de Conteúdo (usa o Context)
 const AgendaContent: React.FC = () => {
     const location = useLocation();
-    const { items, addItem, updateItem, deleteItem } = useAgenda();
+    const { items, addItem, updateItem, deleteItem, toggleCompletion } = useAgenda();
     
     const [showForm, setShowForm] = useState(false);
     const [editingItem, setEditingItem] = useState<AgendaItem | null>(null);
     
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<{ id: string, title: string } | null>(null);
+    
+    // NOVO ESTADO: Data selecionada no calendário (padrão: hoje)
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     // Reset para tela inicial quando navegado via menu lateral
     useEffect(() => {
@@ -37,6 +41,7 @@ const AgendaContent: React.FC = () => {
             setEditingItem(null);
             setShowDeleteConfirm(false);
             setDeleteTarget(null);
+            setSelectedDate(new Date());
         }
     }, [location.state]);
     
@@ -48,6 +53,8 @@ const AgendaContent: React.FC = () => {
         
         // Preenche a data se vier do calendário
         if (date) {
+            // Se a data vier do calendário, define a data selecionada e preenche o formulário
+            setSelectedDate(date);
             setEditingItem({
                 ...initialAgendaItem,
                 id: '', // ID temporário
@@ -87,22 +94,68 @@ const AgendaContent: React.FC = () => {
         setShowForm(false);
     };
     
-    // --- Renderização ---
-    
-    // Calcula o total de itens por dia para o calendário
-    const itemsByDay = useMemo(() => {
-        const map = new Map<string, AgendaItem[]>();
-        items.forEach(item => {
-            if (item.dueDate && !item.isCompleted) {
-                const key = format(item.dueDate, 'yyyy-MM-dd');
-                if (!map.has(key)) {
-                    map.set(key, []);
+    // --- Eventos do Dia Selecionado ---
+    const eventsForSelectedDay = useMemo(() => {
+        return items
+            .filter(item => item.dueDate && isSameDay(item.dueDate, selectedDate))
+            .sort((a, b) => {
+                // Ordena por hora (se houver) e depois por urgência
+                if (a.dueTime && b.dueTime) {
+                    return a.dueTime.localeCompare(b.dueTime);
                 }
-                map.get(key)!.push(item);
-            }
-        });
-        return map;
-    }, [items]);
+                if (a.dueTime) return -1;
+                if (b.dueTime) return 1;
+                
+                const urgencyOrder = { Urgente: 1, Normal: 2, Leve: 3 };
+                return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+            });
+    }, [items, selectedDate]);
+    
+    const handleSelectDate = (date: Date) => {
+        setSelectedDate(date);
+    };
+    
+    const renderEventItem = (item: AgendaItem) => {
+        const urgencyColor = item.urgency === 'Urgente' ? 'text-red-600' : item.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
+        
+        return (
+            <div key={item.id} className={`p-3 rounded-lg transition-colors border ${item.isCompleted ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        {item.isCompleted ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                            <Clock className={`h-4 w-4 ${urgencyColor}`} />
+                        )}
+                        <span className={`text-sm font-medium ${item.isCompleted ? 'line-through text-gray-500' : 'text-gray-900 dark:text-white'}`}>
+                            {item.title}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {item.dueTime && (
+                            <span className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                {item.dueTime}
+                            </span>
+                        )}
+                        <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 p-1">
+                            <Edit className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+                {item.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">{item.description}</p>
+                )}
+                {!item.isCompleted && (
+                    <button 
+                        onClick={() => toggleCompletion(item.id)}
+                        className="mt-2 text-xs text-green-600 hover:text-green-800 flex items-center gap-1"
+                    >
+                        <Check className="h-3 w-3" /> Marcar como concluído
+                    </button>
+                )}
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -142,17 +195,31 @@ const AgendaContent: React.FC = () => {
                 
                 {/* Coluna 3: Calendário e Eventos */}
                 <div className="lg:col-span-1 space-y-6">
-                    <AgendaCalendar onSelectDate={handleOpenForm} />
+                    <AgendaCalendar onSelectDate={handleSelectDate} />
                     
-                    {/* Eventos do Dia Selecionado (Simulado) */}
+                    {/* Eventos do Dia Selecionado */}
                     <div className="card p-4 space-y-3">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Eventos do Dia
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Calendar className="h-5 w-5" />
+                            Compromissos em {isToday(selectedDate) ? 'Hoje' : format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Clique em uma data no calendário para adicionar um compromisso.
-                        </p>
-                        {/* Aqui poderíamos listar os eventos do dia selecionado */}
+                        
+                        {eventsForSelectedDay.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Nenhum compromisso agendado para esta data.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                {eventsForSelectedDay.map(renderEventItem)}
+                            </div>
+                        )}
+                        
+                        <button
+                            onClick={() => handleOpenForm(selectedDate)}
+                            className="btn-secondary w-full justify-center mt-3"
+                        >
+                            <Plus className="h-4 w-4" /> Adicionar Compromisso
+                        </button>
                     </div>
                 </div>
             </div>
@@ -189,4 +256,4 @@ const AgendaContent: React.FC = () => {
     );
 };
 
-export default AgendaPage;
+export default AgendaContent;

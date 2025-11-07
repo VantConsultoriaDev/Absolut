@@ -158,9 +158,9 @@ const AgendaFormModal: React.FC<AgendaFormModalProps> = ({ isOpen, editingItem, 
                   onChange={(e) => handleFormChange('urgency', e.target.value as AgendaItem['urgency'])}
                   className="input-field"
                 >
-                  <option value="low">Baixa</option>
-                  <option value="medium">Média</option>
-                  <option value="high">Alta</option>
+                  <option value="Urgente">Urgente</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Leve">Leve</option>
                 </select>
               </div>
 

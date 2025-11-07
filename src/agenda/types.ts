@@ -5,7 +5,7 @@ export interface AgendaItem {
   title: string;
   description?: string;
   isCompleted: boolean;
-  urgency: 'low' | 'medium' | 'high';
+  urgency: 'Urgente' | 'Normal' | 'Leve'; // ALTERADO
   
   // Data e Hora do Compromisso/Tarefa
   dueDate?: Date; 
@@ -33,7 +33,7 @@ export interface AgendaContextType {
 export const initialAgendaItem: Omit<AgendaItem, 'id' | 'createdAt' | 'updatedAt' | 'isCompleted'> = {
     title: '',
     description: '',
-    urgency: 'medium',
+    urgency: 'Normal', // ALTERADO
     dueDate: undefined,
     dueTime: undefined,
     notificationOffset: 30,
@@ -58,6 +58,8 @@ export const loadAgendaData = (): AgendaItem[] => {
         // Mapeia e converte datas
         return data.map((d: any) => ({
             ...d,
+            // CORREÇÃO: Mapeia urgência antiga para nova se necessário
+            urgency: d.urgency === 'high' ? 'Urgente' : d.urgency === 'medium' ? 'Normal' : d.urgency === 'low' ? 'Leve' : d.urgency,
             dueDate: d.dueDate ? new Date(d.dueDate) : undefined,
             createdAt: new Date(d.createdAt),
             updatedAt: new Date(d.updatedAt),
