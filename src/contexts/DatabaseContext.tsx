@@ -626,7 +626,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           handleSyncAction({ type: 'update_veiculo', description: '', data: { updatedData: vehicle } } as UndoAction);
           
           // EXIBIÇÃO DA MENSAGEM DE SUCESSO DO VEÍCULO
-          // showSuccess(`Veículo "${vehicle.placa || vehicle.placaCavalo || vehicle.placaCarreta}" atualizado com sucesso.`); // REMOVIDO
+          // showSuccess(`Veículo "${vehicle.placa || vehicle.placaCavalo || vehicle.placaCarreta}" criado com sucesso.`); // REMOVIDO
       }
       return updatedVeiculo;
     } catch (e) {
@@ -862,10 +862,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- CARGA OPERATIONS ---
   const createCarga = (cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>): Carga => {
     try {
-        // NOVO: Validação de peso máximo antes de dividir
-        const MAX_ALLOWED_WEIGHT = 1000; // 1000 toneladas
-        if (cargaData.peso > MAX_ALLOWED_WEIGHT) {
-            throw new Error(`Peso excessivo (${cargaData.peso}t). O limite máximo é de ${MAX_ALLOWED_WEIGHT} toneladas para evitar a criação de muitas cargas.`);
+        // NOVO: Validação de peso máximo antes do split
+        if (cargaData.peso > 1000) {
+            throw new Error('O peso da carga excede o limite máximo de 1000 toneladas.');
         }
         
         // 1. Split the load if necessary

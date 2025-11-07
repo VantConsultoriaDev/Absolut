@@ -487,12 +487,7 @@ const Cargas: React.FC = () => {
       }
       performReset();
     } catch (e) {
-      // Captura o erro de peso excessivo do DatabaseContext
-      if (e instanceof Error && e.message.includes('Peso excessivo')) {
-        showError(e.message);
-      } else {
-        showError(e instanceof Error ? e.message : 'Erro ao salvar carga.');
-      }
+      showError(e instanceof Error ? e.message : 'Erro ao salvar carga.');
     }
   };
 
@@ -928,13 +923,15 @@ const Cargas: React.FC = () => {
         const startDate = createLocalDate(filterColetaStartDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        matchesColetaRange = matchesColetaRange && d && d >= startDate;
+        // FIX TS2322: Garante que o resultado seja um booleano
+        matchesColetaRange = matchesColetaRange && (d ? d >= startDate : false);
       }
       if (filterColetaEndDate) {
         const endDate = createLocalDate(filterColetaEndDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        matchesColetaRange = matchesColetaRange && d && d <= endDate;
+        // FIX TS2322: Garante que o resultado seja um booleano
+        matchesColetaRange = matchesColetaRange && (d ? d <= endDate : false);
       }
 
       let matchesEntregaRange = true;
