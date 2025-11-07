@@ -68,7 +68,7 @@ export class CPFService {
         console.error('CPFService: Erro nos dados da API:', errorMessage);
         
         if (response.status === 401 || response.status === 403) {
-             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirado. Verifique a configuração.');
+             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
         
         return null;
