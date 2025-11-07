@@ -101,7 +101,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       return '';
   };
   
-  // Efeito para inicializar o crtSuffix ao editar
+  // Efeito para inicializar o crtSuffix ao editar (Executa apenas na montagem se estiver editando)
   useEffect(() => {
       if (editingCarga && formData.crt) {
           const ufOrigem = formData.trajetos[0]?.ufOrigem;
@@ -109,21 +109,27 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
           const prefix = getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
           
           if (formData.crt.startsWith(prefix)) {
+              // Se o CRT existente tem o prefixo, usa o restante como sufixo
               setCrtSuffix(formData.crt.substring(prefix.length));
           } else {
-              // Se não for um CRT padrão, usa o CRT completo como sufixo (fallback)
+              // Se não tiver prefixo, usa o CRT completo como sufixo (para edição manual)
               setCrtSuffix(formData.crt);
           }
       } else if (!editingCarga) {
           setCrtSuffix('');
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingCarga, formData.crt, formData.tipoOperacao]);
+  }, [editingCarga]);
   
   // 2. Valor total do CRT (Prefix + Suffix)
   const fullCrt = useMemo(() => {
-      const ufOrigem = formData.trajetos[0]?.ufOrigem;
-      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      // Usar o último trajeto para destino
+      const primeiroTrajeto = formData.trajetos[0];
+      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
+      
+      const ufOrigem = primeiroTrajeto?.ufOrigem;
+      const ufDestino = ultimoTrajeto?.ufDestino;
+      
       const prefix = getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
       
       // Se não houver prefixo, o CRT é o sufixo (ou vazio)
@@ -136,6 +142,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   
   // 3. Atualiza o CRT no formData sempre que o fullCrt mudar
   useEffect(() => {
+      // Esta atualização é crucial para manter o estado do formulário sincronizado
       onFormChange('crt', fullCrt);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fullCrt]);
@@ -207,16 +214,38 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   
   // Verifica se o CRT deve ser gerado automaticamente
   const shouldGenerateCrt = useMemo(() => {
-      const ufOrigem = formData.trajetos[0]?.ufOrigem;
-      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      const primeiroTrajeto = formData.trajetos[0];
+      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
+      const ufOrigem = primeiroTrajeto?.ufOrigem;
+      const ufDestino = ultimoTrajeto?.ufDestino;
       return !!getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
   }, [formData.trajetos, formData.tipoOperacao]);
   
   const crtPrefix = useMemo(() => {
-      const ufOrigem = formData.trajetos[0]?.ufOrigem;
-      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      const primeiroTrajeto = formData.trajetos[0];
+      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
+      const ufOrigem = primeiroTrajeto?.ufOrigem;
+      const ufDestino = ultimoTrajeto?.ufDestino;
       return getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
   }, [formData.trajetos, formData.tipoOperacao]);
+
+
+  const handleSubmitWrapper = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
+    
+    // 1. Validação de Importação (UF Destino)
+    if (formData.tipoOperacao === 'importacao') {
+        if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
+            alert('Em casos de IMPORTAÇÃO, a UF Destino não pode ser Chile (CL) ou Uruguai (UY).');
+            return;
+        }
+    }
+    
+    // 2. Chama o submit original
+    onSubmit(e);
+  };
 
 
   return (
@@ -241,7 +270,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
               </button>
             </div>
 
-            <form onSubmit={onSubmit} className="space-y-6">
+            <form onSubmit={handleSubmitWrapper} className="space-y-6">
               {/* Seção 1: Dados Básicos */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* NOVO CAMPO: Tipo de Operação */}
