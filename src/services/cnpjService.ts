@@ -101,10 +101,16 @@ export class CNPJService {
       // 2. Nome Fantasia: APENAS payload.response.nome_fantasia
       const nomeFantasiaFinal = payload.response?.nome_fantasia || '';
       
-      // 3. Email: APENAS payload.response.correio_eletronico, com fallback para payload.email e verificação de '@'
-      let emailFinal = payload.response?.correio_eletronico || payload.email || '';
-      if (typeof emailFinal === 'string' && !emailFinal.includes('@')) {
-          emailFinal = ''; // Limpa se não for um email válido
+      // 3. Email: Lógica expandida para buscar o email
+      let emailFinal = '';
+      const possibleEmails = [
+          payload.response?.correio_eletronico, // Prioridade 1: Campo aninhado
+          payload.email,                       // Prioridade 2: Campo email no payload principal
+          payload.contato?.email,              // Prioridade 3: Campo aninhado em contato
+      ].filter(e => typeof e === 'string' && e.includes('@'));
+      
+      if (possibleEmails.length > 0) {
+          emailFinal = possibleEmails[0];
       }
       
       // 4. Contato (Telefone): Prioriza ddd1 + telefone1
