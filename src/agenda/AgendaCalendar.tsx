@@ -6,9 +6,10 @@ import { useAgenda } from './AgendaContext';
 
 interface AgendaCalendarProps {
   onSelectDate: (date: Date) => void;
+  selectedDate: Date; // NOVO: Data atualmente selecionada
 }
 
-const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
+const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate, selectedDate }) => {
   const { items } = useAgenda();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -75,25 +76,32 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
 
       {/* Dias do Mês */}
       <div className="grid grid-cols-7 gap-1">
-        {days.map((day, index) => (
-          <button
-            key={index}
-            type="button"
-            onClick={() => onSelectDate(day.date)}
-            className={`p-1 h-10 w-full flex flex-col items-center justify-center rounded-lg transition-colors relative 
-              ${!day.isSameMonth ? 'text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'}
-              ${isSameDay(day.date, new Date()) ? 'border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30' : ''}
-            `}
-          >
-            <span className={`text-sm font-medium ${!day.isSameMonth ? 'opacity-60' : ''}`}>
-              {day.formattedDate}
-            </span>
-            {/* Indicador visual de evento */}
-            {day.hasEvent && (
-              <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSameDay(day.date, new Date()) ? 'bg-blue-700' : 'bg-red-500'}`} />
-            )}
-          </button>
-        ))}
+        {days.map((day, index) => {
+            const isTodayDay = isSameDay(day.date, new Date());
+            const isSelected = isSameDay(day.date, selectedDate);
+            
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => onSelectDate(day.date)}
+                className={`p-1 h-10 w-full flex flex-col items-center justify-center rounded-lg transition-colors relative 
+                  ${!day.isSameMonth ? 'text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'}
+                  ${isTodayDay ? 'border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30' : ''}
+                  ${isSelected && !isTodayDay ? 'bg-blue-200 dark:bg-blue-800 border border-blue-500' : ''}
+                  ${isSelected && isTodayDay ? 'bg-blue-300 dark:bg-blue-700' : ''}
+                `}
+              >
+                <span className={`text-sm font-medium ${!day.isSameMonth ? 'opacity-60' : ''}`}>
+                  {day.formattedDate}
+                </span>
+                {/* Indicador visual de evento */}
+                {day.hasEvent && (
+                  <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSelected ? 'bg-white' : isTodayDay ? 'bg-blue-700' : 'bg-red-500'}`} />
+                )}
+              </button>
+            );
+        })}
       </div>
     </div>
   );

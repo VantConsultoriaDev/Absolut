@@ -53,7 +53,7 @@ const AgendaContent: React.FC = () => {
         
         // Preenche a data se vier do calendário
         if (date) {
-            // Se a data vier do calendário, define a data selecionada e preenche o formulário
+            // Se a data vier do calendário, define a data selecionada e pré-preenche o formulário
             setSelectedDate(date);
             setEditingItem({
                 ...initialAgendaItem,
@@ -222,7 +222,7 @@ const AgendaContent: React.FC = () => {
                 
                 {/* Coluna 3: Calendário */}
                 <div className="lg:col-span-1 space-y-6">
-                    <AgendaCalendar onSelectDate={handleSelectDate} />
+                    <AgendaCalendar onSelectDate={handleSelectDate} selectedDate={selectedDate} />
                 </div>
             </div>
             
