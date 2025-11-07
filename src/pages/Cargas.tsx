@@ -85,6 +85,7 @@ const Cargas: React.FC = () => {
     status: 'a_coletar',
     transbordo: 'sem_transbordo',
     trajetos: [{ ...initialTrajeto }],
+    tipoOperacao: 'exportacao', // NOVO: Padrão para exportação
   };
 
   const [showForm, setShowForm] = useState(false);
@@ -259,6 +260,12 @@ const Cargas: React.FC = () => {
         newFormData.trajetos = [newFormData.trajetos[0]];
       }
       
+      // Lógica de tipoOperacao: se mudar, limpa a UF de origem do primeiro trajeto
+      if (field === 'tipoOperacao') {
+          newFormData.trajetos[0].ufOrigem = '';
+          newFormData.trajetos[0].cidadeOrigem = '';
+      }
+      
       // Detectar se há mudanças comparando com os dados originais
       if (originalFormData) {
         const hasChanges = JSON.stringify(newFormData) !== JSON.stringify(originalFormData);
@@ -394,6 +401,7 @@ const Cargas: React.FC = () => {
       observacoes: carga.observacoes || '',
       status: carga.status,
       transbordo: carga.transbordo,
+      tipoOperacao: carga.tipoOperacao || 'exportacao', // NOVO: Carrega tipoOperacao
       // Mapeia trajetos, garantindo que o valor seja formatado
       trajetos: (carga.trajetos || []).map(t => ({ // Garante que trajetos seja um array
         ...t,
@@ -480,6 +488,9 @@ const Cargas: React.FC = () => {
           dataColeta: t.dataColeta || undefined,
           dataEntrega: t.dataEntrega || undefined,
       })) as Trajeto[],
+      
+      // NOVO CAMPO
+      tipoOperacao: formData.tipoOperacao,
     };
 
     try {

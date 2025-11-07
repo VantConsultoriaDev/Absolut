@@ -1,9 +1,12 @@
 import { Truck, CheckCircle, Clock, AlertTriangle, Package } from 'lucide-react';
 
-export const UFS_ORDENADAS = [
+export const UFS_ESTRANGEIRAS = [
   { value: 'AR', label: 'Argentina (AR)' },
   { value: 'CL', label: 'Chile (CL)' },
-  { value: 'UY', label: 'Uruguai (UY)' }, // NOVO: Uruguai
+  { value: 'UY', label: 'Uruguai (UY)' },
+];
+
+export const UFS_BRASIL = [
   { value: 'RS', label: 'Rio Grande do Sul (RS)' },
   { value: 'SP', label: 'São Paulo (SP)' },
   { value: 'AC', label: 'Acre (AC)' },
@@ -32,6 +35,8 @@ export const UFS_ORDENADAS = [
   { value: 'SE', label: 'Sergipe (SE)' },
   { value: 'TO', label: 'Tocantins (TO)' }
 ];
+
+export const UFS_ORDENADAS = [...UFS_ESTRANGEIRAS, ...UFS_BRASIL];
 
 export const STATUS_CONFIG = {
   a_coletar: { 

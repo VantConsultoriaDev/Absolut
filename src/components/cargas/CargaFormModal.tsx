@@ -4,6 +4,7 @@ import { useModal } from '../../hooks/useModal';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
 import StandardCheckbox from '../StandardCheckbox'; // Importando o StandardCheckbox
+import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants'; // Importando listas de UF
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
 export interface TrajetoForm extends Omit<Trajeto, 'valor' | 'dataColeta' | 'dataEntrega'> {
@@ -25,6 +26,9 @@ export interface CargaFormData {
   // Novos campos para transbordo
   transbordo: 'sem_transbordo' | 'com_transbordo';
   trajetos: TrajetoForm[];
+  
+  // NOVO CAMPO
+  tipoOperacao: 'importacao' | 'exportacao';
 }
 
 interface CargaFormModalProps {
@@ -75,10 +79,20 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   }, [formData.trajetos]);
 
   // Função auxiliar para determinar se é um país estrangeiro
-  const isForeignCountry = (uf: string) => uf === 'AR' || uf === 'CL' || uf === 'UY';
+  const isForeignCountry = (uf: string) => UFS_ESTRANGEIRAS.some(u => u.value === uf);
   
   // Estado booleano derivado para o checkbox
   const isTransbordoEnabled = formData.transbordo === 'com_transbordo';
+  
+  // Opções de UF de Origem filtradas
+  const filteredUfOrigemOptions = useMemo(() => {
+      if (formData.tipoOperacao === 'importacao') {
+          // Importação: Origem deve ser um país estrangeiro
+          return UFS_ESTRANGEIRAS;
+      }
+      // Exportação: Origem deve ser uma UF brasileira
+      return UFS_BRASIL;
+  }, [formData.tipoOperacao]);
 
   const handleTransbordoToggle = (checked: boolean) => {
     const newTransbordo = checked ? 'com_transbordo' : 'sem_transbordo';
@@ -149,6 +163,22 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
             <form onSubmit={onSubmit} className="space-y-6">
               {/* Seção 1: Dados Básicos */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* NOVO CAMPO: Tipo de Operação */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tipo de Operação *
+                  </label>
+                  <select
+                    value={formData.tipoOperacao}
+                    onChange={(e) => onFormChange('tipoOperacao', e.target.value as CargaFormData['tipoOperacao'])}
+                    className="input-field"
+                    required
+                  >
+                    <option value="exportacao">Exportação</option>
+                    <option value="importacao">Importação</option>
+                  </select>
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     CRT
@@ -182,7 +212,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   </select>
                 </div>
                 
-                <div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Cliente
                   </label>
@@ -250,10 +280,11 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             }}
                             className="input-field"
                             required
-                            disabled={isTransbordoEnabled && index > 0} // Origem de transbordo é preenchida automaticamente
+                            // A UF de origem só pode ser alterada no primeiro trajeto
+                            disabled={isTransbordoEnabled && index > 0} 
                           >
                             <option value="">Selecione a UF de origem</option>
-                            {ufsOrdenadas.map((uf) => (
+                            {filteredUfOrigemOptions.map((uf) => (
                               <option key={uf.value} value={uf.value}>
                                 {uf.label}
                               </option>
@@ -291,6 +322,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             required
                           >
                             <option value="">Selecione a UF de destino</option>
+                            {/* O destino pode ser qualquer UF/País */}
                             {ufsOrdenadas.map((uf) => (
                               <option key={uf.value} value={uf.value}>
                                 {uf.label}

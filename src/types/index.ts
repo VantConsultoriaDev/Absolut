@@ -161,6 +161,9 @@ export interface Carga {
   transbordo: 'sem_transbordo' | 'com_transbordo'
   trajetos: Trajeto[] // Lista de trajetos (mínimo 1)
   
+  // NOVO CAMPO
+  tipoOperacao: 'importacao' | 'exportacao' // Importação ou Exportação
+  
   createdAt: Date
   updatedAt: Date
 }
