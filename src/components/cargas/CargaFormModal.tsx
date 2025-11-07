@@ -170,6 +170,12 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       
       if (!isLastTrajeto) {
           // Se não for o último trajeto, permite todas as UFs/Países
+          
+          // NOVO: Se for Exportação com Transbordo, permite BR como destino intermediário
+          if (formData.tipoOperacao === 'exportacao' && isTransbordoEnabled) {
+              return ufsOrdenadas;
+          }
+          
           return ufsOrdenadas;
       }
       
@@ -179,16 +185,19 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       }
       
       if (formData.tipoOperacao === 'importacao') {
-          // Importação: Destino NÃO PODE ser CL ou UY. Deve ser BR ou AR (se transbordo)
+          // Importação: Destino NÃO PODE ser CL ou UY. Deve ser BR ou AR.
+          
+          // Filtra UFs que não são CL ou UY
+          const allowedUfs = ufsOrdenadas.filter(uf => uf.value !== 'CL' && uf.value !== 'UY');
           
           // Se for transbordo, permite AR, CL, UY, BR
           if (isTransbordoEnabled) {
-              // Permite AR, CL, UY, BR
-              return ufsOrdenadas;
+              // Se transbordo, permite todas as UFs brasileiras e AR
+              return allowedUfs;
           }
           
           // Se não for transbordo, o destino final deve ser BR ou AR
-          return ufsOrdenadas.filter(uf => uf.value === 'AR' || UFS_BRASIL.some(b => b.value === uf.value));
+          return allowedUfs.filter(uf => uf.value === 'AR' || UFS_BRASIL.some(b => b.value === uf.value));
       }
       
       return ufsOrdenadas;
@@ -268,22 +277,19 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
     
     // 2. Validação de Importação (UF Destino NÃO PODE ser CL ou UY)
     if (formData.tipoOperacao === 'importacao') {
-        // Se for transbordo, o destino final pode ser AR, CL, UY, BR.
-        // Se não for transbordo, o destino final deve ser BR ou AR.
+        // Regra geral: UF Destino NÃO PODE ser CL ou UY
+        if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
+            alert('Em casos de IMPORTAÇÃO, a UF Destino não pode ser Chile (CL) ou Uruguai (UY).');
+            return;
+        }
         
+        // Se não for transbordo, o destino final deve ser BR ou AR
         if (!isTransbordoEnabled) {
-            // Se não for transbordo, o destino final deve ser BR ou AR
             const isDestinoBR = UFS_BRASIL.some(u => u.value === ultimoTrajeto.ufDestino);
             if (ultimoTrajeto.ufDestino !== 'AR' && !isDestinoBR) {
                 alert('Em casos de IMPORTAÇÃO SEM TRANSBORDO, a UF Destino deve ser Brasil (BR) ou Argentina (AR).');
                 return;
             }
-        }
-        
-        // Regra geral: UF Destino NÃO PODE ser CL ou UY
-        if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
-            alert('Em casos de IMPORTAÇÃO, a UF Destino não pode ser Chile (CL) ou Uruguai (UY).');
-            return;
         }
     }
     
