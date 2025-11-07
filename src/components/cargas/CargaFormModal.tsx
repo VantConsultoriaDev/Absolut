@@ -272,7 +272,29 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         return;
     }
     
-    // VALIDAÇÃO 2: Exportação (UF Destino SÓ PODE ser AR, CL, UY)
+    // VALIDAÇÃO 2: Validação de campos obrigatórios por trajeto
+    for (const trajeto of formData.trajetos) {
+        // UF Origem e Valor são sempre obrigatórios
+        if (!trajeto.ufOrigem) {
+            alert(`Trajeto ${trajeto.index}: UF Origem é obrigatória.`);
+            return;
+        }
+        if (parseCurrency(trajeto.valor) <= 0) {
+            alert(`Trajeto ${trajeto.index}: Valor deve ser maior que zero.`);
+            return;
+        }
+        
+        // UF Destino é obrigatória APENAS se não for transbordo OU se for o último trajeto
+        const isLastTrajeto = trajeto.index === formData.trajetos.length;
+        if (!isTransbordoEnabled || isLastTrajeto) {
+            if (!trajeto.ufDestino) {
+                alert(`Trajeto ${trajeto.index}: UF Destino é obrigatória.`);
+                return;
+            }
+        }
+    }
+    
+    // VALIDAÇÃO 3: Exportação (UF Destino SÓ PODE ser AR, CL, UY)
     if (formData.tipoOperacao === 'exportacao') {
         const isDestinoForeign = UFS_ESTRANGEIRAS.some(u => u.value === ultimoTrajeto.ufDestino);
         if (!isDestinoForeign) {
@@ -281,7 +303,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // VALIDAÇÃO 3: Importação (UF Destino NÃO PODE ser CL ou UY)
+    // VALIDAÇÃO 4: Importação (UF Destino NÃO PODE ser CL ou UY)
     if (formData.tipoOperacao === 'importacao') {
         // Regra geral: UF Destino NÃO PODE ser CL ou UY
         if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
@@ -299,7 +321,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // 4. Chama o submit original
+    // 5. Chama o submit original
     onSubmit(e);
   };
 
@@ -406,6 +428,9 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   // Opções de destino para este trajeto
                   const destinoOptions = getFilteredUfDestinoOptions(index);
                   
+                  // UF Destino é obrigatória?
+                  const isUfDestinoRequired = !isTransbordoEnabled || isLastTrajeto;
+                  
                   return (
                   <div key={trajeto.index} className={`p-4 border rounded-lg ${index > 0 ? 'mt-4 border-blue-200 dark:border-blue-700' : 'border-gray-100 dark:border-gray-700'}`}>
                     
@@ -488,7 +513,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            UF Destino{getLabelSuffix(trajeto.index)} *
+                            UF Destino{getLabelSuffix(trajeto.index)} {isUfDestinoRequired ? '*' : ''}
                           </label>
                           <select
                             value={trajeto.ufDestino}
@@ -498,7 +523,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                                 onTrajetoChange(index, 'cidadeDestino', '');
                             }}
                             className="input-field"
-                            required
+                            // Removido required
                           >
                             <option value="">Selecione a UF de destino</option>
                             {destinoOptions.map((uf) => (
