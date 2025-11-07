@@ -13,6 +13,15 @@ interface UseCityAutocompleteResult {
 }
 
 /**
+ * Remove acentos e caracteres especiais de uma string.
+ * @param str String a ser normalizada.
+ * @returns String normalizada.
+ */
+const normalizeString = (str: string): string => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
+/**
  * Hook para buscar e filtrar cidades de uma UF usando a API do IBGE.
  * @param uf Sigla da Unidade Federativa (ex: 'SP', 'RS'). Deve ser uma UF brasileira.
  * @param query Termo de busca digitado pelo usuário.
@@ -73,17 +82,17 @@ export const useCityAutocomplete = (uf: string, query: string): UseCityAutocompl
       return [];
     }
 
-    const q = debouncedQuery.toLowerCase();
+    const q = normalizeString(debouncedQuery).toLowerCase();
     
-    // 1. Filtra: A cidade deve conter o texto digitado
+    // 1. Filtra: A cidade deve conter o texto digitado (após normalização)
     const results = listaCidades.filter(c =>
-      c.nome.toLowerCase().includes(q)
+      normalizeString(c.nome).toLowerCase().includes(q)
     );
     
     // 2. Ordena: Prioriza as que começam com o texto digitado
     results.sort((a, b) => {
-      const aName = a.nome.toLowerCase();
-      const bName = b.nome.toLowerCase();
+      const aName = normalizeString(a.nome).toLowerCase();
+      const bName = normalizeString(b.nome).toLowerCase();
       
       const aStarts = aName.startsWith(q);
       const bStarts = bName.startsWith(q);
@@ -91,7 +100,7 @@ export const useCityAutocomplete = (uf: string, query: string): UseCityAutocompl
       if (aStarts && !bStarts) return -1; // a vem primeiro
       if (!aStarts && bStarts) return 1;  // b vem primeiro
       
-      // Se ambos começam ou nenhum começa, ordena alfabeticamente
+      // Se ambos começam ou nenhum começa, ordena alfabeticamente (usando o nome normalizado)
       return aName.localeCompare(bName);
     });
 
