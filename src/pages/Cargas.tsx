@@ -71,15 +71,15 @@ const Cargas: React.FC = () => {
     ufDestino: '',
     cidadeDestino: '',
     valor: formatCurrency(0), // Inicialização simples
-    dataColeta: format(new Date(), 'yyyy-MM-dd'),
-    dataEntrega: format(new Date(), 'yyyy-MM-dd'),
+    dataColeta: '', // ALTERADO: Vazio
+    dataEntrega: '', // ALTERADO: Vazio
   };
 
   const initialFormData: CargaFormData = {
     crt: '',
     clienteId: '',
-    dataColeta: format(new Date(), 'yyyy-MM-dd'),
-    dataEntrega: format(new Date(), 'yyyy-MM-dd'),
+    dataColeta: '', // ALTERADO: Vazio
+    dataEntrega: '', // ALTERADO: Vazio
     peso: '',
     observacoes: '',
     status: 'a_coletar',
@@ -317,8 +317,8 @@ const Cargas: React.FC = () => {
         ufDestino: '',
         cidadeDestino: '',
         valor: formatCurrency(0),
-        dataColeta: format(new Date(), 'yyyy-MM-dd'),
-        dataEntrega: format(new Date(), 'yyyy-MM-dd'),
+        dataColeta: '', // ALTERADO: Vazio
+        dataEntrega: '', // ALTERADO: Vazio
       };
       
       const newFormData = { ...prev, trajetos: [...prev.trajetos, newTrajeto] };
@@ -384,8 +384,8 @@ const Cargas: React.FC = () => {
       crt: carga.crt || '',
       clienteId: carga.clienteId || '',
       // Datas globais são mantidas para compatibilidade, mas não são usadas no formulário
-      dataColeta: carga.dataColeta ? format(new Date(carga.dataColeta), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-      dataEntrega: carga.dataEntrega ? format(new Date(carga.dataEntrega), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      dataColeta: carga.dataColeta ? format(new Date(carga.dataColeta), 'yyyy-MM-dd') : '', // ALTERADO: Vazio se não houver
+      dataEntrega: carga.dataEntrega ? format(new Date(carga.dataEntrega), 'yyyy-MM-dd') : '', // ALTERADO: Vazio se não houver
       peso: carga.peso.toString(),
       observacoes: carga.observacoes || '',
       status: carga.status,
@@ -394,8 +394,8 @@ const Cargas: React.FC = () => {
       trajetos: (carga.trajetos || []).map(t => ({ // Garante que trajetos seja um array
         ...t,
         valor: formatCurrency(t.valor || 0),
-        dataColeta: t.dataColeta || format(new Date(), 'yyyy-MM-dd'),
-        dataEntrega: t.dataEntrega || format(new Date(), 'yyyy-MM-dd'),
+        dataColeta: t.dataColeta || '', // ALTERADO: Vazio se não houver
+        dataEntrega: t.dataEntrega || '', // ALTERADO: Vazio se não houver
       })) as TrajetoForm[],
     };
     
@@ -410,8 +410,8 @@ const Cargas: React.FC = () => {
             ufDestino: destinoInfo.uf,
             cidadeDestino: destinoInfo.cidade,
             valor: formatCurrency(carga.valor || 0),
-            dataColeta: format(carga.dataColeta || new Date(), 'yyyy-MM-dd'),
-            dataEntrega: format(carga.dataEntrega || new Date(), 'yyyy-MM-dd'),
+            dataColeta: carga.dataColeta ? format(carga.dataColeta, 'yyyy-MM-dd') : '', // ALTERADO: Vazio se não houver
+            dataEntrega: carga.dataEntrega ? format(carga.dataEntrega, 'yyyy-MM-dd') : '', // ALTERADO: Vazio se não houver
         }];
     }
 
@@ -436,8 +436,8 @@ const Cargas: React.FC = () => {
     
     // 1. Validação dos Trajetos
     for (const trajeto of formData.trajetos) {
-        if (!trajeto.ufOrigem || !trajeto.ufDestino || parseCurrency(trajeto.valor) <= 0 || !trajeto.dataColeta || !trajeto.dataEntrega) {
-            showError(`Trajeto ${trajeto.index} incompleto. Preencha UF Origem, UF Destino, Valor e Datas.`);
+        if (!trajeto.ufOrigem || !trajeto.ufDestino || parseCurrency(trajeto.valor) <= 0) {
+            showError(`Trajeto ${trajeto.index} incompleto. Preencha UF Origem, UF Destino e Valor.`);
             return;
         }
     }
@@ -460,8 +460,9 @@ const Cargas: React.FC = () => {
       peso: parseFloat(formData.peso),
       valor: valorTotal,
       // Datas globais são a coleta do primeiro trajeto e a entrega do último
-      dataColeta: createLocalDate(origemCarga.dataColeta || format(new Date(), 'yyyy-MM-dd')),
-      dataEntrega: createLocalDate(destinoCarga.dataEntrega || format(new Date(), 'yyyy-MM-dd')),
+      // ALTERADO: Só cria o objeto Date se a string não for vazia
+      dataColeta: origemCarga.dataColeta ? createLocalDate(origemCarga.dataColeta) : undefined,
+      dataEntrega: destinoCarga.dataEntrega ? createLocalDate(destinoCarga.dataEntrega) : undefined,
       status: formData.status,
       crt: formData.crt || undefined,
       clienteId: formData.clienteId || undefined,
@@ -471,6 +472,9 @@ const Cargas: React.FC = () => {
       trajetos: formData.trajetos.map(t => ({
           ...t,
           valor: parseCurrency(t.valor), // Salva o valor como número
+          // ALTERADO: Garante que as datas sejam strings vazias ou YYYY-MM-DD
+          dataColeta: t.dataColeta || undefined,
+          dataEntrega: t.dataEntrega || undefined,
       })) as Trajeto[],
     };
 
@@ -917,13 +921,15 @@ const Cargas: React.FC = () => {
       let matchesColetaRange = true;
       if (filterColetaStartDate) {
         const startDate = createLocalDate(filterColetaStartDate);
-        const d = createLocalDate(format(carga.dataColeta || new Date(), 'yyyy-MM-dd'));
-        matchesColetaRange = matchesColetaRange && d >= startDate;
+        // ALTERADO: Verifica se a data existe antes de formatar
+        const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
+        matchesColetaRange = matchesColetaRange && d && d >= startDate;
       }
       if (filterColetaEndDate) {
         const endDate = createLocalDate(filterColetaEndDate);
-        const d = createLocalDate(format(carga.dataColeta || new Date(), 'yyyy-MM-dd'));
-        matchesColetaRange = matchesColetaRange && d <= endDate;
+        // ALTERADO: Verifica se a data existe antes de formatar
+        const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
+        matchesColetaRange = matchesColetaRange && d && d <= endDate;
       }
 
       let matchesEntregaRange = true;
@@ -966,6 +972,7 @@ const Cargas: React.FC = () => {
             let secondaryComparison = 0;
             
             if (sortConfig.key === 'dataColeta') {
+              // ALTERADO: Trata undefined/null como 0 para ordenação
               const aTime = aValue ? new Date(aValue as Date).getTime() : 0;
               const bTime = bValue ? new Date(bValue as Date).getTime() : 0;
               secondaryComparison = aTime - bTime;
@@ -1337,6 +1344,7 @@ const Cargas: React.FC = () => {
                       {getSimplifiedRoute(carga)}
                     </td>
                     <td className="table-cell whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {/* ALTERADO: Exibe '-' se a data for undefined */}
                       {carga.dataColeta ? format(new Date(carga.dataColeta), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
                     </td>
                     <td className="table-cell whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">

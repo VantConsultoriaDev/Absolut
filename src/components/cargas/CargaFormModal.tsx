@@ -320,26 +320,26 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Data Coleta{getLabelSuffix(trajeto.index)} *
+                                Data Coleta{getLabelSuffix(trajeto.index)}
                             </label>
                             <input
                                 type="date"
                                 value={trajeto.dataColeta}
                                 onChange={(e) => onTrajetoChange(index, 'dataColeta', e.target.value)}
                                 className="input-field"
-                                required
+                                // REMOVIDO: required
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Data Entrega{getLabelSuffix(trajeto.index)} *
+                                Data Entrega{getLabelSuffix(trajeto.index)}
                             </label>
                             <input
                                 type="date"
                                 value={trajeto.dataEntrega}
                                 onChange={(e) => onTrajetoChange(index, 'dataEntrega', e.target.value)}
                                 className="input-field"
-                                required
+                                // REMOVIDO: required
                             />
                         </div>
                         
