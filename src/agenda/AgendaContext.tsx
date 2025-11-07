@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AgendaItem, AgendaContextType, generateUuid, loadAgendaData, saveAgendaData } from './types';
-import { isBefore, subMinutes, isSameDay, isSameHour, isSameMinute } from 'date-fns';
-import { showError } from '../utils/toast';
+import { subMinutes, isSameDay, isSameHour, isSameMinute } from 'date-fns';
+// import { showError } from '../utils/toast'; // Removido
 
 const AgendaContext = createContext<AgendaContextType | undefined>(undefined);
 

@@ -6,6 +6,7 @@ import { Cliente, Trajeto } from '../../types';
 import StandardCheckbox from '../StandardCheckbox';
 import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants';
 import CityAutocompleteInput from '../CityAutocompleteInput';
+import { showError } from '../../utils/toast'; // Importando showError
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
 export interface TrajetoForm extends Omit<Trajeto, 'valor' | 'dataColeta' | 'dataEntrega'> {

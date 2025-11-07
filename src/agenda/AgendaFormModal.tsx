@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Clock, Calendar, AlertTriangle } from 'lucide-react';
+import { X, Clock, Calendar } from 'lucide-react';
 import { useModal } from '../hooks/useModal';
 import { AgendaItem, initialAgendaItem } from './types';
 import { format, isValid } from 'date-fns';

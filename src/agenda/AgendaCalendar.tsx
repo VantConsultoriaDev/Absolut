@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, subMonths, addMonths, getDay, getDate } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, subMonths, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAgenda } from './AgendaContext';
@@ -18,7 +18,6 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
   const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
   const dateFormat = 'd';
-  const headerFormat = 'EEE';
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   const days = useMemo(() => {

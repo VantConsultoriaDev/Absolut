@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Bell, Clock, Calendar } from 'lucide-react';
+import { X, Bell, Clock, Calendar, Check } from 'lucide-react';
 import { useModal } from '../hooks/useModal';
 import { useAgenda } from './AgendaContext';
 import { format } from 'date-fns';
@@ -26,7 +26,8 @@ const NotificationModal: React.FC = () => {
   const timeDisplay = notification.dueTime ? `às ${notification.dueTime}` : '';
   const dateDisplay = notification.dueDate ? format(notification.dueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Sem Data';
   
-  const urgencyColor = notification.urgency === 'high' ? 'text-red-600' : notification.urgency === 'medium' ? 'text-amber-600' : 'text-blue-600';
+  // CORREÇÃO TS2367: Usando a nova nomenclatura de urgência
+  const urgencyColor = notification.urgency === 'Urgente' ? 'text-red-600' : notification.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">

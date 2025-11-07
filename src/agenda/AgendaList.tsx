@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { format, isBefore, isToday, isPast, isFuture } from 'date-fns';
+import { format, isToday, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Check, Clock, AlertTriangle, Calendar, MoreVertical, Trash2, Edit, Plus } from 'lucide-react';
 import { useAgenda } from './AgendaContext';

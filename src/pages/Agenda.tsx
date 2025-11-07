@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Calendar, ListTodo, Plus, Trash2, Clock, AlertTriangle, Check } from 'lucide-react';
+import { Calendar, ListTodo, Plus, Clock, Check, Edit } from 'lucide-react';
 import { AgendaProvider, useAgenda } from '../agenda/AgendaContext';
 import AgendaList from '../agenda/AgendaList';
 import AgendaCalendar from '../agenda/AgendaCalendar';
@@ -256,4 +256,4 @@ const AgendaContent: React.FC = () => {
     );
 };
 
-export default AgendaContent;
+export default AgendaPage;
