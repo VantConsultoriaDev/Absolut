@@ -137,7 +137,7 @@ const AgendaContent: React.FC = () => {
                                 {item.dueTime}
                             </span>
                         )}
-                        <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 p-1">
+                        <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 p-1" title="Editar">
                             <Edit className="h-4 w-4" />
                         </button>
                     </div>
@@ -184,25 +184,13 @@ const AgendaContent: React.FC = () => {
                 
                 {/* Coluna 1 & 2: Lista de Tarefas */}
                 <div className="lg:col-span-2 space-y-6">
+                    
+                    {/* NOVO: Compromissos do Dia Selecionado (Movido para o topo) */}
                     <div className="card p-6 space-y-4">
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <ListTodo className="h-5 w-5" />
-                            Tarefas e Compromissos
-                        </h2>
-                        <AgendaList onEdit={handleEdit} onDelete={handleDelete} />
-                    </div>
-                </div>
-                
-                {/* Coluna 3: Calendário e Eventos */}
-                <div className="lg:col-span-1 space-y-6">
-                    <AgendaCalendar onSelectDate={handleSelectDate} />
-                    
-                    {/* Eventos do Dia Selecionado */}
-                    <div className="card p-4 space-y-3">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
+                            <Calendar className="h-5 w-5 text-blue-600" />
                             Compromissos em {isToday(selectedDate) ? 'Hoje' : format(selectedDate, 'dd/MM/yyyy', { locale: ptBR })}
-                        </h3>
+                        </h2>
                         
                         {eventsForSelectedDay.length === 0 ? (
                             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -221,6 +209,20 @@ const AgendaContent: React.FC = () => {
                             <Plus className="h-4 w-4" /> Adicionar Compromisso
                         </button>
                     </div>
+                    
+                    {/* Lista Geral de Tarefas */}
+                    <div className="card p-6 space-y-4">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <ListTodo className="h-5 w-5" />
+                            Tarefas e Pendências
+                        </h2>
+                        <AgendaList onEdit={handleEdit} onDelete={handleDelete} />
+                    </div>
+                </div>
+                
+                {/* Coluna 3: Calendário */}
+                <div className="lg:col-span-1 space-y-6">
+                    <AgendaCalendar onSelectDate={handleSelectDate} />
                 </div>
             </div>
             

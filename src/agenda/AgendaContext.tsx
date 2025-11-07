@@ -24,17 +24,21 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
 
   // --- Persistência ---
   useEffect(() => {
+    // Garante que os itens sejam salvos sempre que o estado mudar
     saveAgendaData(items);
   }, [items]);
 
   // --- CRUD Operations ---
   const addItem = useCallback((item: Omit<AgendaItem, 'id' | 'createdAt' | 'updatedAt' | 'isCompleted'>): AgendaItem => {
+    const now = new Date();
     const newItem: AgendaItem = {
       ...item,
       id: generateUuid(),
       isCompleted: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
+      // Garante que dueDate seja um objeto Date ou undefined
+      dueDate: item.dueDate instanceof Date ? item.dueDate : undefined,
     };
     setItems(prev => [...prev, newItem]);
     return newItem;
@@ -44,23 +48,43 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     let updatedItem: AgendaItem | null = null;
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        updatedItem = { ...item, ...updates, updatedAt: new Date() };
+        updatedItem = { 
+            ...item, 
+            ...updates, 
+            updatedAt: new Date(),
+            // Garante que dueDate seja um objeto Date ou undefined
+            dueDate: updates.dueDate === null ? undefined : (updates.dueDate instanceof Date ? updates.dueDate : item.dueDate),
+        };
         return updatedItem;
       }
       return item;
     }));
+    
+    // Se o item foi atualizado, remove das notificações pendentes se a data/hora mudou
+    if (updatedItem) {
+        setPendingNotifications(prev => prev.filter(n => n.id !== id));
+        setDismissedNotifications(prev => prev.filter(did => did !== id));
+    }
+    
     return updatedItem;
   }, []);
 
   const deleteItem = useCallback((id: string): boolean => {
     setItems(prev => prev.filter(item => item.id !== id));
+    setPendingNotifications(prev => prev.filter(item => item.id !== id));
+    setDismissedNotifications(prev => prev.filter(did => did !== id));
     return true;
   }, []);
 
   const toggleCompletion = useCallback((id: string) => {
     setItems(prev => prev.map(item => {
       if (item.id === id) {
-        return { ...item, isCompleted: !item.isCompleted, updatedAt: new Date() };
+        const isCompleted = !item.isCompleted;
+        // Se for concluído, remove das notificações pendentes
+        if (isCompleted) {
+            setPendingNotifications(prevN => prevN.filter(n => n.id !== id));
+        }
+        return { ...item, isCompleted, updatedAt: new Date() };
       }
       return item;
     }));

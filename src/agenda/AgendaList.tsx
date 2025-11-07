@@ -16,6 +16,12 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
   const [quickTitle, setQuickTitle] = useState('');
 
   const urgencyOrder = useMemo(() => ({ Urgente: 1, Normal: 2, Leve: 3 }), []);
+  
+  const urgencyConfig = useMemo(() => ({
+    Urgente: { color: 'bg-red-600', text: 'text-red-600', border: 'border-red-600' },
+    Normal: { color: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-600' },
+    Leve: { color: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-600' },
+  }), []);
 
   const sortedItems = useMemo(() => {
     // 1. Filtra itens não concluídos
@@ -74,6 +80,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
 
   const renderItem = (item: AgendaItem) => {
     const isOverdue = item.dueDate && isPast(item.dueDate) && !isToday(item.dueDate);
+    const config = urgencyConfig[item.urgency];
     
     const dateDisplay = item.dueDate 
       ? isToday(item.dueDate) 
@@ -83,14 +90,8 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
       
     const dateColor = isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400';
     
-    const urgencyConfig = {
-        Urgente: 'bg-red-500',
-        Normal: 'bg-amber-500',
-        Leve: 'bg-blue-500',
-    };
-
     return (
-      <div key={item.id} className="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <div key={item.id} className="group flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
         
         {/* Checkbox e Título */}
         <div className="flex items-center flex-1 min-w-0">
@@ -99,7 +100,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
             className={`h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors mr-3 ${
               item.isCompleted 
                 ? 'bg-green-500 border-green-500 text-white' 
-                : 'border-gray-300 dark:border-gray-600 text-transparent hover:bg-gray-200 dark:hover:bg-gray-600'
+                : `${config.border} text-transparent hover:bg-gray-200 dark:hover:bg-gray-600`
             }`}
             title="Marcar como concluído"
           >
@@ -122,13 +123,13 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
           
           {/* Urgência (Badge AT) */}
           <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-            urgencyConfig[item.urgency]
+            config.color
           }`} title={`Urgência: ${item.urgency}`}>
             {item.urgency.substring(0, 1).toUpperCase()}
           </span>
           
-          {/* Menu de Ações */}
-          <div className="relative group">
+          {/* Menu de Ações (Corrigido: hidden group-hover:block) */}
+          <div className="relative">
             <button className="btn-ghost p-1 rounded-full text-gray-400 hover:text-gray-700">
               <MoreVertical className="h-4 w-4" />
             </button>

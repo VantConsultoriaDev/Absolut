@@ -20,6 +20,7 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
   const dateFormat = 'd';
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
+  // Mapeia todos os dias do mês e verifica se há eventos
   const days = useMemo(() => {
     const rows = [];
     let day = startDate;
@@ -30,7 +31,7 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
         formattedDate = format(day, dateFormat);
         const cloneDay = day;
         
-        // Verifica se há eventos neste dia
+        // Verifica se há eventos neste dia (apenas não concluídos)
         const hasEvent = items.some(item => item.dueDate && isSameDay(item.dueDate, cloneDay) && !item.isCompleted);
 
         rows.push({
@@ -87,6 +88,7 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate }) => {
             <span className={`text-sm font-medium ${!day.isSameMonth ? 'opacity-60' : ''}`}>
               {day.formattedDate}
             </span>
+            {/* Indicador visual de evento */}
             {day.hasEvent && (
               <span className={`absolute bottom-1 h-1.5 w-1.5 rounded-full ${isSameDay(day.date, new Date()) ? 'bg-blue-700' : 'bg-red-500'}`} />
             )}

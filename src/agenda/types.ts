@@ -54,14 +54,19 @@ export const loadAgendaData = (): AgendaItem[] => {
         const data = JSON.parse(item);
         
         // Mapeia e converte datas
-        return data.map((d: any) => ({
-            ...d,
-            // CORREÇÃO: Mapeia urgência antiga para nova se necessário
-            urgency: d.urgency === 'high' ? 'Urgente' : d.urgency === 'medium' ? 'Normal' : d.urgency === 'low' ? 'Leve' : d.urgency,
-            dueDate: d.dueDate ? new Date(d.dueDate) : undefined,
-            createdAt: new Date(d.createdAt),
-            updatedAt: new Date(d.updatedAt),
-        }));
+        return data.map((d: any) => {
+            // Garante que dueDate seja um objeto Date válido ou undefined
+            const dueDate = d.dueDate ? new Date(d.dueDate) : undefined;
+            
+            return {
+                ...d,
+                // CORREÇÃO: Mapeia urgência antiga para nova se necessário
+                urgency: d.urgency === 'high' ? 'Urgente' : d.urgency === 'medium' ? 'Normal' : d.urgency === 'low' ? 'Leve' : d.urgency,
+                dueDate: dueDate && !isNaN(dueDate.getTime()) ? dueDate : undefined,
+                createdAt: new Date(d.createdAt),
+                updatedAt: new Date(d.updatedAt),
+            };
+        });
     } catch (e) {
         console.error('Failed to load agenda data from localStorage', e);
         return [];
@@ -71,7 +76,15 @@ export const loadAgendaData = (): AgendaItem[] => {
 // Função para salvar dados no localStorage
 export const saveAgendaData = (data: AgendaItem[]) => {
     try {
-        localStorage.setItem('agenda_items', JSON.stringify(data));
+        // Antes de salvar, remove a referência de Date para que o JSON.stringify funcione corretamente
+        const serializableData = data.map(d => ({
+            ...d,
+            // Converte Date para string ISO para persistência
+            dueDate: d.dueDate ? d.dueDate.toISOString() : undefined,
+            createdAt: d.createdAt.toISOString(),
+            updatedAt: d.updatedAt.toISOString(),
+        }));
+        localStorage.setItem('agenda_items', JSON.stringify(serializableData));
     } catch (e) {
         console.error('Failed to save agenda data to localStorage', e);
     }
