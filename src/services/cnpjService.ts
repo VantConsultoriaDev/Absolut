@@ -40,7 +40,7 @@ export class CNPJService {
     
     if (!API_TOKEN) {
       console.error('CNPJService: VITE_APIBRASIL_TOKEN não configurado.');
-      throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique o arquivo .env.local.');
+      throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
     }
 
     if (this.USE_SIMULATED_DATA) {
@@ -163,6 +163,7 @@ export class CNPJService {
         console.error(`CNPJService: Erro Axios. Status: ${error.response?.status}, Mensagem: ${error.message}, Dados:`, error.response?.data);
         
         if (error.response?.status === 401 || error.response?.status === 403) {
+             // Lança o erro de autorização para ser capturado pelo componente
              throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
       } else {

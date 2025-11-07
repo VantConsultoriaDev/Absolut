@@ -99,10 +99,11 @@ export class VehicleService {
       
       // Se o erro for do Axios e tiver uma resposta de status 401/403, loga o erro de autorização
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-          console.error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
+          // Lança o erro de autorização para ser capturado pelo componente
+          throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
       }
       
-      // Em caso de qualquer erro (rede, timeout, autorização), retorna null para permitir o cadastro manual
+      // Em caso de qualquer outro erro, retorna null para permitir o cadastro manual
       return null;
     }
   }
