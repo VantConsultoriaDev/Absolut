@@ -109,11 +109,19 @@ const ClienteDetailModal: React.FC<ClienteDetailModalProps> = ({
                     </p>
                 </div>
                 <div className="detail-item">
-                    <p className="detail-label">Telefone</p>
+                    <p className="detail-label">Contato</p>
                     <p className="detail-value flex items-center gap-2">
                         <Phone className="h-4 w-4 text-gray-500" /> {formatContact(cliente.telefone || 'N/A')}
                     </p>
                 </div>
+                {cliente.tipo === 'PJ' && cliente.responsavel && (
+                    <div className="detail-item col-span-2">
+                        <p className="detail-label">Responsável</p>
+                        <p className="detail-value flex items-center gap-2">
+                            <User className="h-4 w-4 text-gray-500" /> {cliente.responsavel}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Endereço */}

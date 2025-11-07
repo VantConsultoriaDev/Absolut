@@ -24,6 +24,7 @@ export interface Cliente {
   documento?: string
   email?: string
   telefone?: string
+  responsavel?: string // NOVO CAMPO
   endereco?: string
   numero?: string // NOVO CAMPO
   complemento?: string // NOVO CAMPO
@@ -46,6 +47,7 @@ export interface Parceiro {
   cnh?: string
   email?: string
   telefone?: string
+  responsavel?: string // NOVO CAMPO
   pixKeyType?: 'CPF' | 'CNPJ' | 'Celular' | 'E-mail' | 'Chave aleatória' | '' // NOVO: Incluindo string vazia
   pixKey?: string // NOVO
   pixTitular?: string // NOVO: Titular da chave Pix

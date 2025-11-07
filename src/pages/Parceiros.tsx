@@ -78,6 +78,7 @@ const initialParceiroFormData: Parceiro = {
   cnh: '',
   email: '',
   telefone: '',
+  responsavel: '', // NOVO CAMPO
   pixKeyType: '',
   pixKey: '',
   pixTitular: '',
@@ -240,6 +241,7 @@ const Parceiros: React.FC = () => {
       ...parceiro,
       documento: formatDocument(parceiro.documento || '', parceiro.tipo),
       telefone: formatContact(parceiro.telefone || ''),
+      responsavel: (parceiro as any).responsavel || '', // NOVO CAMPO
       pixKey: parceiro.pixKey ? formatPixKey(parceiro.pixKey, parceiro.pixKeyType || '') : '',
       numero: (parceiro as any).numero || '', // NOVO CAMPO
       complemento: (parceiro as any).complemento || '', // NOVO CAMPO
@@ -289,6 +291,7 @@ const Parceiros: React.FC = () => {
       ...parceiroFormData,
       documento: cleanDocument,
       telefone: parseDocument(parceiroFormData.telefone || ''),
+      responsavel: parceiroFormData.responsavel, // NOVO CAMPO
       pixKey: cleanPixKeyVal,
       pixTitular: parceiroFormData.pixTitular || parceiroFormData.nome,
       // Garante que o nome fantasia seja null se for PF
@@ -847,6 +850,7 @@ const Parceiros: React.FC = () => {
                           documento: '', 
                           nome: '', 
                           nomeFantasia: '',
+                          responsavel: '', // Reset responsavel
                           isMotorista: novoTipo === 'PF' ? prev.isMotorista : false,
                           cnh: novoTipo === 'PF' ? prev.cnh : '',
                         }));
@@ -935,7 +939,7 @@ const Parceiros: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Contato */}
+                {/* Contato e Responsável */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
@@ -946,16 +950,42 @@ const Parceiros: React.FC = () => {
                       className="input-field"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.telefone}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
-                      className="input-field"
-                      placeholder="Ex: (11) 98765-4321"
-                    />
-                  </div>
+                  
+                  {parceiroFormData.tipo === 'PJ' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contato</label>
+                        <input
+                          type="text"
+                          value={parceiroFormData.telefone}
+                          onChange={(e) => setParceiroFormData(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
+                          className="input-field"
+                          placeholder="Ex: (11) 98765-4321"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Responsável</label>
+                        <input
+                          type="text"
+                          value={parceiroFormData.responsavel}
+                          onChange={(e) => setParceiroFormData(prev => ({ ...prev, responsavel: e.target.value }))}
+                          className="input-field"
+                          placeholder="Nome do responsável"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contato</label>
+                      <input
+                        type="text"
+                        value={parceiroFormData.telefone}
+                        onChange={(e) => setParceiroFormData(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
+                        className="input-field"
+                        placeholder="Ex: (11) 98765-4321"
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 {/* Endereço, Número e Complemento (NOVO LAYOUT) */}

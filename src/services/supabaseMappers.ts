@@ -32,12 +32,12 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
     case 'clientes':
       return {
         ...base,
-        tipo: cleanedItem.tipo, nome: cleanedItem.nome, nome_fantasia: cleanedItem.nomeFantasia, documento: cleanedItem.documento, email: cleanedItem.email, telefone: cleanedItem.telefone, endereco: cleanedItem.endereco, numero: cleanedItem.numero, complemento: cleanedItem.complemento, cidade: cleanedItem.cidade, uf: cleanedItem.uf, cep: cleanedItem.cep, observacoes: cleanedItem.observacoes, is_active: cleanedItem.isActive, avatar_url: cleanedItem.avatarUrl,
+        tipo: cleanedItem.tipo, nome: cleanedItem.nome, nome_fantasia: cleanedItem.nomeFantasia, documento: cleanedItem.documento, email: cleanedItem.email, telefone: cleanedItem.telefone, responsavel: cleanedItem.responsavel, endereco: cleanedItem.endereco, numero: cleanedItem.numero, complemento: cleanedItem.complemento, cidade: cleanedItem.cidade, uf: cleanedItem.uf, cep: cleanedItem.cep, observacoes: cleanedItem.observacoes, is_active: cleanedItem.isActive, avatar_url: cleanedItem.avatarUrl,
       };
     case 'parceiros':
       return {
         ...base,
-        tipo: cleanedItem.tipo, nome: cleanedItem.nome, nome_fantasia: cleanedItem.nomeFantasia, documento: cleanedItem.documento, cnh: cleanedItem.cnh, email: cleanedItem.email, telefone: cleanedItem.telefone, 
+        tipo: cleanedItem.tipo, nome: cleanedItem.nome, nome_fantasia: cleanedItem.nomeFantasia, documento: cleanedItem.documento, cnh: cleanedItem.cnh, email: cleanedItem.email, telefone: cleanedItem.telefone, responsavel: cleanedItem.responsavel, 
         pix_key_type: cleanedItem.pixKeyType, // NOVO
         pix_key: cleanedItem.pixKey, // NOVO
         pix_titular: cleanedItem.pixTitular, // NOVO
@@ -131,12 +131,12 @@ export const mapFromSupabase = (tableName: string, item: any) => {
     case 'clientes':
       return {
         ...base,
-        tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, email: item.email, telefone: item.telefone, endereco: item.endereco, numero: item.numero, complemento: item.complemento, cidade: item.cidade, uf: item.uf, cep: item.cep, observacoes: item.observacoes, isActive: item.is_active, avatarUrl: item.avatar_url,
+        tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, email: item.email, telefone: item.telefone, responsavel: item.responsavel, endereco: item.endereco, numero: item.numero, complemento: item.complemento, cidade: item.cidade, uf: item.uf, cep: item.cep, observacoes: item.observacoes, isActive: item.is_active, avatarUrl: item.avatar_url,
       } as Cliente;
     case 'parceiros':
       return {
         ...base,
-        tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, cnh: item.cnh, email: item.email, telefone: item.telefone, 
+        tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, cnh: item.cnh, email: item.email, telefone: item.telefone, responsavel: item.responsavel, 
         pixKeyType: item.pix_key_type, // NOVO
         pixKey: item.pix_key, // NOVO
         pixTitular: item.pix_titular, // NOVO

@@ -131,9 +131,15 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
           <p className="detail-value">{parceiro.email || 'N/A'}</p>
         </div>
         <div className="detail-item">
-          <p className="detail-label flex items-center gap-1"><Phone className="h-4 w-4" /> Telefone</p>
+          <p className="detail-label flex items-center gap-1"><Phone className="h-4 w-4" /> Contato</p>
           <p className="detail-value">{formatContact(parceiro.telefone || 'N/A')}</p>
         </div>
+        {parceiro.tipo === 'PJ' && parceiro.responsavel && (
+            <div className="detail-item md:col-span-2">
+                <p className="detail-label flex items-center gap-1"><User className="h-4 w-4" /> Responsável</p>
+                <p className="detail-value">{parceiro.responsavel}</p>
+            </div>
+        )}
         <div className="detail-item md:col-span-2">
           <p className="detail-label flex items-center gap-1"><MapPin className="h-4 w-4" /> Endereço Completo</p>
           <p className="detail-value">

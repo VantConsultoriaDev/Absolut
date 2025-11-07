@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { formatDocument, formatContact, parseDocument } from '../utils/formatters'
-import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle, Mail, Phone } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { useModal } from '../hooks/useModal' // Importando useModal
 import ClienteDetailModal from '../components/clientes/ClienteDetailModal' // NOVO IMPORT
@@ -31,6 +31,7 @@ const Clientes: React.FC = () => {
     documento: '',
     email: '',
     telefone: '',
+    responsavel: '', // NOVO CAMPO
     endereco: '',
     numero: '', // NOVO CAMPO
     complemento: '', // NOVO CAMPO
@@ -91,6 +92,7 @@ const Clientes: React.FC = () => {
       documento: '',
       email: '',
       telefone: '',
+      responsavel: '', // NOVO CAMPO
       endereco: '',
       numero: '', // NOVO CAMPO
       complemento: '', // NOVO CAMPO
@@ -119,6 +121,7 @@ const Clientes: React.FC = () => {
       documento: c.documento || '',
       email: c.email || '',
       telefone: c.telefone || '',
+      responsavel: (c as any).responsavel || '', // NOVO CAMPO
       endereco: c.endereco || '',
       numero: (c as any).numero || '', // NOVO CAMPO
       complemento: (c as any).complemento || '', // NOVO CAMPO
@@ -205,6 +208,7 @@ const Clientes: React.FC = () => {
         endereco: form.endereco,
         numero: form.numero,
         complemento: form.complemento,
+        responsavel: form.responsavel, // NOVO CAMPO
       }
       
       if (editingId) {
@@ -220,6 +224,7 @@ const Clientes: React.FC = () => {
             documento: parseDocument(form.documento), // Salva documento limpo
             email: form.email,
             telefone: form.telefone,
+            responsavel: form.responsavel, // NOVO CAMPO
             endereco: form.endereco,
             numero: form.numero, // NOVO CAMPO
             complemento: form.complemento, // NOVO CAMPO
@@ -494,7 +499,7 @@ const Clientes: React.FC = () => {
                       value={form.tipo}
                       onChange={(e) => {
                         const novoTipo = e.target.value as 'PF' | 'PJ' | 'INTERNACIONAL'
-                        setForm(prev => ({ ...prev, tipo: novoTipo, documento: '', nome: '', nomeFantasia: '' })) // Reset nomeFantasia
+                        setForm(prev => ({ ...prev, tipo: novoTipo, documento: '', nome: '', nomeFantasia: '', responsavel: '' })) // Reset nomeFantasia e responsavel
                         setCnpjConsultado(false)
                         setConsultandoCNPJ(false)
                         setCnpjError('')
@@ -606,7 +611,7 @@ const Clientes: React.FC = () => {
                   )}
                 </div>
 
-                {/* Contato */}
+                {/* Contato e Responsável */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
@@ -617,16 +622,42 @@ const Clientes: React.FC = () => {
                       className="input-field"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
-                    <input
-                      type="text"
-                      value={form.telefone}
-                      onChange={(e) => setForm(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
-                      className="input-field"
-                      placeholder="Ex: +55 11 9 8765-4321 ou (11) 98765-4321"
-                    />
-                  </div>
+                  
+                  {form.tipo === 'PJ' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contato</label>
+                        <input
+                          type="text"
+                          value={form.telefone}
+                          onChange={(e) => setForm(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
+                          className="input-field"
+                          placeholder="Ex: (11) 98765-4321"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Responsável</label>
+                        <input
+                          type="text"
+                          value={form.responsavel}
+                          onChange={(e) => setForm(prev => ({ ...prev, responsavel: e.target.value }))}
+                          className="input-field"
+                          placeholder="Nome do responsável"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contato</label>
+                      <input
+                        type="text"
+                        value={form.telefone}
+                        onChange={(e) => setForm(prev => ({ ...prev, telefone: formatContact(e.target.value) }))}
+                        className="input-field"
+                        placeholder="Ex: (11) 98765-4321"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
