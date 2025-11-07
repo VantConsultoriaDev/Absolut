@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useCityAutocomplete } from '../hooks/useCityAutocomplete';
 import { Loader2, MapPin } from 'lucide-react';
-import { useModal } from '../hooks/useModal'; // Importando useModal para gerenciar o clique fora
+// import { useModal } from '../hooks/useModal'; // Importando useModal para gerenciar o clique fora
 
 interface CityAutocompleteInputProps {
   uf: string; // UF selecionada (ex: 'SP')
