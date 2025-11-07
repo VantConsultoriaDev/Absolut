@@ -314,16 +314,18 @@ const Cargas: React.FC = () => {
     setFormData(prev => {
       const lastTrajeto = prev.trajetos[prev.trajetos.length - 1];
       
-      // NOVO: Lógica de transferência de destino para origem e limpeza do destino anterior
+      // NOVO: Lógica de transferência de destino para destino e limpeza do destino anterior
       const newIndex = prev.trajetos.length + 1;
       
-      // 1. Cria o novo trajeto, usando o destino anterior como origem
+      // 1. Cria o novo trajeto
       const newTrajeto: TrajetoForm = {
         index: newIndex,
-        ufOrigem: lastTrajeto.ufDestino,
-        cidadeOrigem: lastTrajeto.cidadeDestino,
-        ufDestino: '',
-        cidadeDestino: '',
+        // A origem do novo trajeto é o destino do trajeto anterior (antes de ser limpo)
+        ufOrigem: lastTrajeto.ufDestino, 
+        cidadeOrigem: lastTrajeto.cidadeDestino, 
+        // O destino do novo trajeto é o destino do trajeto anterior (antes de ser limpo)
+        ufDestino: lastTrajeto.ufDestino, 
+        cidadeDestino: lastTrajeto.cidadeDestino, 
         valor: formatCurrency(0),
         dataColeta: '', 
         dataEntrega: '', 
@@ -332,8 +334,8 @@ const Cargas: React.FC = () => {
       // 2. Limpa o destino do trajeto anterior
       const updatedLastTrajeto = {
           ...lastTrajeto,
-          ufDestino: '',
-          cidadeDestino: '',
+          ufDestino: '', // Limpa o destino anterior
+          cidadeDestino: '', // Limpa a cidade destino anterior
       };
       
       // 3. Atualiza o array de trajetos
