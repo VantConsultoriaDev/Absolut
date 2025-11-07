@@ -456,16 +456,14 @@ const Cargas: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.crt.length > 10) {
-      showError('CRT deve ter no máximo 10 caracteres');
-      return;
-    }
+    // 1. Validação de CRT (REMOVIDA A VALIDAÇÃO DE 10 CARACTERES AQUI)
+    
     if (formData.trajetos.length === 0) {
         showError('A carga deve ter pelo menos um trajeto.');
         return;
     }
     
-    // 1. Validação dos Trajetos
+    // 2. Validação dos Trajetos
     for (const trajeto of formData.trajetos) {
         if (!trajeto.ufOrigem || parseCurrency(trajeto.valor) <= 0) {
             showError(`Trajeto ${trajeto.index} incompleto. Preencha UF Origem e Valor.`);
@@ -473,12 +471,12 @@ const Cargas: React.FC = () => {
         }
     }
     
-    // 2. Cálculo do Valor Total e Definição de Origem/Destino da Carga
+    // 3. Cálculo do Valor Total e Definição de Origem/Destino da Carga
     const valorTotal = formData.trajetos.reduce((sum, t) => sum + parseCurrency(t.valor), 0);
     const origemCarga = formData.trajetos[0];
     const destinoCarga = formData.trajetos[formData.trajetos.length - 1];
     
-    // 3. Construção da Carga
+    // 4. Construção da Carga
     const cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'> = {
       descricao: formData.crt || 'Carga sem descrição',
       // Origem e Destino da Carga são os pontos inicial e final
@@ -1012,14 +1010,14 @@ const Cargas: React.FC = () => {
         const startDate = createLocalDate(filterColetaStartDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // CORREÇÃO TS: Garante que a comparação só ocorra se d não for null
+        // CORREÇÃO TS: Garante que a comparação solo ocorra se d não for null
         matchesColetaRange = matchesColetaRange && (d ? d >= startDate : false);
       }
       if (filterColetaEndDate) {
         const endDate = createLocalDate(filterColetaEndDate);
         // ALTERADO: Verifica se a data existe antes de formatar
         const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // CORREÇÃO TS: Garante que a comparação só ocorra se d não for null
+        // CORREÇÃO TS: Garante que a comparação solo ocorra se d não for null
         matchesColetaRange = matchesColetaRange && (d ? d <= endDate : false);
       }
 
