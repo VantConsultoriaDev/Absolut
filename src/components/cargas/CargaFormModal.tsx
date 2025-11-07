@@ -4,7 +4,7 @@ import { useModal } from '../../hooks/useModal';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
 import StandardCheckbox from '../StandardCheckbox';
-import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants';
+import { UFS_BRASIL, UFS_ESTRANGEIRAS, UFS_ORDENADAS } from '../../utils/cargasConstants';
 import CityAutocompleteInput from '../CityAutocompleteInput';
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
@@ -123,13 +123,8 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   
   // 2. Valor total do CRT (Prefix + Suffix)
   const fullCrt = useMemo(() => {
-      // Usar o último trajeto para destino
-      const primeiroTrajeto = formData.trajetos[0];
-      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
-      
-      const ufOrigem = primeiroTrajeto?.ufOrigem;
-      const ufDestino = ultimoTrajeto?.ufDestino;
-      
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
       const prefix = getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
       
       // Se não houver prefixo, o CRT é o sufixo (ou vazio)
@@ -168,6 +163,37 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       // Exportação: Origem deve ser uma UF brasileira
       return UFS_BRASIL;
   }, [formData.tipoOperacao]);
+  
+  // Opções de UF de Destino filtradas (para o último trajeto)
+  const getFilteredUfDestinoOptions = (trajetoIndex: number) => {
+      const isLastTrajeto = trajetoIndex === formData.trajetos.length - 1;
+      
+      if (!isLastTrajeto) {
+          // Se não for o último trajeto, permite todas as UFs/Países
+          return ufsOrdenadas;
+      }
+      
+      if (formData.tipoOperacao === 'exportacao') {
+          // Exportação: Destino SÓ PODE ser AR, CL, UY
+          return UFS_ESTRANGEIRAS;
+      }
+      
+      if (formData.tipoOperacao === 'importacao') {
+          // Importação: Destino NÃO PODE ser CL ou UY. Deve ser BR ou AR (se transbordo)
+          
+          // Se for transbordo, permite AR, CL, UY, BR
+          if (isTransbordoEnabled) {
+              // Permite AR, CL, UY, BR
+              return ufsOrdenadas;
+          }
+          
+          // Se não for transbordo, o destino final deve ser BR ou AR
+          return ufsOrdenadas.filter(uf => uf.value === 'AR' || UFS_BRASIL.some(b => b.value === uf.value));
+      }
+      
+      return ufsOrdenadas;
+  };
+
 
   const handleTransbordoToggle = (checked: boolean) => {
     const newTransbordo = checked ? 'com_transbordo' : 'sem_transbordo';
@@ -214,18 +240,14 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   
   // Verifica se o CRT deve ser gerado automaticamente
   const shouldGenerateCrt = useMemo(() => {
-      const primeiroTrajeto = formData.trajetos[0];
-      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
-      const ufOrigem = primeiroTrajeto?.ufOrigem;
-      const ufDestino = ultimoTrajeto?.ufDestino;
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
       return !!getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
   }, [formData.trajetos, formData.tipoOperacao]);
   
   const crtPrefix = useMemo(() => {
-      const primeiroTrajeto = formData.trajetos[0];
-      const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
-      const ufOrigem = primeiroTrajeto?.ufOrigem;
-      const ufDestino = ultimoTrajeto?.ufDestino;
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
       return getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
   }, [formData.trajetos, formData.tipoOperacao]);
 
@@ -235,15 +257,37 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
     
     const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
     
-    // 1. Validação de Importação (UF Destino)
+    // 1. Validação de Exportação (UF Destino SÓ PODE ser AR, CL, UY)
+    if (formData.tipoOperacao === 'exportacao') {
+        const isDestinoForeign = UFS_ESTRANGEIRAS.some(u => u.value === ultimoTrajeto.ufDestino);
+        if (!isDestinoForeign) {
+            alert('Em casos de EXPORTAÇÃO, a UF Destino do último trajeto SÓ PODE ser Argentina (AR), Chile (CL) ou Uruguai (UY).');
+            return;
+        }
+    }
+    
+    // 2. Validação de Importação (UF Destino NÃO PODE ser CL ou UY)
     if (formData.tipoOperacao === 'importacao') {
+        // Se for transbordo, o destino final pode ser AR, CL, UY, BR.
+        // Se não for transbordo, o destino final deve ser BR ou AR.
+        
+        if (!isTransbordoEnabled) {
+            // Se não for transbordo, o destino final deve ser BR ou AR
+            const isDestinoBR = UFS_BRASIL.some(u => u.value === ultimoTrajeto.ufDestino);
+            if (ultimoTrajeto.ufDestino !== 'AR' && !isDestinoBR) {
+                alert('Em casos de IMPORTAÇÃO SEM TRANSBORDO, a UF Destino deve ser Brasil (BR) ou Argentina (AR).');
+                return;
+            }
+        }
+        
+        // Regra geral: UF Destino NÃO PODE ser CL ou UY
         if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
             alert('Em casos de IMPORTAÇÃO, a UF Destino não pode ser Chile (CL) ou Uruguai (UY).');
             return;
         }
     }
     
-    // 2. Chama o submit original
+    // 3. Chama o submit original
     onSubmit(e);
   };
 
@@ -345,6 +389,10 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   const isOrigemForeign = isForeignCountry(trajeto.ufOrigem);
                   const isDestinoForeign = isForeignCountry(trajeto.ufDestino);
                   const isOrigemDisabled = isTransbordoEnabled && index > 0;
+                  const isLastTrajeto = index === formData.trajetos.length - 1;
+                  
+                  // Opções de destino para este trajeto
+                  const destinoOptions = getFilteredUfDestinoOptions(index);
                   
                   return (
                   <div key={trajeto.index} className={`p-4 border rounded-lg ${index > 0 ? 'mt-4 border-blue-200 dark:border-blue-700' : 'border-gray-100 dark:border-gray-700'}`}>
@@ -441,13 +489,18 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             required
                           >
                             <option value="">Selecione a UF de destino</option>
-                            {/* O destino pode ser qualquer UF/País */}
-                            {ufsOrdenadas.map((uf) => (
+                            {destinoOptions.map((uf) => (
                               <option key={uf.value} value={uf.value}>
                                 {uf.label}
                               </option>
                             ))}
                           </select>
+                          {isLastTrajeto && formData.tipoOperacao === 'exportacao' && (
+                              <p className="text-xs text-gray-500 mt-1">Destino final deve ser AR, CL ou UY.</p>
+                          )}
+                          {isLastTrajeto && formData.tipoOperacao === 'importacao' && (
+                              <p className="text-xs text-gray-500 mt-1">Destino final não pode ser CL ou UY.</p>
+                          )}
                         </div>
                         
                         {trajeto.ufDestino && (
