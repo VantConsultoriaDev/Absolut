@@ -40,7 +40,8 @@ export class VehicleService {
 
       if (!API_TOKEN) {
         console.error('VehicleService: VITE_APIBRASIL_TOKEN não configurado.');
-        throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado. Verifique o arquivo .env.local.');
+        // Retorna null se o token não estiver configurado, permitindo o cadastro manual
+        return null;
       }
 
       const response = await axios.post(
@@ -66,7 +67,7 @@ export class VehicleService {
         
         // Se for erro de autorização, lança um erro específico para ser capturado
         if (response.status === 401 || response.status === 403) {
-             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
+             console.error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
         
         // Se for erro de payload, retorna null
@@ -96,13 +97,13 @@ export class VehicleService {
     } catch (error) {
       console.error('Erro ao consultar placa:', error);
       
-      // Se o erro for do Axios e tiver uma resposta de status 401/403, lança o erro de autorização
+      // Se o erro for do Axios e tiver uma resposta de status 401/403, loga o erro de autorização
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-          throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
+          console.error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
       }
       
-      // Em caso de qualquer outro erro (rede, timeout, etc.), lança o erro para ser tratado pelo chamador
-      throw new Error('Falha ao consultar placa. Verifique a conexão ou o token da API.');
+      // Em caso de qualquer erro (rede, timeout, autorização), retorna null para permitir o cadastro manual
+      return null;
     }
   }
 
