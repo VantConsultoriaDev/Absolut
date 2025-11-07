@@ -59,29 +59,32 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   // Handler unificado para Placa (Cavalo, Truck, Carreta)
   const handlePlacaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Aplica formatação de placa (apenas para visualização)
-    const formatted = formatPlaca(value);
+    
+    // 1. Limpa o valor para obter apenas caracteres alfanuméricos e limita a 7
+    const placaLimpa = value.replace(/[^A-Z0-9]/gi, '').toUpperCase().substring(0, 7);
+    
+    // 2. Aplica formatação de placa (apenas para visualização)
+    // formatPlaca já lida com a limpeza e formatação se a placa tiver 7 caracteres alfanuméricos.
+    const formatted = formatPlaca(value); 
+    
+    // 3. Atualiza o estado com o valor formatado
     setFormData(prev => ({ ...prev, [placaField]: formatted }));
     
-    const placaLimpa = formatted.replace(/[^A-Z0-9]/gi, '');
-    
-    // Dispara a consulta automaticamente se a placa estiver completa (7 caracteres)
+    // 4. Dispara a consulta se a placa estiver completa (7 caracteres alfanuméricos)
     if (placaLimpa.length === 7 && !placaConsultada && !consultandoPlaca) {
+        // Passamos o valor formatado para a consulta
         handlePlacaConsultation(formatted, formData.tipo);
     }
   };
   
   // Handler para forçar maiúsculas no blur (para todos os campos de placa)
   const handlePlacaBlur = () => {
-    setFormData(prev => ({ ...prev, [placaField]: forceUpperCase(placaValue) }));
+    // Garante que o valor final seja formatado e em maiúsculas
+    const finalFormatted = formatPlaca(placaValue);
+    setFormData(prev => ({ ...prev, [placaField]: forceUpperCase(finalFormatted) }));
   };
   
-  // Lógica de Carretas (apenas para Cavalo)
-  // const isCavalo = formData.tipo === 'Cavalo'; // REMOVIDO TS6133
-  // const isCarreta = formData.tipo === 'Carreta'; // REMOVIDO TS6133
-  
   // Determina se o campo de carroceria deve ser exibido
-  // Deve ser exibido apenas para Truck, mas não para Cavalo ou Carreta
   const showCarroceria = formData.tipo === 'Truck';
 
   return (
@@ -119,12 +122,6 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                         placaCavalo: '', 
                         placaCarreta: '', 
                         chassis: '',
-                        // Campos removidos do tipo Veiculo, mas mantidos no VeiculoFormData para evitar erros de TS
-                        // quantidadeCarretas: 0,
-                        // possuiDolly: false,
-                        // placaCarreta1: '',
-                        // placaCarreta2: '',
-                        // placaDolly: '',
                     }))}
                     className="input-field"
                     required
@@ -150,7 +147,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                     onBlur={handlePlacaBlur}
                     className="input-field"
                     placeholder="Ex: ABC1234 ou ABC1D23"
-                    maxLength={7}
+                    // REMOVIDO: maxLength={7}
                     required
                   />
                   
