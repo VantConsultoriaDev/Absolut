@@ -82,6 +82,12 @@ const initialParceiroFormData: Parceiro = {
   pixKeyType: '',
   pixKey: '',
   pixTitular: '',
+  
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO
+  dataNascimento: undefined,
+  rg: undefined,
+  orgaoEmissor: undefined,
+  
   endereco: '',
   numero: '', // NOVO CAMPO
   complemento: '', // NOVO CAMPO
@@ -120,7 +126,8 @@ const Parceiros: React.FC = () => {
   // Estados de Modais e Formulários
   const [showParceiroForm, setShowParceiroForm] = useState(false);
   const [editingParceiroId, setEditingParceiroId] = useState<string | null>(null);
-  const [parceiroFormData, setParceiroFormData] = useState<Parceiro>(initialParceiroFormData);
+  // Usamos um estado que reflete a interface Parceiro, mas com dataNascimentoStr para o input
+  const [parceiroFormData, setParceiroFormData] = useState<Parceiro & { dataNascimentoStr?: string }>(initialParceiroFormData);
   
   const [showMotoristaForm, setShowMotoristaForm] = useState(false);
   const [editingMotoristaId, setEditingMotoristaId] = useState<string | null>(null);
@@ -245,6 +252,14 @@ const Parceiros: React.FC = () => {
       pixKey: parceiro.pixKey ? formatPixKey(parceiro.pixKey, parceiro.pixKeyType || '') : '',
       numero: (parceiro as any).numero || '', // NOVO CAMPO
       complemento: (parceiro as any).complemento || '', // NOVO CAMPO
+      
+      // NOVOS CAMPOS DE IDENTIFICAÇÃO
+      rg: parceiro.rg || undefined,
+      orgaoEmissor: parceiro.orgaoEmissor || undefined,
+      dataNascimento: parceiro.dataNascimento,
+      dataNascimentoStr: parceiro.dataNascimento && isValid(parceiro.dataNascimento) 
+          ? format(parceiro.dataNascimento, 'yyyy-MM-dd') 
+          : undefined,
     });
     setEditingParceiroId(parceiro.id);
     setShowParceiroForm(true);
@@ -287,24 +302,49 @@ const Parceiros: React.FC = () => {
         return;
     }
     
-    const payload: Parceiro = {
+    // 1. Converte data de nascimento de volta para Date
+    const dataNascimentoDate = parceiroFormData.dataNascimentoStr 
+        ? createLocalDate(parceiroFormData.dataNascimentoStr) 
+        : undefined;
+        
+    // 2. Prepara o payload base
+    const payloadBase: Parceiro = {
       ...parceiroFormData,
       documento: cleanDocument,
       telefone: parseDocument(parceiroFormData.telefone || ''),
       responsavel: parceiroFormData.responsavel, // NOVO CAMPO
       pixKey: cleanPixKeyVal,
       pixTitular: parceiroFormData.pixTitular || parceiroFormData.nome,
-      // Garante que o nome fantasia seja null se for PF
       nomeFantasia: parceiroFormData.tipo === 'PF' ? undefined : parceiroFormData.nomeFantasia,
-      // Garante que isActive seja true se não estiver definido (ou seja, não bloqueado)
       isActive: parceiroFormData.isActive ?? true,
+      
+      // Campos de identificação PF
+      dataNascimento: dataNascimentoDate,
+      rg: parceiroFormData.rg,
+      orgaoEmissor: parceiroFormData.orgaoEmissor,
     };
+    
+    // 3. Lógica para limpar campos de endereço se for PF
+    let finalPayload: Parceiro;
+    if (parceiroFormData.tipo === 'PF') {
+        finalPayload = {
+            ...payloadBase,
+            endereco: undefined,
+            numero: undefined,
+            complemento: undefined,
+            cidade: undefined,
+            uf: undefined,
+            cep: undefined,
+        };
+    } else {
+        finalPayload = payloadBase;
+    }
 
     try {
       if (editingParceiroId) {
-        updateParceiro(editingParceiroId, payload);
+        updateParceiro(editingParceiroId, finalPayload);
       } else {
-        createParceiro(payload);
+        createParceiro(finalPayload);
       }
       setShowParceiroForm(false);
       resetParceiroForm();
@@ -853,6 +893,11 @@ const Parceiros: React.FC = () => {
                           responsavel: '', // Reset responsavel
                           isMotorista: novoTipo === 'PF' ? prev.isMotorista : false,
                           cnh: novoTipo === 'PF' ? prev.cnh : '',
+                          // Limpa campos de identificação PF se mudar para PJ
+                          dataNascimento: novoTipo === 'PJ' ? undefined : prev.dataNascimento,
+                          dataNascimentoStr: novoTipo === 'PJ' ? undefined : prev.dataNascimentoStr,
+                          rg: novoTipo === 'PJ' ? undefined : prev.rg,
+                          orgaoEmissor: novoTipo === 'PJ' ? undefined : prev.orgaoEmissor,
                         }));
                         setCnpjConsultado(false);
                         setConsultandoCNPJ(false);
@@ -939,6 +984,42 @@ const Parceiros: React.FC = () => {
                   )}
                 </div>
                 
+                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO (PF) */}
+                {parceiroFormData.tipo === 'PF' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
+                        <div className="md:col-span-3">
+                            <h4 className="text-md font-semibold text-gray-900 dark:text-white">Identificação Pessoal</h4>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Nasc.</label>
+                            <input
+                                type="date"
+                                value={parceiroFormData.dataNascimentoStr || ''}
+                                onChange={(e) => setParceiroFormData(prev => ({ ...prev, dataNascimentoStr: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RG</label>
+                            <input
+                                type="text"
+                                value={parceiroFormData.rg || ''}
+                                onChange={(e) => setParceiroFormData(prev => ({ ...prev, rg: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Órgão Emissor</label>
+                            <input
+                                type="text"
+                                value={parceiroFormData.orgaoEmissor || ''}
+                                onChange={(e) => setParceiroFormData(prev => ({ ...prev, orgaoEmissor: e.target.value }))}
+                                className="input-field"
+                            />
+                        </div>
+                    </div>
+                )}
+                
                 {/* Contato e Responsável */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -989,66 +1070,70 @@ const Parceiros: React.FC = () => {
                 </div>
                 
                 {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
-                  <input
-                    type="text"
-                    value={parceiroFormData.endereco}
-                    onChange={(e) => setParceiroFormData(prev => ({ ...prev, endereco: e.target.value }))}
-                    className="input-field"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.numero}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, numero: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.complemento}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, complemento: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-                
-                {/* Cidade, UF, CEP */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.cidade}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, cidade: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.uf}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, uf: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.cep}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, cep: e.target.value }))}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
+                {parceiroFormData.tipo === 'PJ' && (
+                    <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                          <input
+                            type="text"
+                            value={parceiroFormData.endereco}
+                            onChange={(e) => setParceiroFormData(prev => ({ ...prev, endereco: e.target.value }))}
+                            className="input-field"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
+                            <input
+                              type="text"
+                              value={parceiroFormData.numero}
+                              onChange={(e) => setParceiroFormData(prev => ({ ...prev, numero: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
+                            <input
+                              type="text"
+                              value={parceiroFormData.complemento}
+                              onChange={(e) => setParceiroFormData(prev => ({ ...prev, complemento: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Cidade, UF, CEP */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                            <input
+                              type="text"
+                              value={parceiroFormData.cidade}
+                              onChange={(e) => setParceiroFormData(prev => ({ ...prev, cidade: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
+                            <input
+                              type="text"
+                              value={parceiroFormData.uf}
+                              onChange={(e) => setParceiroFormData(prev => ({ ...prev, uf: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                            <input
+                              type="text"
+                              value={parceiroFormData.cep}
+                              onChange={(e) => setParceiroFormData(prev => ({ ...prev, cep: e.target.value }))}
+                              className="input-field"
+                            />
+                          </div>
+                        </div>
+                    </>
+                )}
                 
                 {/* PIX */}
                 <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3">

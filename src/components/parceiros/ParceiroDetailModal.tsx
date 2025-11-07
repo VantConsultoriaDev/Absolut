@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, RefreshCw, Search } from 'lucide-react';
+import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, RefreshCw, Search, Calendar, FileBadge } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista, Veiculo, PermissoInternacional } from '../../types';
 import { formatDocument, formatContact, formatPlaca, formatPixKey } from '../../utils/formatters';
-import { format } from 'date-fns';
-// import { ptBR } from 'date-fns/locale';
+import { format, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface ParceiroDetailModalProps {
   isOpen: boolean;
@@ -63,6 +63,8 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
     parceiro.numero ? `, ${parceiro.numero}` : '',
     parceiro.complemento ? ` (${parceiro.complemento})` : '',
   ].join('');
+  
+  const hasAddressInfo = !!parceiro.endereco || !!parceiro.cidade || !!parceiro.cep;
 
   // Lógica de filtragem de motoristas
   const filteredMotoristas = useMemo(() => {
@@ -124,7 +126,35 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
 
   const renderDetalhes = () => (
     <div className="space-y-6">
-      {/* Informações de Contato e Endereço */}
+      
+      {/* Informações de Identificação (PF) */}
+      {!isPJ && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="md:col-span-3">
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileBadge className="h-5 w-5 text-green-600" /> Identificação Pessoal
+                </h4>
+            </div>
+            <div className="detail-item">
+                <p className="detail-label flex items-center gap-1"><Calendar className="h-4 w-4" /> Data Nasc.</p>
+                <p className="detail-value">
+                    {parceiro.dataNascimento && isValid(parceiro.dataNascimento) 
+                        ? format(parceiro.dataNascimento, 'dd/MM/yyyy', { locale: ptBR }) 
+                        : 'N/A'}
+                </p>
+            </div>
+            <div className="detail-item">
+                <p className="detail-label flex items-center gap-1"><FileText className="h-4 w-4" /> RG</p>
+                <p className="detail-value">{parceiro.rg || 'N/A'}</p>
+            </div>
+            <div className="detail-item">
+                <p className="detail-label flex items-center gap-1"><FileText className="h-4 w-4" /> Órgão Emissor</p>
+                <p className="detail-value">{parceiro.orgaoEmissor || 'N/A'}</p>
+            </div>
+        </div>
+      )}
+      
+      {/* Informações de Contato */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="detail-item">
           <p className="detail-label flex items-center gap-1"><Mail className="h-4 w-4" /> Email</p>
@@ -140,7 +170,11 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
                 <p className="detail-value">{parceiro.responsavel}</p>
             </div>
         )}
-        <div className="detail-item md:col-span-2">
+      </div>
+      
+      {/* Informações de Endereço (Apenas se for PJ ou se houver dados) */}
+      {(isPJ || hasAddressInfo) && (
+        <div className="detail-item">
           <p className="detail-label flex items-center gap-1"><MapPin className="h-4 w-4" /> Endereço Completo</p>
           <p className="detail-value">
             {fullAddress || 'N/A'}
@@ -151,7 +185,7 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
             )}
           </p>
         </div>
-      </div>
+      )}
       
       {/* Informações PIX */}
       {hasPixInfo && (
