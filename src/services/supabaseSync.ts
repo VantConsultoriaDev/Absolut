@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import { UndoAction } from './undoService';
 import { mapToSupabase, mapFromSupabase } from './supabaseMappers';
 import { showError, showLoading, dismissToast } from '../utils/toast';
-import { Cliente, Parceiro, Motorista, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Veiculo } from '../types';
+import { Cliente, Parceiro, Motorista, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Veiculo, Compromisso, Tarefa } from '../types';
 
 interface SyncDependencies {
     userId: string | undefined;
@@ -16,6 +16,8 @@ interface SyncDependencies {
     setCargas: (data: Carga[]) => void;
     setContratos: (data: ContratoFrete[]) => void;
     setPermissoes: (data: PermissoInternacional[]) => void;
+    setCompromissos: (data: Compromisso[]) => void; // NOVO
+    setTarefas: (data: Tarefa[]) => void; // NOVO
     isSyncing: boolean; // Adicionado para resolver TS2551
 }
 
@@ -119,16 +121,17 @@ export const syncActionToSupabase = (action: UndoAction, userId: string | undefi
 export const pullSupabaseData = async (deps: SyncDependencies): Promise<boolean> => {
     const { 
         setIsSynced, setIsSyncing, setClientes, setParceiros, setMotoristas, setVeiculos, 
-        setMovimentacoes, setCargas, setContratos, setPermissoes, isSyncing // Corrigido: isSyncing adicionado à desestruturação
+        setMovimentacoes, setCargas, setContratos, setPermissoes, setCompromissos, setTarefas, isSyncing
     } = deps;
 
-    if (!supabase || isSyncing) return false; // Corrigido: usando isSyncing desestruturado
+    if (!supabase || isSyncing) return false;
     const toastId = showLoading('Sincronizando dados com o Supabase...');
     setIsSyncing(true);
     
     try {
         const tables = [
-            'clientes', 'parceiros', 'motoristas', 'movimentacoes_financeiras', 'cargas', 'contratos_frete', 'permisso_internacional'
+            'clientes', 'parceiros', 'motoristas', 'movimentacoes_financeiras', 'cargas', 'contratos_frete', 'permisso_internacional',
+            'compromissos', 'tarefas' // NOVO: Adicionando tabelas da agenda
         ];
         
         // Fetch Veiculos separadamente, incluindo o relacionamento com permisso_internacional
@@ -149,7 +152,8 @@ export const pullSupabaseData = async (deps: SyncDependencies): Promise<boolean>
         ));
         
         const [
-            clientesRes, parceirosRes, motoristasRes, movimentacoesRes, cargasRes, contratosRes
+            clientesRes, parceirosRes, motoristasRes, movimentacoesRes, cargasRes, contratosRes,
+            compromissosRes, tarefasRes // NOVO: Resultados da agenda
         ] = results;
 
         if (clientesRes.error) throw clientesRes.error;
@@ -158,6 +162,8 @@ export const pullSupabaseData = async (deps: SyncDependencies): Promise<boolean>
         if (movimentacoesRes.error) throw movimentacoesRes.error;
         if (cargasRes.error) throw cargasRes.error;
         if (contratosRes.error) throw contratosRes.error;
+        if (compromissosRes.error) throw compromissosRes.error; // NOVO
+        if (tarefasRes.error) throw tarefasRes.error; // NOVO
         
         // Mapeia Permissoes separadamente (embora já estejam nos Veículos, mantemos a tabela para consistência)
         // CORREÇÃO: Extrai permissoes dos veiculos mapeados para popular a tabela permissoes
@@ -173,6 +179,10 @@ export const pullSupabaseData = async (deps: SyncDependencies): Promise<boolean>
         setMovimentacoes(movimentacoesRes.data.map(item => mapFromSupabase('movimentacoes_financeiras', item) as MovimentacaoFinanceira));
         setCargas(cargasRes.data.map(item => mapFromSupabase('cargas', item) as Carga));
         setContratos(contratosRes.data.map(item => mapFromSupabase('contratos_frete', item) as ContratoFrete));
+        
+        // NOVO: Mapeamento da Agenda
+        setCompromissos(compromissosRes.data.map(item => mapFromSupabase('compromissos', item) as Compromisso));
+        setTarefas(tarefasRes.data.map(item => mapFromSupabase('tarefas', item) as Tarefa));
 
         setIsSynced(true);
         // toastId é o ID retornado por showLoading, que é uma string

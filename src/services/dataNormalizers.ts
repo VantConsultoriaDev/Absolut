@@ -1,4 +1,4 @@
-import { Cliente, Parceiro, Motorista, Veiculo, Carga, PermissoInternacional } from '../types';
+import { Cliente, Parceiro, Motorista, Veiculo, Carga, PermissoInternacional, Compromisso, Tarefa } from '../types';
 
 // Utilitário para remover chaves com valor undefined (evita sobrescrever campos obrigatórios)
 export const stripUndefined = <T extends object>(obj: Partial<T>): Partial<T> => {
@@ -48,6 +48,8 @@ export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | '
   complemento: d.complemento, // NOVO
   cidade: d.cidade,
   uf: d.uf, // RENOMEADO
+  cep: d.cep,
+  
   observacoes: d.observacoes,
 });
 
@@ -89,6 +91,26 @@ export const normalizePermissoCreate = (d: Omit<PermissoInternacional, 'id' | 'c
   razaoSocial: d.razaoSocial,
   nomeFantasia: d.nomeFantasia,
   enderecoCompleto: d.enderecoCompleto,
+});
+
+export const normalizeCompromissoCreate = (d: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>) => ({
+  ...d,
+  titulo: d.titulo,
+  descricao: d.descricao,
+  data_hora: d.data_hora,
+  duracao_minutos: d.duracao_minutos,
+  local: d.local,
+  notificacao: d.notificacao,
+});
+
+export const normalizeTarefaCreate = (d: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>) => ({
+  ...d,
+  titulo: d.titulo,
+  descricao: d.descricao,
+  prioridade: d.prioridade,
+  status: d.status,
+  data_vencimento: d.data_vencimento,
+  vincular_ao_calendario: d.vincular_ao_calendario,
 });
 
 // --- APLICADORES DE ATUALIZAÇÃO ---
@@ -145,6 +167,20 @@ export const applyUpdateCarga = (current: Carga, changes: Partial<Carga>): Carga
 export const applyUpdatePermisso = (current: PermissoInternacional, changes: Partial<PermissoInternacional>): PermissoInternacional => {
   const c = stripUndefined(changes);
   const merged: PermissoInternacional = { ...current, ...c };
+  merged.updatedAt = new Date();
+  return merged;
+};
+
+export const applyUpdateCompromisso = (current: Compromisso, changes: Partial<Compromisso>): Compromisso => {
+  const c = stripUndefined(changes);
+  const merged: Compromisso = { ...current, ...c };
+  merged.updatedAt = new Date();
+  return merged;
+};
+
+export const applyUpdateTarefa = (current: Tarefa, changes: Partial<Tarefa>): Tarefa => {
+  const c = stripUndefined(changes);
+  const merged: Tarefa = { ...current, ...c };
   merged.updatedAt = new Date();
   return merged;
 };

@@ -1,4 +1,4 @@
-import { Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional } from '../types';
+import { Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Compromisso, Tarefa } from '../types';
 
 // Função auxiliar para remover chaves com valor undefined ou null, E converter strings vazias em null
 const cleanObject = (obj: any) => {
@@ -139,6 +139,26 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         ...base,
         carga_id: cleanedItem.cargaId, pdf_url: cleanedItem.pdfUrl, motorista_nome: cleanedItem.motoristaNome, parceiro_nome: cleanedItem.parceiroNome, crt: cleanedItem.crt,
       };
+    case 'compromissos':
+      return {
+        ...base,
+        titulo: cleanedItem.titulo,
+        descricao: cleanedItem.descricao,
+        data_hora: cleanedItem.data_hora?.toISOString(),
+        duracao_minutos: cleanedItem.duracaoMinutos,
+        local: cleanedItem.local,
+        notificacao: cleanedItem.notificacao,
+      };
+    case 'tarefas':
+      return {
+        ...base,
+        titulo: cleanedItem.titulo,
+        descricao: cleanedItem.descricao,
+        prioridade: cleanedItem.prioridade,
+        status: cleanedItem.status,
+        data_vencimento: cleanedItem.dataVencimento?.toISOString().split('T')[0],
+        vincular_ao_calendario: cleanedItem.vincularAoCalendario,
+      };
     default:
       return base;
   }
@@ -260,6 +280,26 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         ...base,
         cargaId: item.carga_id, pdfUrl: item.pdf_url, motoristaNome: item.motorista_nome, parceiroNome: item.parceiro_nome, crt: item.crt,
       } as ContratoFrete;
+    case 'compromissos':
+      return {
+        ...base,
+        titulo: item.titulo,
+        descricao: item.descricao,
+        data_hora: new Date(item.data_hora),
+        duracao_minutos: item.duracao_minutos,
+        local: item.local,
+        notificacao: item.notificacao,
+      } as Compromisso;
+    case 'tarefas':
+      return {
+        ...base,
+        titulo: item.titulo,
+        descricao: item.descricao,
+        prioridade: item.prioridade,
+        status: item.status,
+        data_vencimento: item.data_vencimento ? new Date(item.data_vencimento) : undefined,
+        vincular_ao_calendario: item.vincular_ao_calendario,
+      } as Tarefa;
     default:
       return base;
   }

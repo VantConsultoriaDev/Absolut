@@ -206,6 +206,34 @@ export interface ContratoFrete {
   updatedAt: Date
 }
 
+// --- NOVAS INTERFACES PARA AGENDA (Mapeamento do Supabase) ---
+
+export interface Compromisso {
+  id: string;
+  user_id: string;
+  titulo: string;
+  descricao?: string;
+  data_hora: Date; // Data e hora do compromisso
+  duracao_minutos: number;
+  local?: string;
+  notificacao: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Tarefa {
+  id: string;
+  user_id: string;
+  titulo: string;
+  descricao?: string;
+  prioridade: string; // Ex: 'alta', 'media', 'baixa'
+  status: string; // Ex: 'pendente', 'concluida'
+  data_vencimento?: Date;
+  vincular_ao_calendario: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // Tipo para as opções de split de extras
 type ExtraSplitOption = 'adiantamento' | 'saldo' | 'individual';
 
@@ -299,6 +327,10 @@ export interface DatabaseContextType {
   cargas: Carga[]
   contratos: ContratoFrete[] // Novo
   
+  // NOVO: Agenda
+  compromissos: Compromisso[];
+  tarefas: Tarefa[];
+  
   // User operations (Removidas as funções CRUD)
   createUser: (user: CreateType<User>) => User
   updateUser: (id: string, user: Partial<User>) => User | null
@@ -351,6 +383,16 @@ export interface DatabaseContextType {
   generateContract: (cargaId: string) => Promise<void>
   getContracts: () => Promise<ContratoFrete[]>
   deleteContrato: (id: string) => boolean 
+  
+  // NOVO: CRUD Compromissos
+  createCompromisso: (compromisso: CreateType<Compromisso>) => Compromisso;
+  updateCompromisso: (id: string, compromisso: Partial<Compromisso>) => Compromisso | null;
+  deleteCompromisso: (id: string) => boolean;
+  
+  // NOVO: CRUD Tarefas
+  createTarefa: (tarefa: CreateType<Tarefa>) => Tarefa;
+  updateTarefa: (id: string, tarefa: Partial<Tarefa>) => Tarefa | null;
+  deleteTarefa: (id: string) => boolean;
   
   // Storage Utils (NOVO)
   uploadAvatar: (file: File, clienteId: string) => Promise<string | null>

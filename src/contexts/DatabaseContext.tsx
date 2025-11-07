@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional } from '../types'
+import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Compromisso, Tarefa } from '../types'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext'
 import { parseDocument } from '../utils/formatters'
@@ -8,7 +8,8 @@ import { showError } from '../utils/toast' // Removido showSuccess
 import { 
   normalizeClienteCreate, normalizeParceiroCreate, normalizeMotoristaCreate, normalizeVeiculoCreate, 
   normalizeCargaCreate, normalizePermissoCreate, applyUpdateCliente, applyUpdateParceiro, 
-  applyUpdateMotorista, applyUpdateVeiculo, applyUpdateCarga, applyUpdatePermisso 
+  applyUpdateMotorista, applyUpdateVeiculo, applyUpdateCarga, applyUpdatePermisso,
+  normalizeCompromissoCreate, normalizeTarefaCreate, applyUpdateCompromisso, applyUpdateTarefa
 } from '../services/dataNormalizers'
 import { 
   uploadAvatar, deleteAvatar, deleteComprovante, uploadComprovante 
@@ -60,6 +61,8 @@ export const initializeDemoData = () => {
         validadeCnh: d.validadeCnh ? new Date(d.validadeCnh) : undefined,
         dataConsulta: d.dataConsulta ? new Date(d.dataConsulta) : undefined,
         dataNascimento: d.dataNascimento ? new Date(d.dataNascimento) : undefined, // NOVO
+        data_hora: d.data_hora ? new Date(d.data_hora) : undefined, // NOVO: Compromisso
+        data_vencimento: d.data_vencimento ? new Date(d.data_vencimento) : undefined, // NOVO: Tarefa
         // Novos campos de endereço (garante que existam)
         numero: d.numero || undefined,
         complemento: d.complemento || undefined,
@@ -78,7 +81,9 @@ export const initializeDemoData = () => {
     movimentacoes: loadFromStorage('movimentacoes'),
     cargas: loadFromStorage('cargas'),
     contratos: loadFromStorage('contratos'),
-    permissoes: loadFromStorage('permissoes') // NOVO: Carregando permissoes
+    permissoes: loadFromStorage('permissoes'),
+    compromissos: loadFromStorage('compromissos'), // NOVO
+    tarefas: loadFromStorage('tarefas'), // NOVO
   }
 }
 
@@ -165,7 +170,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoFinanceira[]>(demoData.movimentacoes)
   const [cargas, setCargas] = useState<Carga[]>(demoData.cargas)
   const [contratos, setContratos] = useState<ContratoFrete[]>(demoData.contratos)
-  const [permissoes, setPermissoes] = useState<PermissoInternacional[]>(demoData.permissoes) // NOVO
+  const [permissoes, setPermissoes] = useState<PermissoInternacional[]>(demoData.permissoes)
+  const [compromissos, setCompromissos] = useState<Compromisso[]>(demoData.compromissos) // NOVO
+  const [tarefas, setTarefas] = useState<Tarefa[]>(demoData.tarefas) // NOVO
   const [isSynced, setIsSynced] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -180,7 +187,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   useEffect(() => { saveToLocalStorage('movimentacoes', movimentacoes); }, [movimentacoes]);
   useEffect(() => { saveToLocalStorage('cargas', cargas); }, [cargas]);
   useEffect(() => { saveToLocalStorage('contratos', contratos); }, [contratos]);
-  useEffect(() => { saveToLocalStorage('permissoes', permissoes); }, [permissoes]); // NOVO: Persistindo permissoes
+  useEffect(() => { saveToLocalStorage('permissoes', permissoes); }, [permissoes]);
+  useEffect(() => { saveToLocalStorage('compromissos', compromissos); }, [compromissos]); // NOVO
+  useEffect(() => { saveToLocalStorage('tarefas', tarefas); }, [tarefas]); // NOVO
 
   // --- SINCRONIZAÇÃO IMEDIATA (PUSH) ---
   const handleSyncAction = useCallback((action: UndoAction) => {
@@ -203,7 +212,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         setPermissoes,
         isSyncing, // Passando isSyncing para o serviço verificar
     };
-    return pullSupabaseDataService(deps);
+    
+    // Adicionando setters para Compromissos e Tarefas
+    const agendaDeps = {
+        ...deps,
+        setCompromissos,
+        setTarefas,
+    };
+    
+    return pullSupabaseDataService(agendaDeps);
   }, [isSyncing, user?.id]);
 
   // --- LOAD DATA (Chamado apenas na montagem inicial ou login/logout) ---
@@ -1058,6 +1075,176 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
   };
   
+  // --- COMPROMISSO OPERATIONS (NOVO) ---
+  const createCompromisso = (compromissoData: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>): Compromisso => {
+    try {
+      const newCompromisso: Compromisso = {
+        ...normalizeCompromissoCreate(compromissoData),
+        id: generateId(),
+        user_id: user?.id || 'anon',
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+      setCompromissos(prev => [...prev, newCompromisso])
+      
+      undoService.addUndoAction({
+          type: 'create_compromissos',
+          description: `Compromisso "${newCompromisso.titulo}" criado`,
+          data: { newRecord: newCompromisso },
+          undoFunction: async () => {
+              setCompromissos(prev => prev.filter(c => c.id !== newCompromisso.id));
+          }
+      });
+      handleSyncAction({ type: 'create_compromissos', description: '', data: { newRecord: newCompromisso } } as UndoAction);
+      return newCompromisso
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao criar compromisso.');
+      throw e;
+    }
+  }
+
+  const updateCompromisso = (id: string, compromissoData: Partial<Compromisso>): Compromisso | null => {
+    try {
+      let updatedCompromisso: Compromisso | null = null;
+      let originalCompromisso: Compromisso | null = null;
+      
+      setCompromissos(prev => prev.map(compromisso => {
+        if (compromisso.id === id) {
+          originalCompromisso = compromisso;
+          const updated = applyUpdateCompromisso(compromisso, compromissoData);
+          updatedCompromisso = updated;
+          return updated;
+        }
+        return compromisso;
+      }));
+      
+      if (updatedCompromisso && originalCompromisso) {
+          const comp = updatedCompromisso as Compromisso;
+          undoService.addUndoAction({
+              type: 'update_compromissos',
+              description: `Compromisso "${comp.titulo}" atualizado`,
+              data: { updatedData: comp },
+              undoFunction: async () => {
+                  setCompromissos(prev => prev.map(c => c.id === id ? originalCompromisso! : c));
+              }
+          });
+          handleSyncAction({ type: 'update_compromissos', description: '', data: { updatedData: comp } } as UndoAction);
+      }
+      return updatedCompromisso;
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao atualizar compromisso.');
+      throw e;
+    }
+  }
+
+  const deleteCompromisso = (id: string): boolean => {
+    try {
+      const deletedCompromisso = compromissos.find(c => c.id === id);
+      setCompromissos(prev => prev.filter(compromisso => compromisso.id !== id))
+      
+      if (deletedCompromisso) {
+          undoService.addUndoAction({
+              type: 'delete_compromissos',
+              description: `Compromisso "${deletedCompromisso.titulo}" excluído`,
+              data: { deletedData: deletedCompromisso },
+              undoFunction: async () => {
+                  setCompromissos(prev => [...prev, deletedCompromisso]);
+              }
+          });
+          handleSyncAction({ type: 'delete_compromissos', description: '', data: { deletedData: deletedCompromisso } } as UndoAction);
+      }
+      return true
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao excluir compromisso.');
+      throw e;
+    }
+  }
+  
+  // --- TAREFA OPERATIONS (NOVO) ---
+  const createTarefa = (tarefaData: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>): Tarefa => {
+    try {
+      const newTarefa: Tarefa = {
+        ...normalizeTarefaCreate(tarefaData),
+        id: generateId(),
+        user_id: user?.id || 'anon',
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+      setTarefas(prev => [...prev, newTarefa])
+      
+      undoService.addUndoAction({
+          type: 'create_tarefas',
+          description: `Tarefa "${newTarefa.titulo}" criada`,
+          data: { newRecord: newTarefa },
+          undoFunction: async () => {
+              setTarefas(prev => prev.filter(t => t.id !== newTarefa.id));
+          }
+      });
+      handleSyncAction({ type: 'create_tarefas', description: '', data: { newRecord: newTarefa } } as UndoAction);
+      return newTarefa
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao criar tarefa.');
+      throw e;
+    }
+  }
+
+  const updateTarefa = (id: string, tarefaData: Partial<Tarefa>): Tarefa | null => {
+    try {
+      let updatedTarefa: Tarefa | null = null;
+      let originalTarefa: Tarefa | null = null;
+      
+      setTarefas(prev => prev.map(tarefa => {
+        if (tarefa.id === id) {
+          originalTarefa = tarefa;
+          const updated = applyUpdateTarefa(tarefa, tarefaData);
+          updatedTarefa = updated;
+          return updated;
+        }
+        return tarefa;
+      }));
+      
+      if (updatedTarefa && originalTarefa) {
+          const task = updatedTarefa as Tarefa;
+          undoService.addUndoAction({
+              type: 'update_tarefas',
+              description: `Tarefa "${task.titulo}" atualizada`,
+              data: { updatedData: task },
+              undoFunction: async () => {
+                  setTarefas(prev => prev.map(t => t.id === id ? originalTarefa! : t));
+              }
+          });
+          handleSyncAction({ type: 'update_tarefas', description: '', data: { updatedData: task } } as UndoAction);
+      }
+      return updatedTarefa;
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao atualizar tarefa.');
+      throw e;
+    }
+  }
+
+  const deleteTarefa = (id: string): boolean => {
+    try {
+      const deletedTarefa = tarefas.find(t => t.id === id);
+      setTarefas(prev => prev.filter(tarefa => tarefa.id !== id))
+      
+      if (deletedTarefa) {
+          undoService.addUndoAction({
+              type: 'delete_tarefas',
+              description: `Tarefa "${deletedTarefa.titulo}" excluída`,
+              data: { deletedData: deletedTarefa },
+              undoFunction: async () => {
+                  setTarefas(prev => [...prev, deletedTarefa]);
+              }
+          });
+          handleSyncAction({ type: 'delete_tarefas', description: '', data: { deletedData: deletedTarefa } } as UndoAction);
+      }
+      return true
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao excluir tarefa.');
+      throw e;
+    }
+  }
+
   // Utility functions for Cargas/Financeiro synchronization
   const getMotoristaName = (motoristaId: string | undefined) => {
     if (!motoristaId) return 'N/A';
@@ -1089,6 +1276,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     movimentacoes,
     cargas,
     contratos,
+    compromissos, // NOVO
+    tarefas, // NOVO
     
     // User operations
     createUser,
@@ -1139,6 +1328,14 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     generateContract,
     getContracts,
     deleteContrato,
+    
+    // NOVO: Compromisso/Tarefa CRUD
+    createCompromisso,
+    updateCompromisso,
+    deleteCompromisso,
+    createTarefa,
+    updateTarefa,
+    deleteTarefa,
     
     // Utility functions for Cargas/Financeiro synchronization
     getMotoristaName,
