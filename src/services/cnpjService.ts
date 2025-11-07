@@ -95,23 +95,23 @@ export class CNPJService {
 
       // --- NOVO MAPEAMENTO DE CAMPOS ---
       
-      // 1. Razão Social
+      // 1. Razão Social: Prioriza 'razao_social' e 'nome_empresarial'
       const razaoSocialFinal = payload.razao_social || payload.nome_empresarial || payload.nome || '';
       
-      // 2. Nome Fantasia
+      // 2. Nome Fantasia: Prioriza 'nome_fantasia'
       const nomeFantasiaFinal = payload.nome_fantasia || payload.fantasia || payload.titulo_estabelecimento || '';
       
-      // 3. Email
+      // 3. Email: Prioriza 'correio_eletronico'
       const emailFinal = payload.correio_eletronico || payload.email || '';
       
-      // 4. Contato (Telefone)
+      // 4. Contato (Telefone): Prioriza ddd1 + telefone1
       const telefoneCompleto = payload.ddd1 && payload.telefone1 ? 
         `(${payload.ddd1}) ${payload.telefone1}` : 
         payload.ddd_telefone_1 ? 
         `(${payload.ddd_telefone_1.substring(0,2)}) ${payload.ddd_telefone_1.substring(2)}` : 
         payload.telefone || '';
         
-      // 5. Endereço (Logradouro)
+      // 5. Endereço (Logradouro): Prioriza tipo_logradouro + logradouro
       const tipoLogradouro = payload.tipo_logradouro || payload.descricao_tipo_logradouro || '';
       const logradouro = payload.logradouro || '';
       
@@ -126,7 +126,7 @@ export class CNPJService {
       // 7. Complemento
       const complementoFinal = payload.complemento || '';
       
-      // 8. Cidade (Município)
+      // 8. Cidade (Município): Prioriza municipio.descricao
       const municipioNormalizado = (() => {
         const m = payload?.municipio;
         if (typeof m === 'string') return m;
@@ -180,7 +180,7 @@ export class CNPJService {
         
         if (error.response?.status === 401 || error.response?.status === 403) {
              // Lança o erro de autorização para ser capturado pelo componente
-             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
+             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirado. Verifique a configuração.');
         }
       } else {
         console.error(`CNPJService: Erro desconhecido na requisição da API:`, error);
