@@ -171,7 +171,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       if (!isLastTrajeto) {
           // Se não for o último trajeto, permite todas as UFs/Países
           
-          // NOVO: Se for Exportação com Transbordo, permite BR como destino intermediário
+          // Se for Exportação com Transbordo, permite BR como destino intermediário
           if (formData.tipoOperacao === 'exportacao' && isTransbordoEnabled) {
               return ufsOrdenadas;
           }
@@ -266,7 +266,13 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
     
     const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
     
-    // 1. Validação de Exportação (UF Destino SÓ PODE ser AR, CL, UY)
+    // VALIDAÇÃO 1: Transbordo SIM, mas apenas 1 trajeto
+    if (formData.transbordo === 'com_transbordo' && formData.trajetos.length <= 1) {
+        alert('Para Transbordo, é necessário adicionar pelo menos dois trajetos.');
+        return;
+    }
+    
+    // VALIDAÇÃO 2: Exportação (UF Destino SÓ PODE ser AR, CL, UY)
     if (formData.tipoOperacao === 'exportacao') {
         const isDestinoForeign = UFS_ESTRANGEIRAS.some(u => u.value === ultimoTrajeto.ufDestino);
         if (!isDestinoForeign) {
@@ -275,7 +281,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // 2. Validação de Importação (UF Destino NÃO PODE ser CL ou UY)
+    // VALIDAÇÃO 3: Importação (UF Destino NÃO PODE ser CL ou UY)
     if (formData.tipoOperacao === 'importacao') {
         // Regra geral: UF Destino NÃO PODE ser CL ou UY
         if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
@@ -293,7 +299,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // 3. Chama o submit original
+    // 4. Chama o submit original
     onSubmit(e);
   };
 
