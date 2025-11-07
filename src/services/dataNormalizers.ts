@@ -19,6 +19,8 @@ export const normalizeClienteCreate = (d: Omit<Cliente, 'id' | 'createdAt' | 'up
   nome: d.nome,
   nomeFantasia: d.nomeFantasia,
   endereco: d.endereco,
+  numero: d.numero, // NOVO
+  complemento: d.complemento, // NOVO
   cidade: d.cidade,
   uf: d.uf, // RENOMEADO
   observacoes: d.observacoes,
@@ -29,6 +31,8 @@ export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | '
   nome: d.nome,
   nomeFantasia: d.nomeFantasia,
   endereco: d.endereco,
+  numero: d.numero, // NOVO
+  complemento: d.complemento, // NOVO
   cidade: d.cidade,
   uf: d.uf, // RENOMEADO
   observacoes: d.observacoes,

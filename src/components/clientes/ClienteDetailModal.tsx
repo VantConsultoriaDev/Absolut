@@ -25,6 +25,12 @@ const ClienteDetailModal: React.FC<ClienteDetailModalProps> = ({
 
   const displayTitle = cliente.tipo === 'PJ' && cliente.nomeFantasia ? cliente.nomeFantasia : cliente.nome;
   const secondaryTitle = cliente.tipo === 'PJ' && cliente.nomeFantasia ? cliente.nome : cliente.nomeFantasia;
+  
+  const fullAddress = [
+    cliente.endereco,
+    cliente.numero ? `, ${cliente.numero}` : '',
+    cliente.complemento ? ` (${cliente.complemento})` : '',
+  ].join('');
 
   const handleEdit = () => {
     onEdit(cliente);
@@ -112,10 +118,10 @@ const ClienteDetailModal: React.FC<ClienteDetailModalProps> = ({
 
             {/* Endereço */}
             <div className="detail-item">
-                <p className="detail-label">Endereço</p>
+                <p className="detail-label">Endereço Completo</p>
                 <p className="detail-value flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-500" /> 
-                    {cliente.endereco || 'N/A'}
+                    {fullAddress || 'N/A'}
                     {cliente.cidade && cliente.uf && (
                         <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
                             {cliente.cidade} - {cliente.uf} ({cliente.cep})

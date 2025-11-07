@@ -82,6 +82,8 @@ const initialParceiroFormData: Parceiro = {
   pixKey: '',
   pixTitular: '',
   endereco: '',
+  numero: '', // NOVO CAMPO
+  complemento: '', // NOVO CAMPO
   cidade: '',
   uf: '', // RENOMEADO
   cep: '',
@@ -239,6 +241,8 @@ const Parceiros: React.FC = () => {
       documento: formatDocument(parceiro.documento || '', parceiro.tipo),
       telefone: formatContact(parceiro.telefone || ''),
       pixKey: parceiro.pixKey ? formatPixKey(parceiro.pixKey, parceiro.pixKeyType || '') : '',
+      numero: (parceiro as any).numero || '', // NOVO CAMPO
+      complemento: (parceiro as any).complemento || '', // NOVO CAMPO
     });
     setEditingParceiroId(parceiro.id);
     setShowParceiroForm(true);
@@ -585,6 +589,8 @@ const Parceiros: React.FC = () => {
           // CORRIGIDO: Garantindo que o telefone seja string antes de formatar
           telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
+          numero: dados.numero || prev.numero, // NOVO CAMPO
+          complemento: dados.complemento || prev.complemento, // NOVO CAMPO
           cidade: dados.cidade || prev.cidade,
           uf: dados.uf || prev.uf, // RENOMEADO
           cep: dados.cep || prev.cep,
@@ -952,26 +958,39 @@ const Parceiros: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Endereço */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                  <input
+                    type="text"
+                    value={parceiroFormData.endereco}
+                    onChange={(e) => setParceiroFormData(prev => ({ ...prev, endereco: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
                     <input
                       type="text"
-                      value={parceiroFormData.endereco}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, endereco: e.target.value }))}
+                      value={parceiroFormData.numero}
+                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, numero: e.target.value }))}
                       className="input-field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
                     <input
                       type="text"
-                      value={parceiroFormData.cep}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, cep: e.target.value }))}
+                      value={parceiroFormData.complemento}
+                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, complemento: e.target.value }))}
                       className="input-field"
                     />
                   </div>
+                </div>
+                
+                {/* Cidade, UF, CEP */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
                     <input
@@ -987,6 +1006,15 @@ const Parceiros: React.FC = () => {
                       type="text"
                       value={parceiroFormData.uf}
                       onChange={(e) => setParceiroFormData(prev => ({ ...prev, uf: e.target.value }))}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
+                    <input
+                      type="text"
+                      value={parceiroFormData.cep}
+                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, cep: e.target.value }))}
                       className="input-field"
                     />
                   </div>

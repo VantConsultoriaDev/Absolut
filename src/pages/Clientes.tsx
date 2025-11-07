@@ -27,11 +27,13 @@ const Clientes: React.FC = () => {
   const [form, setForm] = useState({
     tipo: 'PJ' as 'PF' | 'PJ' | 'INTERNACIONAL',
     nome: '', // Razão Social (PJ) / Nome (PF/INT)
-    nomeFantasia: '', // NOVO CAMPO
+    nomeFantasia: '', // Novo campo para Nome Fantasia
     documento: '',
     email: '',
     telefone: '',
     endereco: '',
+    numero: '', // NOVO CAMPO
+    complemento: '', // NOVO CAMPO
     cidade: '',
     uf: '', // RENOMEADO
     cep: '',
@@ -90,6 +92,8 @@ const Clientes: React.FC = () => {
       email: '',
       telefone: '',
       endereco: '',
+      numero: '', // NOVO CAMPO
+      complemento: '', // NOVO CAMPO
       cidade: '',
       uf: '', // RENOMEADO
       cep: '',
@@ -116,6 +120,8 @@ const Clientes: React.FC = () => {
       email: c.email || '',
       telefone: c.telefone || '',
       endereco: c.endereco || '',
+      numero: (c as any).numero || '', // NOVO CAMPO
+      complemento: (c as any).complemento || '', // NOVO CAMPO
       cidade: c.cidade || '',
       uf: c.uf || '', // RENOMEADO
       cep: c.cep || '',
@@ -194,7 +200,11 @@ const Clientes: React.FC = () => {
       const payload: Partial<Cliente> = {
         ...form,
         documento: parseDocument(form.documento), // Salva documento limpo
-        avatarUrl: finalAvatarUrl, 
+        avatarUrl: finalAvatarUrl,
+        // Adicionando campos de endereço
+        endereco: form.endereco,
+        numero: form.numero,
+        complemento: form.complemento,
       }
       
       if (editingId) {
@@ -211,6 +221,8 @@ const Clientes: React.FC = () => {
             email: form.email,
             telefone: form.telefone,
             endereco: form.endereco,
+            numero: form.numero, // NOVO CAMPO
+            complemento: form.complemento, // NOVO CAMPO
             cidade: form.cidade,
             uf: form.uf, // RENOMEADO
             cep: form.cep,
@@ -268,6 +280,8 @@ const Clientes: React.FC = () => {
           nomeFantasia: dados.nomeFantasia || prev.nomeFantasia, // Nome Fantasia
           telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
+          numero: dados.numero || prev.numero, // NOVO CAMPO
+          complemento: dados.complemento || prev.complemento, // NOVO CAMPO
           cidade: dados.cidade || prev.cidade,
           uf: dados.uf || prev.uf, // RENOMEADO
           cep: dados.cep || prev.cep
@@ -592,7 +606,7 @@ const Clientes: React.FC = () => {
                   )}
                 </div>
 
-                {/* Antiga seção de documento/email/telefone (agora só email/telefone) */}
+                {/* Contato */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
@@ -615,22 +629,32 @@ const Clientes: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                  <input
+                    type="text"
+                    value={form.endereco}
+                    onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
+                    className="input-field"
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número</label>
                     <input
                       type="text"
-                      value={form.endereco}
-                      onChange={(e) => setForm(prev => ({ ...prev, endereco: e.target.value }))}
+                      value={form.numero}
+                      onChange={(e) => setForm(prev => ({ ...prev, numero: e.target.value }))}
                       className="input-field"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
                     <input
                       type="text"
-                      value={form.cidade}
-                      onChange={(e) => setForm(prev => ({ ...prev, cidade: e.target.value }))}
+                      value={form.complemento}
+                      onChange={(e) => setForm(prev => ({ ...prev, complemento: e.target.value }))}
                       className="input-field"
                     />
                   </div>
@@ -647,6 +671,15 @@ const Clientes: React.FC = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+                    <input
+                      type="text"
+                      value={form.cidade}
+                      onChange={(e) => setForm(prev => ({ ...prev, cidade: e.target.value }))}
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP</label>
                     <input
                       type="text"
@@ -655,7 +688,6 @@ const Clientes: React.FC = () => {
                       className="input-field"
                     />
                   </div>
-                  {/* Checkbox 'Ativo' removido conforme solicitado */}
                 </div>
 
                 <div>

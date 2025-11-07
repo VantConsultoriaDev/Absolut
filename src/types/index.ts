@@ -25,6 +25,8 @@ export interface Cliente {
   email?: string
   telefone?: string
   endereco?: string
+  numero?: string // NOVO CAMPO
+  complemento?: string // NOVO CAMPO
   cidade?: string
   uf?: string // RENOMEADO
   cep?: string
@@ -48,6 +50,8 @@ export interface Parceiro {
   pixKey?: string // NOVO
   pixTitular?: string // NOVO: Titular da chave Pix
   endereco?: string
+  numero?: string // NOVO CAMPO
+  complemento?: string // NOVO CAMPO
   cidade?: string
   uf?: string // RENOMEADO
   cep?: string

@@ -57,6 +57,12 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
   const secondaryTitle = parceiro.tipo === 'PJ' && parceiro.nomeFantasia ? parceiro.nome : undefined;
   const isPJ = parceiro.tipo === 'PJ';
   const isBlocked = parceiro.isActive === false;
+  
+  const fullAddress = [
+    parceiro.endereco,
+    parceiro.numero ? `, ${parceiro.numero}` : '',
+    parceiro.complemento ? ` (${parceiro.complemento})` : '',
+  ].join('');
 
   // Lógica de filtragem de motoristas
   const filteredMotoristas = useMemo(() => {
@@ -129,9 +135,9 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
           <p className="detail-value">{formatContact(parceiro.telefone || 'N/A')}</p>
         </div>
         <div className="detail-item md:col-span-2">
-          <p className="detail-label flex items-center gap-1"><MapPin className="h-4 w-4" /> Endereço</p>
+          <p className="detail-label flex items-center gap-1"><MapPin className="h-4 w-4" /> Endereço Completo</p>
           <p className="detail-value">
-            {parceiro.endereco || 'N/A'}
+            {fullAddress || 'N/A'}
             {parceiro.cidade && parceiro.uf && (
               <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                 ({parceiro.cidade} - {parceiro.uf}, {parceiro.cep})

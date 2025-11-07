@@ -59,6 +59,9 @@ export const initializeDemoData = () => {
         dataPagamento: d.dataPagamento ? new Date(d.dataPagamento) : null,
         validadeCnh: d.validadeCnh ? new Date(d.validadeCnh) : undefined,
         dataConsulta: d.dataConsulta ? new Date(d.dataConsulta) : undefined,
+        // Novos campos de endereço (garante que existam)
+        numero: d.numero || undefined,
+        complemento: d.complemento || undefined,
       })) : [];
     } catch (e) {
       console.error(`Failed to load ${key} from localStorage`, e);
