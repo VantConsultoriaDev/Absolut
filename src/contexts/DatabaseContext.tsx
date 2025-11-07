@@ -61,8 +61,8 @@ export const initializeDemoData = () => {
         validadeCnh: d.validadeCnh ? new Date(d.validadeCnh) : undefined,
         dataConsulta: d.dataConsulta ? new Date(d.dataConsulta) : undefined,
         dataNascimento: d.dataNascimento ? new Date(d.dataNascimento) : undefined, // NOVO
-        data_hora: d.data_hora ? new Date(d.data_hora) : undefined, // NOVO: Compromisso
-        data_vencimento: d.data_vencimento ? new Date(d.data_vencimento) : undefined, // NOVO: Tarefa
+        dataHora: d.dataHora ? new Date(d.dataHora) : undefined, // CORRIGIDO: data_hora -> dataHora
+        dataVencimento: d.dataVencimento ? new Date(d.dataVencimento) : undefined, // CORRIGIDO: data_vencimento -> dataVencimento
         // Novos campos de endereço (garante que existam)
         numero: d.numero || undefined,
         complemento: d.complemento || undefined,
@@ -1076,14 +1076,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   };
   
   // --- COMPROMISSO OPERATIONS (NOVO) ---
-  const createCompromisso = (compromissoData: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>): Compromisso => {
+  const createCompromisso = (compromissoData: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'userId'>): Compromisso => {
     try {
+      const now = new Date();
       const newCompromisso: Compromisso = {
         ...normalizeCompromissoCreate(compromissoData),
         id: generateId(),
-        user_id: user?.id || 'anon',
-        created_at: new Date(),
-        updated_at: new Date()
+        userId: user?.id || 'anon', // CORRIGIDO: user_id -> userId
+        createdAt: now, // CORRIGIDO: created_at -> createdAt
+        updatedAt: now // CORRIGIDO: updated_at -> updatedAt
       }
       setCompromissos(prev => [...prev, newCompromisso])
       
@@ -1161,14 +1162,15 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   }
   
   // --- TAREFA OPERATIONS (NOVO) ---
-  const createTarefa = (tarefaData: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'user_id'>): Tarefa => {
+  const createTarefa = (tarefaData: Omit<Tarefa, 'id' | 'createdAt' | 'updatedAt' | 'userId'>): Tarefa => {
     try {
+      const now = new Date();
       const newTarefa: Tarefa = {
         ...normalizeTarefaCreate(tarefaData),
         id: generateId(),
-        user_id: user?.id || 'anon',
-        created_at: new Date(),
-        updated_at: new Date()
+        userId: user?.id || 'anon', // CORRIGIDO: user_id -> userId
+        createdAt: now, // CORRIGIDO: created_at -> createdAt
+        updatedAt: now // CORRIGIDO: updated_at -> updatedAt
       }
       setTarefas(prev => [...prev, newTarefa])
       
@@ -1329,10 +1331,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     getContracts,
     deleteContrato,
     
-    // NOVO: Compromisso/Tarefa CRUD
+    // NOVO: CRUD Compromissos
     createCompromisso,
     updateCompromisso,
     deleteCompromisso,
+    
+    // NOVO: CRUD Tarefas
     createTarefa,
     updateTarefa,
     deleteTarefa,
