@@ -369,7 +369,7 @@ const Cargas: React.FC = () => {
       // Se o trajeto removido era o último, e o penúltimo agora é o último,
       // precisamos garantir que o destino do novo último trajeto seja o destino final da carga.
       if (newTrajetos.length > 0 && index === prev.trajetos.length - 1) {
-          const newLastTrajeto = newTrajetos[newTrajetos.length - 1];
+          // const newLastTrajeto = newTrajetos[newTrajetos.length - 1]; // REMOVIDO TS6133
           // Se o destino final da carga original era o destino do trajeto removido,
           // precisamos restaurar o destino final no novo último trajeto.
           // Simplificando: apenas garantimos que o destino do novo último trajeto não seja limpo.

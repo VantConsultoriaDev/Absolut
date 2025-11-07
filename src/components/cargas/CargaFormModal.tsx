@@ -4,7 +4,7 @@ import { useModal } from '../../hooks/useModal';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
 import StandardCheckbox from '../StandardCheckbox';
-import { UFS_BRASIL, UFS_ESTRANGEIRAS, UFS_ORDENADAS } from '../../utils/cargasConstants';
+import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants';
 import CityAutocompleteInput from '../CityAutocompleteInput';
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
