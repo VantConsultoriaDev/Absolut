@@ -154,7 +154,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   // Estado booleano derivado para o checkbox
   const isTransbordoEnabled = formData.transbordo === 'com_transbordo';
   
-  // Opções de UF de Origem filtradas
+  // Opções de UF de Origem filtradas (para o primeiro trajeto)
   const filteredUfOrigemOptions = useMemo(() => {
       if (formData.tipoOperacao === 'importacao') {
           // Importação: Origem deve ser um país estrangeiro
@@ -431,6 +431,11 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   // UF Destino é obrigatória?
                   const isUfDestinoRequired = !isTransbordoEnabled || isLastTrajeto;
                   
+                  // Determina as opções de UF Origem
+                  const currentUfOrigemOptions = isOrigemDisabled 
+                    ? ufsOrdenadas // Se for transbordo e não for o primeiro, permite todas as UFs/Países
+                    : filteredUfOrigemOptions; // Se for o primeiro, usa o filtro de tipoOperacao
+                  
                   return (
                   <div key={trajeto.index} className={`p-4 border rounded-lg ${index > 0 ? 'mt-4 border-blue-200 dark:border-blue-700' : 'border-gray-100 dark:border-gray-700'}`}>
                     
@@ -473,7 +478,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                             disabled={isOrigemDisabled} 
                           >
                             <option value="">Selecione a UF de origem</option>
-                            {filteredUfOrigemOptions.map((uf) => (
+                            {currentUfOrigemOptions.map((uf) => (
                               <option key={uf.value} value={uf.value}>
                                 {uf.label}
                               </option>
