@@ -64,14 +64,13 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
     const placaLimpa = value.replace(/[^A-Z0-9]/gi, '').toUpperCase().substring(0, 7);
     
     // 2. Aplica formatação de placa (apenas para visualização)
-    // formatPlaca já lida com a limpeza e formatação se a placa tiver 7 caracteres alfanuméricos.
     const formatted = formatPlaca(value); 
     
     // 3. Atualiza o estado com o valor formatado
     setFormData(prev => ({ ...prev, [placaField]: formatted }));
     
     // 4. Dispara a consulta se a placa estiver completa (7 caracteres alfanuméricos)
-    if (placaLimpa.length === 7 && !placaConsultada && !consultandoPlaca) {
+    if (placaLimpa.length === 7 && !consultandoPlaca) {
         // Passamos o valor formatado para a consulta
         handlePlacaConsultation(formatted, formData.tipo);
     }

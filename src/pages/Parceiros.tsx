@@ -147,6 +147,10 @@ const Parceiros: React.FC = () => {
   // NOVO: Estado para consulta de CNPJ do PIX
   const [consultandoPixCnpj, setConsultandoPixCnpj] = useState(false);
   const [pixCnpjError, setPixCnpjError] = useState(''); // NOVO: Mensagem de erro de CNPJ PIX
+  
+  // NOVO: Rastreamento do último valor consultado (limpo)
+  const [lastConsultedCnpj, setLastConsultedCnpj] = useState('');
+  const [lastConsultedPlaca, setLastConsultedPlaca] = useState('');
 
   // Filtros
   const [query, setQuery] = useState('');
@@ -209,6 +213,7 @@ const Parceiros: React.FC = () => {
     setConsultandoCNPJ(false);
     setCnpjError(''); // Limpa erro
     setPixCnpjError(''); // Limpa erro PIX
+    setLastConsultedCnpj(''); // Limpa rastreamento
   };
 
   const resetMotoristaForm = () => {
@@ -222,10 +227,13 @@ const Parceiros: React.FC = () => {
     setPlacaConsultada(false);
     setConsultandoPlaca(false);
     setPlacaError('');
+    setLastConsultedPlaca(''); // Limpa rastreamento
   };
 
   // --- PARCEIRO CRUD ---
   const handleEditParceiro = (parceiro: Parceiro) => {
+    const cleanCnpj = parseDocument(parceiro.documento || '');
+    
     setParceiroFormData({
       ...parceiro,
       documento: formatDocument(parceiro.documento || '', parceiro.tipo),
@@ -238,11 +246,13 @@ const Parceiros: React.FC = () => {
     setCnpjError(''); // Limpa erro
     setPixCnpjError(''); // Limpa erro PIX
     
-    // Se for PJ e tiver documento, marca como consultado para evitar consulta automática ao abrir
-    if (parceiro.tipo === 'PJ' && parceiro.documento && parseDocument(parceiro.documento).length === 14) {
+    // Se for PJ e tiver documento, marca como consultado e rastreia
+    if (parceiro.tipo === 'PJ' && cleanCnpj.length === 14) {
         setCnpjConsultado(true);
+        setLastConsultedCnpj(cleanCnpj);
     } else {
         setCnpjConsultado(false);
+        setLastConsultedCnpj('');
     }
   };
 
@@ -400,6 +410,9 @@ const Parceiros: React.FC = () => {
   };
 
   const handleEditVeiculo = (veiculo: Veiculo) => {
+    const placa = veiculo.placa || veiculo.placaCavalo || veiculo.placaCarreta || '';
+    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '');
+    
     setVeiculoFormData({
       parceiroId: veiculo.parceiroId,
       placa: veiculo.placa || '',
@@ -427,12 +440,13 @@ const Parceiros: React.FC = () => {
     setShowVeiculoForm(true);
     // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
     
-    // Se tiver placa completa, marca como consultada para evitar consulta automática ao abrir
-    const placa = veiculo.placa || veiculo.placaCavalo || veiculo.placaCarreta || '';
-    if (placa.replace(/[^A-Z0-9]/gi, '').length === 7) {
+    // Se tiver placa completa, marca como consultada e rastreia
+    if (placaLimpa.length === 7) {
         setPlacaConsultada(true);
+        setLastConsultedPlaca(placaLimpa);
     } else {
         setPlacaConsultada(false);
+        setLastConsultedPlaca('');
     }
   };
 
@@ -550,9 +564,16 @@ const Parceiros: React.FC = () => {
         return;
     }
     
+    // 2. Verifica se o CNPJ já foi consultado e não foi alterado
+    if (cnpjLimpo === lastConsultedCnpj && cnpjConsultado && !consultandoCNPJ) {
+        return;
+    }
+    
     if (consultandoCNPJ) return;
 
     setConsultandoCNPJ(true);
+    setCnpjConsultado(false); // Reset antes de consultar
+    
     try {
       const dados = await CNPJService.consultarCNPJ(cnpj);
       
@@ -569,6 +590,7 @@ const Parceiros: React.FC = () => {
           cep: dados.cep || prev.cep,
         }));
         setCnpjConsultado(true);
+        setLastConsultedCnpj(cnpjLimpo); // Rastreia o CNPJ consultado
         setCnpjError('');
         if (dados.simulado) {
           showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.');
@@ -576,10 +598,12 @@ const Parceiros: React.FC = () => {
       } else {
         // CNPJ válido, mas não encontrado na base externa
         setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
+        setLastConsultedCnpj(''); // Não rastreia se falhou
       }
     } catch (err) {
       console.error('Erro ao consultar CNPJ:', err);
       setCnpjError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.');
+      setLastConsultedCnpj(''); // Não rastreia se falhou
     } finally {
       setConsultandoCNPJ(false);
     }
@@ -634,6 +658,11 @@ const Parceiros: React.FC = () => {
       return;
     }
     
+    // 1. Verifica se a Placa já foi consultada e não foi alterada
+    if (placaLimpa === lastConsultedPlaca && placaConsultada && !consultandoPlaca) {
+        return;
+    }
+    
     setConsultandoPlaca(true);
     setPlacaError('');
     setPlacaConsultada(false);
@@ -652,12 +681,15 @@ const Parceiros: React.FC = () => {
           // Capacidade não vem da API base, mantemos o valor existente
         }));
         setPlacaConsultada(true);
+        setLastConsultedPlaca(placaLimpa); // Rastreia a placa consultada
       } else {
         setPlacaError('Placa não encontrada na base de dados externa.');
+        setLastConsultedPlaca(''); // Não rastreia se falhou
       }
     } catch (err) {
       console.error('Erro ao consultar placa:', err);
       setPlacaError(err instanceof Error ? err.message : 'Falha ao consultar placa. Verifique a conexão ou o token da API.');
+      setLastConsultedPlaca(''); // Não rastreia se falhou
     } finally {
       setConsultandoPlaca(false);
     }
@@ -815,6 +847,7 @@ const Parceiros: React.FC = () => {
                         setCnpjConsultado(false);
                         setConsultandoCNPJ(false);
                         setCnpjError('');
+                        setLastConsultedCnpj(''); // Reset rastreamento
                       }}
                       className="input-field"
                       disabled={!!editingParceiroId}
@@ -834,7 +867,7 @@ const Parceiros: React.FC = () => {
                       value={parceiroFormData.documento}
                       onChange={(e) => {
                         const formatted = formatDocument(e.target.value, parceiroFormData.tipo);
-                        const limpo = formatted.replace(/\D/g, '');
+                        const limpo = parseDocument(formatted);
                         
                         // Se o documento for alterado, reseta o estado de consulta
                         if (limpo !== parseDocument(parceiroFormData.documento || '')) {
@@ -844,10 +877,10 @@ const Parceiros: React.FC = () => {
                         setParceiroFormData(prev => ({ ...prev, documento: formatted }));
                         setCnpjError(''); // Limpa erro ao digitar
                         
-                        if (parceiroFormData.tipo === 'PJ' && limpo.length === 14 && !cnpjConsultado) {
+                        if (parceiroFormData.tipo === 'PJ' && limpo.length === 14) {
+                          // Dispara a consulta se for um CNPJ completo, independentemente do estado 'consultado'
                           handleCNPJConsultation(formatted);
                         }
-                        if (cnpjConsultado && limpo.length < 14) setCnpjConsultado(false);
                       }}
                       className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
                       placeholder={parceiroFormData.tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
