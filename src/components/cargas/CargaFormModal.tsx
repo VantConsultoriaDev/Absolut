@@ -77,11 +77,37 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   // NOVO ESTADO: Apenas para o sufixo numérico do CRT
   const [crtSuffix, setCrtSuffix] = useState('');
   
+  // 1. Função para calcular o prefixo do CRT (LÓGICA CORRIGIDA)
+  const getCrtPrefix = (tipoOperacao: CargaFormData['tipoOperacao'], ufOrigem: string | undefined, ufDestino: string | undefined): string => {
+      if (!ufOrigem || !ufDestino) return '';
+      
+      const isOrigemBR = UFS_BRASIL.some(u => u.value === ufOrigem);
+      const isDestinoBR = UFS_BRASIL.some(u => u.value === ufDestino);
+      
+      if (tipoOperacao === 'exportacao' && isOrigemBR) {
+          // EXPORTAÇÃO: Brasil -> Estrangeiro
+          if (ufDestino === 'AR') return 'BR5708';
+          if (ufDestino === 'UY') return 'BR5709';
+          if (ufDestino === 'CL') return 'BR5846';
+      }
+      
+      if (tipoOperacao === 'importacao' && isDestinoBR) {
+          // IMPORTAÇÃO: Estrangeiro -> Brasil
+          if (ufOrigem === 'AR') return 'AR5708';
+          if (ufOrigem === 'CL') return 'CL5846';
+          if (ufOrigem === 'UY') return 'UY5709';
+      }
+      
+      return '';
+  };
+  
   // Efeito para inicializar o crtSuffix ao editar
   useEffect(() => {
       if (editingCarga && formData.crt) {
-          // Tenta extrair o sufixo numérico do CRT completo
-          const prefix = getCrtPrefix(formData.trajetos[0]?.ufOrigem, formData.trajetos[formData.trajetos.length - 1]?.ufDestino);
+          const ufOrigem = formData.trajetos[0]?.ufOrigem;
+          const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+          const prefix = getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
+          
           if (formData.crt.startsWith(prefix)) {
               setCrtSuffix(formData.crt.substring(prefix.length));
           } else {
@@ -92,29 +118,13 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
           setCrtSuffix('');
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingCarga, formData.crt]);
-  
-  // 1. Função para calcular o prefixo do CRT
-  const getCrtPrefix = (ufOrigem: string | undefined, ufDestino: string | undefined): string => {
-      if (!ufOrigem && !ufDestino) return '';
-      
-      // Regra 1: UF ORIGEM é Argentina, Chile ou Uruguai
-      if (ufOrigem === 'AR') return 'BR5708';
-      if (ufOrigem === 'CL') return 'BR5846';
-      if (ufOrigem === 'UY') return 'BR5709';
-      
-      // Regra 2: UF ORIGEM não é estrangeira, mas UF DESTINO é Argentina ou Chile
-      if (ufDestino === 'AR') return 'AR5708';
-      if (ufDestino === 'CL') return 'CL5846';
-      
-      return '';
-  };
+  }, [editingCarga, formData.crt, formData.tipoOperacao]);
   
   // 2. Valor total do CRT (Prefix + Suffix)
   const fullCrt = useMemo(() => {
       const ufOrigem = formData.trajetos[0]?.ufOrigem;
       const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
-      const prefix = getCrtPrefix(ufOrigem, ufDestino);
+      const prefix = getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
       
       // Se não houver prefixo, o CRT é o sufixo (ou vazio)
       if (!prefix) return crtSuffix;
@@ -122,7 +132,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       // Se houver prefixo, concatena com o sufixo (apenas números)
       const cleanSuffix = crtSuffix.replace(/\D/g, '').slice(0, 6);
       return prefix + cleanSuffix;
-  }, [formData.trajetos, crtSuffix]);
+  }, [formData.trajetos, crtSuffix, formData.tipoOperacao]);
   
   // 3. Atualiza o CRT no formData sempre que o fullCrt mudar
   useEffect(() => {
@@ -199,14 +209,14 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   const shouldGenerateCrt = useMemo(() => {
       const ufOrigem = formData.trajetos[0]?.ufOrigem;
       const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
-      return !!getCrtPrefix(ufOrigem, ufDestino);
-  }, [formData.trajetos]);
+      return !!getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
+  }, [formData.trajetos, formData.tipoOperacao]);
   
   const crtPrefix = useMemo(() => {
       const ufOrigem = formData.trajetos[0]?.ufOrigem;
       const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
-      return getCrtPrefix(ufOrigem, ufDestino);
-  }, [formData.trajetos]);
+      return getCrtPrefix(formData.tipoOperacao, ufOrigem, ufDestino);
+  }, [formData.trajetos, formData.tipoOperacao]);
 
 
   return (
