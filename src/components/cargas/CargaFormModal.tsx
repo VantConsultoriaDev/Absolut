@@ -394,8 +394,10 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     onChange={(e) => onFormChange('peso', e.target.value)}
                     className="input-field"
                     placeholder="0.00"
+                    max={1000}
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Máximo 1000 toneladas</p>
                 </div>
               </div>
               

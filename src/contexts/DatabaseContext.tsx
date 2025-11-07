@@ -50,8 +50,8 @@ export const initializeDemoData = () => {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item).map((d: any) => ({
         ...d,
-        createdAt: new Date(d.createdAt),
-        updatedAt: new Date(d.updatedAt),
+        createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
+        updatedAt: d.updatedAt ? new Date(d.updatedAt) : new Date(),
         // Conversões específicas para datas
         data: d.data ? new Date(d.data) : undefined,
         dataColeta: d.dataColeta ? new Date(d.dataColeta) : undefined,
@@ -862,6 +862,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- CARGA OPERATIONS ---
   const createCarga = (cargaData: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>): Carga => {
     try {
+        // NOVO: Validação de peso máximo antes de dividir
+        const MAX_ALLOWED_WEIGHT = 1000; // 1000 toneladas
+        if (cargaData.peso > MAX_ALLOWED_WEIGHT) {
+            throw new Error(`Peso excessivo (${cargaData.peso}t). O limite máximo é de ${MAX_ALLOWED_WEIGHT} toneladas para evitar a criação de muitas cargas.`);
+        }
+        
         // 1. Split the load if necessary
         const loadsToCreate = splitCarga(cargaData);
         

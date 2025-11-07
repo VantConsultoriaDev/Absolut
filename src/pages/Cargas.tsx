@@ -487,7 +487,12 @@ const Cargas: React.FC = () => {
       }
       performReset();
     } catch (e) {
-      showError(e instanceof Error ? e.message : 'Erro ao salvar carga.');
+      // Captura o erro de peso excessivo do DatabaseContext
+      if (e instanceof Error && e.message.includes('Peso excessivo')) {
+        showError(e.message);
+      } else {
+        showError(e instanceof Error ? e.message : 'Erro ao salvar carga.');
+      }
     }
   };
 
