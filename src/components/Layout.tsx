@@ -16,7 +16,8 @@ import {
   FileBadge,
   Pin, 
   UserCircle,
-  User 
+  User,
+  Calendar // NOVO: Importando Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -116,6 +117,7 @@ const Layout: React.FC = () => {
 
   const navigation = [
     { name: 'Início', href: '/inicio', icon: Home, permission: 'inicio' },
+    { name: 'Agenda', href: '/agenda', icon: Calendar, permission: 'agenda' }, // NOVO ITEM
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign, permission: 'financeiro' },
     { name: 'Cargas', href: '/cargas', icon: Truck, permission: 'cargas' },
     { name: 'Contratos', href: '/contratos', icon: FileText, permission: 'cargas' },

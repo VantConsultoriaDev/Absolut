@@ -18,6 +18,7 @@ const Parceiros = React.lazy(() => import('./pages/Parceiros'))
 const Clientes = React.lazy(() => import('./pages/Clientes'))
 const Contratos = React.lazy(() => import('./pages/Contratos'))
 const CrtMic = React.lazy(() => import('./pages/CrtMic'))
+const Agenda = React.lazy(() => import('./pages/Agenda')) // NOVO: Importando Agenda
 const Layout = React.lazy(() => import('./components/Layout'))
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
                     <Route path="crt-mic" element={<CrtMic />} />
                     <Route path="parceiros" element={<Parceiros />} />
                     <Route path="clientes" element={<Clientes />} />
+                    <Route path="agenda" element={<Agenda />} /> {/* NOVO: Rota Agenda */}
                   </Route>
                 </Routes>
               </Suspense>
