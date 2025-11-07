@@ -1,16 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { format, isToday, isPast, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, Clock, AlertTriangle, Calendar, MoreVertical, Trash2, Edit, Plus } from 'lucide-react';
+import { Check, Clock, AlertTriangle, Calendar, Plus } from 'lucide-react';
 import { useAgenda } from './AgendaContext';
 import { AgendaItem, initialAgendaItem } from './types';
 
 interface AgendaListProps {
   onEdit: (item: AgendaItem) => void;
   onDelete: (id: string, title: string) => void;
+  onOpenDetail: (item: AgendaItem) => void; // NOVO: Handler para abrir o modal de detalhes
 }
 
-const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
+const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete, onOpenDetail }) => {
   const { items, toggleCompletion, addItem } = useAgenda();
   const [filterUrgency, setFilterUrgency] = useState<'Todos' | AgendaItem['urgency']>('Todos');
   const [quickTitle, setQuickTitle] = useState('');
@@ -91,12 +92,19 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
     const dateColor = isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400';
     
     return (
-      <div key={item.id} className="group flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <button 
+        key={item.id} 
+        onClick={() => onOpenDetail(item)} // NOVO: Torna a linha clicável
+        className="group flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+      >
         
         {/* Checkbox e Título */}
         <div className="flex items-center flex-1 min-w-0">
           <button 
-            onClick={() => toggleCompletion(item.id)}
+            onClick={(e) => {
+                e.stopPropagation(); // Evita abrir o modal de detalhes
+                toggleCompletion(item.id);
+            }}
             className={`h-6 w-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors mr-3 ${
               item.isCompleted 
                 ? 'bg-green-500 border-green-500 text-white' 
@@ -111,7 +119,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
           </span>
         </div>
         
-        {/* Data e Ações */}
+        {/* Data e Urgência */}
         <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
           
           {/* Data/Hora */}
@@ -128,28 +136,9 @@ const AgendaList: React.FC<AgendaListProps> = ({ onEdit, onDelete }) => {
             {item.urgency.substring(0, 1).toUpperCase()}
           </span>
           
-          {/* Menu de Ações (Corrigido: hidden group-hover:block) */}
-          <div className="relative">
-            <button className="btn-ghost p-1 rounded-full text-gray-400 hover:text-gray-700">
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            <div className="absolute right-0 top-full mt-1 z-10 hidden group-hover:block card w-32 p-1">
-              <button 
-                onClick={() => onEdit(item)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-              >
-                <Edit className="h-4 w-4" /> Editar
-              </button>
-              <button 
-                onClick={() => onDelete(item.id, item.title)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-              >
-                <Trash2 className="h-4 w-4" /> Excluir
-              </button>
-            </div>
-          </div>
+          {/* Menu de Ações REMOVIDO */}
         </div>
-      </div>
+      </button>
     );
   };
 

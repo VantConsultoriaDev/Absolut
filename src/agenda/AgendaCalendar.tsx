@@ -6,10 +6,11 @@ import { useAgenda } from './AgendaContext';
 
 interface AgendaCalendarProps {
   onSelectDate: (date: Date) => void;
-  selectedDate: Date; // NOVO: Data atualmente selecionada
+  selectedDate: Date; 
+  onDoubleClickDay: (date: Date) => void; // NOVO: Handler para duplo clique
 }
 
-const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate, selectedDate }) => {
+const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate, selectedDate, onDoubleClickDay }) => {
   const { items } = useAgenda();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -85,6 +86,7 @@ const AgendaCalendar: React.FC<AgendaCalendarProps> = ({ onSelectDate, selectedD
                 key={index}
                 type="button"
                 onClick={() => onSelectDate(day.date)}
+                onDoubleClick={() => onDoubleClickDay(day.date)} // NOVO: Duplo clique
                 className={`p-1 h-10 w-full flex flex-col items-center justify-center rounded-lg transition-colors relative 
                   ${!day.isSameMonth ? 'text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'}
                   ${isTodayDay ? 'border-2 border-blue-500 bg-blue-100 dark:bg-blue-900/30' : ''}

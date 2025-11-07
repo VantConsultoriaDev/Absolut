@@ -7,9 +7,12 @@ import AgendaCalendar from '../agenda/AgendaCalendar';
 import AgendaFormModal from '../agenda/AgendaFormModal';
 import NotificationModal from '../agenda/NotificationModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TaskDetailModal from '../agenda/TaskDetailModal'; // NOVO
+import CalendarDayModal from '../agenda/CalendarDayModal'; // NOVO
 import { AgendaItem, initialAgendaItem } from '../agenda/types';
 import { format, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { showError } from '../utils/toast';
 
 // Componente principal que usa o Provider
 const AgendaPage: React.FC = () => {
@@ -31,6 +34,14 @@ const AgendaContent: React.FC = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<{ id: string, title: string } | null>(null);
     
+    // NOVO ESTADO: Modal de Detalhes da Tarefa
+    const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+    const [detailTargetItem, setDetailTargetItem] = useState<AgendaItem | null>(null);
+    
+    // NOVO ESTADO: Modal de Detalhes do Dia do Calendário
+    const [showCalendarDayModal, setShowCalendarDayModal] = useState(false);
+    const [calendarDayTargetDate, setCalendarDayTargetDate] = useState<Date | null>(null);
+    
     // NOVO ESTADO: Data selecionada no calendário (padrão: hoje)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -42,6 +53,10 @@ const AgendaContent: React.FC = () => {
             setShowDeleteConfirm(false);
             setDeleteTarget(null);
             setSelectedDate(new Date());
+            setShowTaskDetailModal(false);
+            setDetailTargetItem(null);
+            setShowCalendarDayModal(false);
+            setCalendarDayTargetDate(null);
         }
     }, [location.state]);
     
@@ -94,7 +109,33 @@ const AgendaContent: React.FC = () => {
         setShowForm(false);
     };
     
-    // --- Eventos do Dia Selecionado ---
+    // NOVO: Handler para abrir o modal de detalhes da tarefa
+    const handleOpenTaskDetail = (item: AgendaItem) => {
+        setDetailTargetItem(item);
+        setShowTaskDetailModal(true);
+    };
+    
+    // NOVO: Handler para adiar a tarefa
+    const handlePostpone = (id: string, newDate: Date) => {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+        
+        // Mantém a hora, mas atualiza a data
+        updateItem(id, { 
+            dueDate: newDate,
+            // Se a tarefa estava concluída, volta para pendente ao adiar
+            isCompleted: false, 
+        });
+        showError(`Tarefa "${item.title}" adiada para ${format(newDate, 'dd/MM/yyyy', { locale: ptBR })}.`);
+    };
+    
+    // NOVO: Handler para duplo clique no calendário
+    const handleDoubleClickDay = (date: Date) => {
+        setCalendarDayTargetDate(date);
+        setShowCalendarDayModal(true);
+    };
+    
+    // --- Eventos do Dia Selecionado (Mantido) ---
     const eventsForSelectedDay = useMemo(() => {
         return items
             .filter(item => item.dueDate && isSameDay(item.dueDate, selectedDate))
@@ -119,7 +160,11 @@ const AgendaContent: React.FC = () => {
         const urgencyColor = item.urgency === 'Urgente' ? 'text-red-600' : item.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
         
         return (
-            <div key={item.id} className={`p-3 rounded-lg transition-colors border ${item.isCompleted ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200'}`}>
+            <div 
+                key={item.id} 
+                onClick={() => handleOpenTaskDetail(item)} // NOVO: Abre modal de detalhes
+                className={`p-3 rounded-lg transition-colors border cursor-pointer ${item.isCompleted ? 'bg-green-50 dark:bg-green-900/20 border-green-200' : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 hover:border-blue-400'}`}
+            >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {item.isCompleted ? (
@@ -137,7 +182,14 @@ const AgendaContent: React.FC = () => {
                                 {item.dueTime}
                             </span>
                         )}
-                        <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 p-1" title="Editar">
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(item);
+                            }} 
+                            className="text-blue-500 hover:text-blue-700 p-1" 
+                            title="Editar"
+                        >
                             <Edit className="h-4 w-4" />
                         </button>
                     </div>
@@ -147,7 +199,10 @@ const AgendaContent: React.FC = () => {
                 )}
                 {!item.isCompleted && (
                     <button 
-                        onClick={() => toggleCompletion(item.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCompletion(item.id);
+                        }}
                         className="mt-2 text-xs text-green-600 hover:text-green-800 flex items-center gap-1"
                     >
                         <Check className="h-3 w-3" /> Marcar como concluído
@@ -185,7 +240,7 @@ const AgendaContent: React.FC = () => {
                 {/* Coluna 1 & 2: Lista de Tarefas */}
                 <div className="lg:col-span-2 space-y-6">
                     
-                    {/* NOVO: Compromissos do Dia Selecionado (Movido para o topo) */}
+                    {/* Compromissos do Dia Selecionado */}
                     <div className="card p-6 space-y-4">
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-blue-600" />
@@ -212,21 +267,29 @@ const AgendaContent: React.FC = () => {
                     
                     {/* Lista Geral de Tarefas */}
                     <div className="card p-6 space-y-4">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
                             <ListTodo className="h-5 w-5" />
                             Tarefas e Pendências
                         </h2>
-                        <AgendaList onEdit={handleEdit} onDelete={handleDelete} />
+                        <AgendaList 
+                            onEdit={handleEdit} 
+                            onDelete={handleDelete} 
+                            onOpenDetail={handleOpenTaskDetail} // NOVO
+                        />
                     </div>
                 </div>
                 
                 {/* Coluna 3: Calendário */}
                 <div className="lg:col-span-1 space-y-6">
-                    <AgendaCalendar onSelectDate={handleSelectDate} selectedDate={selectedDate} />
+                    <AgendaCalendar 
+                        onSelectDate={handleSelectDate} 
+                        selectedDate={selectedDate} 
+                        onDoubleClickDay={handleDoubleClickDay} // NOVO
+                    />
                 </div>
             </div>
             
-            {/* Modal de Formulário */}
+            {/* Modal de Formulário (Edição/Criação) */}
             {showForm && (
                 <AgendaFormModal
                     isOpen={showForm}
@@ -236,6 +299,40 @@ const AgendaContent: React.FC = () => {
                         setEditingItem(null);
                     }}
                     onSubmit={handleSubmit}
+                />
+            )}
+            
+            {/* Modal de Detalhes da Tarefa (NOVO) */}
+            {showTaskDetailModal && detailTargetItem && (
+                <TaskDetailModal
+                    isOpen={showTaskDetailModal}
+                    item={detailTargetItem}
+                    onClose={() => {
+                        setShowTaskDetailModal(false);
+                        setDetailTargetItem(null);
+                    }}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onToggleCompletion={toggleCompletion}
+                    onPostpone={handlePostpone}
+                />
+            )}
+            
+            {/* Modal de Detalhes do Dia do Calendário (NOVO) */}
+            {showCalendarDayModal && calendarDayTargetDate && (
+                <CalendarDayModal
+                    isOpen={showCalendarDayModal}
+                    date={calendarDayTargetDate}
+                    items={items}
+                    onClose={() => {
+                        setShowCalendarDayModal(false);
+                        setCalendarDayTargetDate(null);
+                    }}
+                    onEdit={(item) => {
+                        setShowCalendarDayModal(false); // Fecha o modal do dia
+                        handleEdit(item); // Abre o modal de formulário para edição
+                    }}
+                    onToggleCompletion={toggleCompletion}
                 />
             )}
             
