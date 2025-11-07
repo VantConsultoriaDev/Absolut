@@ -46,16 +46,28 @@ const AgendaFormModal: React.FC<AgendaFormModalProps> = ({ isOpen, editingItem, 
   // Verifica se há alterações (simplificado)
   const hasChanges = useMemo(() => {
       if (!isOpen) return false;
-      const current = JSON.stringify(formData);
-      const original = JSON.stringify(editingItem ? {
+      
+      // Define o estado inicial para comparação
+      const initialData = editingItem ? {
           title: editingItem.title,
           description: editingItem.description || '',
           urgency: editingItem.urgency,
           dueDate: editingItem.dueDate,
           dueTime: editingItem.dueTime || '',
           notificationOffset: editingItem.notificationOffset || 30,
-      } : initialAgendaItem);
-      return current !== original;
+      } : initialAgendaItem;
+      
+      // Normaliza o formData para comparação
+      const currentData = {
+          ...formData,
+          dueDate: formData.dueDate, // Mantém o objeto Date
+          description: formData.description || '',
+          dueTime: formData.dueTime || '',
+          notificationOffset: formData.notificationOffset || 30,
+      };
+      
+      // Compara as strings JSON
+      return JSON.stringify(currentData) !== JSON.stringify(initialData);
   }, [formData, editingItem, isOpen]);
 
   const handleFormChange = (field: keyof typeof formData, value: any) => {
@@ -113,7 +125,7 @@ const AgendaFormModal: React.FC<AgendaFormModalProps> = ({ isOpen, editingItem, 
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingItem ? 'Editar Item' : 'Novo Item da Agenda'}
+                {editingItem && editingItem.id ? 'Editar Item' : 'Novo Item da Agenda'}
               </h3>
               <button onClick={() => {
                   if (hasChanges) {
@@ -220,7 +232,7 @@ const AgendaFormModal: React.FC<AgendaFormModalProps> = ({ isOpen, editingItem, 
                     }
                 }}>Cancelar</button>
                 <button type="submit" className="btn-primary flex-1">
-                  {editingItem ? 'Salvar Alterações' : 'Adicionar Item'}
+                  {editingItem && editingItem.id ? 'Salvar Alterações' : 'Adicionar Item'}
                 </button>
               </div>
             </form>

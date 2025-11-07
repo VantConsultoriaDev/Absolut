@@ -46,19 +46,23 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
 
   const updateItem = useCallback((id: string, updates: Partial<AgendaItem>): AgendaItem | null => {
     let updatedItem: AgendaItem | null = null;
-    setItems(prev => prev.map(item => {
-      if (item.id === id) {
-        updatedItem = { 
-            ...item, 
-            ...updates, 
-            updatedAt: new Date(),
-            // Garante que dueDate seja um objeto Date ou undefined
-            dueDate: updates.dueDate === null ? undefined : (updates.dueDate instanceof Date ? updates.dueDate : item.dueDate),
-        };
-        return updatedItem;
-      }
-      return item;
-    }));
+    
+    setItems(prev => {
+      const newItems = prev.map(item => {
+        if (item.id === id) {
+          updatedItem = { 
+              ...item, 
+              ...updates, 
+              updatedAt: new Date(),
+              // Garante que dueDate seja um objeto Date ou undefined
+              dueDate: updates.dueDate === null ? undefined : (updates.dueDate instanceof Date ? updates.dueDate : item.dueDate),
+          };
+          return updatedItem;
+        }
+        return item;
+      });
+      return newItems; // Retorna o novo array de itens
+    });
     
     // Se o item foi atualizado, remove das notificações pendentes se a data/hora mudou
     if (updatedItem) {
