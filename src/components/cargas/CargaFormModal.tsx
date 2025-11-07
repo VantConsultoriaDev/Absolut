@@ -156,13 +156,25 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
   
   // Opções de UF de Origem filtradas (para o primeiro trajeto)
   const filteredUfOrigemOptions = useMemo(() => {
+      if (formData.transbordo === 'com_transbordo') {
+          if (formData.tipoOperacao === 'exportacao') {
+              // Exportação (Transbordo): Origem SÓ pode ser BR
+              return UFS_BRASIL;
+          }
+          if (formData.tipoOperacao === 'importacao') {
+              // Importação (Transbordo): Origem SÓ pode ser BR ou AR
+              return [...UFS_BRASIL, UFS_ESTRANGEIRAS.find(u => u.value === 'AR')!].filter(Boolean);
+          }
+      }
+      
+      // Sem Transbordo (Regras originais)
       if (formData.tipoOperacao === 'importacao') {
-          // Importação: Origem deve ser um país estrangeiro
+          // Importação (Sem Transbordo): Origem deve ser um país estrangeiro
           return UFS_ESTRANGEIRAS;
       }
-      // Exportação: Origem deve ser uma UF brasileira
+      // Exportação (Sem Transbordo): Origem deve ser uma UF brasileira
       return UFS_BRASIL;
-  }, [formData.tipoOperacao]);
+  }, [formData.tipoOperacao, formData.transbordo]);
   
   // Opções de UF de Destino filtradas (para o último trajeto)
   const getFilteredUfDestinoOptions = (trajetoIndex: number) => {
@@ -270,6 +282,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       return;
     }
     
+    const primeiroTrajeto = formData.trajetos[0];
     const ultimoTrajeto = formData.trajetos[formData.trajetos.length - 1];
     
     // VALIDAÇÃO 1: Transbordo SIM, mas apenas 1 trajeto
@@ -300,7 +313,23 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // VALIDAÇÃO 3: Exportação (UF Destino SÓ PODE ser AR, CL, UY)
+    // VALIDAÇÃO 3: Regras de UF de Origem para Transbordo
+    if (isTransbordoEnabled) {
+        const isOrigemBR = UFS_BRASIL.some(u => u.value === primeiroTrajeto.ufOrigem);
+        const isOrigemAR = primeiroTrajeto.ufOrigem === 'AR';
+        
+        if (formData.tipoOperacao === 'exportacao' && !isOrigemBR) {
+            alert('Em EXPORTAÇÃO com Transbordo, a UF Origem do primeiro trajeto deve ser Brasileira.');
+            return;
+        }
+        
+        if (formData.tipoOperacao === 'importacao' && !isOrigemBR && !isOrigemAR) {
+            alert('Em IMPORTAÇÃO com Transbordo, a UF Origem do primeiro trajeto deve ser Brasileira ou Argentina (AR).');
+            return;
+        }
+    }
+    
+    // VALIDAÇÃO 4: Exportação (UF Destino SÓ PODE ser AR, CL, UY)
     if (formData.tipoOperacao === 'exportacao') {
         const isDestinoForeign = UFS_ESTRANGEIRAS.some(u => u.value === ultimoTrajeto.ufDestino);
         if (!isDestinoForeign) {
@@ -309,7 +338,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // VALIDAÇÃO 4: Importação (UF Destino NÃO PODE ser CL ou UY)
+    // VALIDAÇÃO 5: Importação (UF Destino NÃO PODE ser CL ou UY)
     if (formData.tipoOperacao === 'importacao') {
         // Regra geral: UF Destino NÃO PODE ser CL ou UY
         if (ultimoTrajeto.ufDestino === 'CL' || ultimoTrajeto.ufDestino === 'UY') {
@@ -327,7 +356,7 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
         }
     }
     
-    // 5. Chama o submit original
+    // 6. Chama o submit original
     onSubmit(e);
   };
 
