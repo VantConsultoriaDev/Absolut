@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { formatDocument, formatContact, parseDocument } from '../utils/formatters'
-import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle, Mail, Phone } from 'lucide-react'
+import { Plus, Search, Building2, User, Globe, Image, X as CloseIcon, AlertTriangle } from 'lucide-react'
 import { CNPJService } from '../services/cnpjService'
 import { useModal } from '../hooks/useModal' // Importando useModal
 import ClienteDetailModal from '../components/clientes/ClienteDetailModal' // NOVO IMPORT
