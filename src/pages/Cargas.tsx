@@ -31,7 +31,8 @@ import CargaImportModal from '../components/cargas/CargaImportModal';
 import StatusChangeModal from '../components/StatusChangeModal';
 import CargaDetailModal from '../components/cargas/CargaDetailModal';
 import MultiSelectStatus from '../components/MultiSelectStatus'; // NOVO: Importando MultiSelectStatus
-import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade } from '../utils/cargasConstants'; // IMPORTANDO extrairUfECidade
+import ConfirmationModal from '../components/ConfirmationModal'; // Importando ConfirmationModal
+import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade, getBaseCrt } from '../utils/cargasConstants'; // IMPORTANDO getBaseCrt
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'crt' | 'origem' | 'destino' | 'dataColeta' | 'valor' | 'status';
@@ -145,6 +146,10 @@ const Cargas: React.FC = () => {
   // Delete State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id: string, descricao: string} | null>(null);
+  
+  // NOVO: Estado para deleção de carga dividida
+  const [showSplitDeleteConfirm, setShowSplitDeleteConfirm] = useState(false);
+  const [splitDeleteTarget, setSplitDeleteTarget] = useState<{ id: string, baseCrt: string, descricao: string } | null>(null);
   
   // ALTERADO: Estado de Ordenação Padrão
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection }>({
@@ -494,38 +499,93 @@ const Cargas: React.FC = () => {
   // Handlers de Ações (Delete, Status, Link, Integrate)
   const handleDelete = (id: string) => {
     const carga = cargas.find(c => c.id === id);
-    if (carga) {
-      setDeleteTarget({
-        id: id,
-        descricao: carga.descricao || carga.crt || 'Carga sem descrição'
-      });
-      setShowDeleteConfirm(true);
+    if (!carga) return;
+    
+    const baseCrt = getBaseCrt(carga.crt);
+    
+    if (baseCrt) {
+        // É uma carga dividida, pergunta ao usuário
+        setSplitDeleteTarget({
+            id: id,
+            baseCrt: baseCrt,
+            descricao: carga.descricao || carga.crt || 'Carga sem descrição'
+        });
+        setShowSplitDeleteConfirm(true);
+    } else {
+        // Carga normal, usa o modal de confirmação padrão
+        setDeleteTarget({
+            id: id,
+            descricao: carga.descricao || carga.crt || 'Carga sem descrição'
+        });
+        setShowDeleteConfirm(true);
     }
   };
 
-  const confirmDelete = () => {
-    if (deleteTarget) {
-      const deletedCarga = cargas.find(c => c.id === deleteTarget.id);
-      
-      if (deletedCarga) {
-        const associatedMovs = movimentacoes.filter(m => m.cargaId === deletedCarga.id);
-        deleteCarga(deletedCarga.id);
+  const confirmDelete = (deleteMode: 'single' | 'all' = 'single') => {
+    let targetId: string | undefined;
+    let targetDescription: string | undefined;
+    let baseCrt: string | undefined;
+    
+    if (showSplitDeleteConfirm && splitDeleteTarget) {
+        targetId = splitDeleteTarget.id;
+        targetDescription = splitDeleteTarget.descricao;
+        baseCrt = splitDeleteTarget.baseCrt;
+    } else if (showDeleteConfirm && deleteTarget) {
+        targetId = deleteTarget.id;
+        targetDescription = deleteTarget.descricao;
+    }
+    
+    if (!targetId || !targetDescription) return;
+    
+    const deletedCarga = cargas.find(c => c.id === targetId);
+    if (!deletedCarga) return;
+    
+    // Se for deleção de todas as partes
+    if (deleteMode === 'all' && baseCrt) {
+        // Encontra todas as cargas com o mesmo CRT base
+        const allParts = cargas.filter(c => getBaseCrt(c.crt) === baseCrt);
+        const allIds = allParts.map(p => p.id);
+        
+        // Deleta todas as partes e suas movimentações associadas
+        const associatedMovs = movimentacoes.filter(m => allIds.includes(m.cargaId || ''));
+        
+        allIds.forEach(id => deleteCarga(id));
+        
+        // Cria uma única ação de undo para todas as partes
+        undoService.addUndoAction({
+            type: 'delete_cargo_split_all',
+            description: `Todas as partes da Carga base "${baseCrt}" (${allIds.length} partes) excluídas`,
+            data: { deletedCargas: allParts, associatedMovs },
+            undoFunction: async () => {
+                allParts.forEach(carga => createCarga(carga));
+                associatedMovs.forEach(mov => {
+                    createMovimentacao({ ...mov, cargaId: mov.cargaId! });
+                });
+            }
+        });
+        
+    } else {
+        // Deleção de carga única (seja ela split ou não)
+        const associatedMovs = movimentacoes.filter(m => m.cargaId === targetId);
+        deleteCarga(targetId);
         
         undoService.addUndoAction({
-          type: 'delete_cargo',
-          description: `Carga "${deleteTarget.descricao}" excluída`,
-          data: { deletedCarga, associatedMovs },
-          undoFunction: async () => {
-            const restoredCarga = createCarga(deletedCarga);
-            associatedMovs.forEach(mov => {
-              createMovimentacao({ ...mov, cargaId: restoredCarga.id });
-            });
-          }
+            type: 'delete_cargo',
+            description: `Carga "${targetDescription}" excluída`,
+            data: { deletedCarga, associatedMovs },
+            undoFunction: async () => {
+                const restoredCarga = createCarga(deletedCarga);
+                associatedMovs.forEach(mov => {
+                    createMovimentacao({ ...mov, cargaId: restoredCarga.id });
+                });
+            }
         });
-      }
-      setShowDeleteConfirm(false);
-      setDeleteTarget(null);
     }
+    
+    setShowDeleteConfirm(false);
+    setDeleteTarget(null);
+    setShowSplitDeleteConfirm(false);
+    setSplitDeleteTarget(null);
   };
 
   const handleOpenStatusModal = (carga: Carga) => {
@@ -1051,11 +1111,6 @@ const Cargas: React.FC = () => {
     return trajetosIntegrados.every(isIntegrated => isIntegrated);
   };
   
-  // Função para verificar se o trajeto está vinculado
-  // const isTrajetoLinked = (trajeto: Trajeto) => { // REMOVIDO TS6133
-  //   return !!trajeto.parceiroId && !!trajeto.motoristaId && !!trajeto.veiculoId;
-  // };
-  
   // Componente auxiliar para o cabeçalho da tabela com ordenação
   const SortableHeader: React.FC<{ columnKey: SortKey, label: string }> = ({ columnKey, label }) => {
     const isSorted = sortConfig.key === columnKey;
@@ -1512,41 +1567,61 @@ const Cargas: React.FC = () => {
         />
       )}
 
-      {/* Modal de confirmação de exclusão */}
-      {showDeleteConfirm && deleteTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Confirmar Exclusão
-              </h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Tem certeza que deseja excluir a carga "{deleteTarget.descricao}"? Esta ação também excluirá todas as movimentações financeiras associadas.
-            </p>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteTarget(null);
-                }}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
+      {/* Modal de confirmação de exclusão (Carga Normal) */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={() => confirmDelete('single')}
+        title="Confirmar Exclusão"
+        message={
+          <>
+            Tem certeza que deseja excluir a carga "{deleteTarget?.descricao}"? Esta ação também excluirá todas as movimentações financeiras associadas.
+          </>
+        }
+        confirmText="Excluir Carga"
+        variant="danger"
+      />
+      
+      {/* Modal de confirmação de exclusão (Carga Dividida) */}
+      <ConfirmationModal
+        isOpen={showSplitDeleteConfirm}
+        onClose={() => {
+          setShowSplitDeleteConfirm(false);
+          setSplitDeleteTarget(null);
+        }}
+        onConfirm={() => confirmDelete('single')} // onConfirm é o fallback, mas usaremos os botões customizados
+        title="Excluir Carga Dividida"
+        message={
+          <>
+            A carga "{splitDeleteTarget?.descricao}" faz parte de uma operação de divisão (CRT base: <span className="font-semibold">{splitDeleteTarget?.baseCrt}</span>).
+            <p className="mt-3">O que você deseja excluir?</p>
+          </>
+        }
+        variant="warning"
+      >
+        <div className="flex space-x-3 mt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setShowSplitDeleteConfirm(false);
+              confirmDelete('all');
+            }}
+            className="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium bg-red-600 hover:bg-red-700"
+          >
+            Excluir TODAS as partes ({splitDeleteTarget?.baseCrt})
+          </button>
+          <button
+            type="button"
+            onClick={() => confirmDelete('single')}
+            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+          >
+            Excluir SOMENTE esta parte
+          </button>
         </div>
-      )}
+      </ConfirmationModal>
     </div>
   );
 };

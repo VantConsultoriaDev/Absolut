@@ -11,6 +11,7 @@ interface ConfirmationModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
+  children?: React.ReactNode; // Adicionado suporte a children
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -22,6 +23,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   variant = 'danger',
+  children, // Desestruturado
 }) => {
   const { modalRef } = useModal({ isOpen, onClose });
 
@@ -65,20 +67,25 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {message}
           </div>
           
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-            >
-              {cancelText}
-            </button>
-            <button
-              onClick={onConfirm}
-              className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium ${colorConfig.confirmButtonClass}`}
-            >
-              {confirmText}
-            </button>
-          </div>
+          {/* NOVO: Renderiza children se fornecido, caso contrário, usa botões padrão */}
+          {children ? (
+            children
+          ) : (
+            <div className="flex space-x-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                {cancelText}
+              </button>
+              <button
+                onClick={onConfirm}
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium ${colorConfig.confirmButtonClass}`}
+              >
+                {confirmText}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

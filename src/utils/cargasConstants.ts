@@ -107,3 +107,16 @@ export const extrairUfECidade = (localCompleto: string): { uf: string, cidade: s
   // Se o valor for um código de 2 letras que não está na lista, ele será tratado como cidade.
   return { uf: '', cidade: cleanLocal };
 };
+
+/**
+ * Extrai o CRT base de uma carga dividida (ex: "BR722-1/3" -> "BR722").
+ * Retorna null se não for uma carga dividida.
+ * @param crt CRT da carga.
+ * @returns CRT base ou null.
+ */
+export const getBaseCrt = (crt: string | undefined): string | null => {
+  if (!crt) return null;
+  // Regex: Captura tudo antes do último hífen seguido por X/Y (onde X e Y são dígitos)
+  const match = crt.match(/^(.*)-\d+\/\d+$/);
+  return match ? match[1] : null;
+};
