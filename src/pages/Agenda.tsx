@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Calendar, ListTodo, Plus, Clock, Check, Edit } from 'lucide-react';
-import { AgendaProvider, useAgenda } from '../agenda/AgendaContext';
+import { useAgenda } from '../agenda/AgendaContext';
 import AgendaList from '../agenda/AgendaList';
 import AgendaCalendar from '../agenda/AgendaCalendar';
 import AgendaFormModal from '../agenda/AgendaFormModal';
-import NotificationModal from '../agenda/NotificationModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TaskDetailModal from '../agenda/TaskDetailModal'; // NOVO
 import CalendarDayModal from '../agenda/CalendarDayModal'; // NOVO
@@ -13,15 +12,6 @@ import { AgendaItem, initialAgendaItem } from '../agenda/types';
 import { format, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { showError } from '../utils/toast';
-
-// Componente principal que usa o Provider
-const AgendaPage: React.FC = () => {
-    return (
-        <AgendaProvider>
-            <AgendaContent />
-        </AgendaProvider>
-    );
-};
 
 // Componente de Conteúdo (usa o Context)
 const AgendaContent: React.FC = () => {
@@ -360,11 +350,8 @@ const AgendaContent: React.FC = () => {
                     variant="danger"
                 />
             )}
-            
-            {/* Modal de Notificação (Sempre ativo) */}
-            <NotificationModal />
         </div>
     );
 };
 
-export default AgendaPage;
+export default AgendaContent;
