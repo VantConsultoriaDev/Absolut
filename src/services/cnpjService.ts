@@ -101,8 +101,8 @@ export class CNPJService {
       // 2. Nome Fantasia: APENAS payload.response.nome_fantasia
       const nomeFantasiaFinal = payload.response?.nome_fantasia || '';
       
-      // 3. Email: APENAS 'correio_eletronico'
-      const emailFinal = payload.correio_eletronico || '';
+      // 3. Email: APENAS payload.response.correio_eletronico
+      const emailFinal = payload.response?.correio_eletronico || '';
       
       // 4. Contato (Telefone): Prioriza ddd1 + telefone1
       const telefoneCompleto = payload.ddd1 && payload.telefone1 ? 
