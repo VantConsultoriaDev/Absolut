@@ -93,16 +93,16 @@ export class CNPJService {
         return null;
       }
 
-      // --- NOVO MAPEAMENTO DE CAMPOS ---
+      // --- NOVO MAPEAMENTO DE CAMPOS (ESTRITO) ---
       
-      // 1. Razão Social: Prioriza 'razao_social' e 'nome_empresarial'
-      const razaoSocialFinal = payload.razao_social || payload.nome_empresarial || payload.nome || '';
+      // 1. Razão Social: APENAS 'razao_social'
+      const razaoSocialFinal = payload.razao_social || '';
       
-      // 2. Nome Fantasia: Prioriza 'nome_fantasia'
-      const nomeFantasiaFinal = payload.nome_fantasia || payload.fantasia || payload.titulo_estabelecimento || '';
+      // 2. Nome Fantasia: APENAS 'nome_fantasia'
+      const nomeFantasiaFinal = payload.nome_fantasia || '';
       
-      // 3. Email: Prioriza 'correio_eletronico'
-      const emailFinal = payload.correio_eletronico || payload.email || '';
+      // 3. Email: APENAS 'correio_eletronico'
+      const emailFinal = payload.correio_eletronico || '';
       
       // 4. Contato (Telefone): Prioriza ddd1 + telefone1
       const telefoneCompleto = payload.ddd1 && payload.telefone1 ? 
@@ -144,15 +144,9 @@ export class CNPJService {
       
       // --- FIM NOVO MAPEAMENTO ---
       
-      // Fallback para Razão Social se estiver vazia
-      if (!razaoSocialFinal && nomeFantasiaFinal) {
-          // Se a Razão Social estiver vazia, mas o Nome Fantasia estiver preenchido, usa o Nome Fantasia como Razão Social.
-          // Isso é crucial para o campo obrigatório 'nome'.
-          // Mantemos o nome fantasia original no campo nomeFantasia.
-          // A API deve retornar a Razão Social, mas este é um fallback seguro.
-          // Não alteramos nomeFantasiaFinal aqui.
-      }
-
+      // Se a Razão Social for vazia, usamos o Nome Fantasia como fallback para o campo obrigatório 'nome'
+      // Mas mantemos o mapeamento estrito acima.
+      
       const resultado: CNPJData = {
         razaoSocial: razaoSocialFinal,
         nomeFantasia: nomeFantasiaFinal, 
