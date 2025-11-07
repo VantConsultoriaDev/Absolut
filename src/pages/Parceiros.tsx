@@ -17,6 +17,7 @@ import {
   cleanPixKey,
   forceUpperCase,
   createLocalDate,
+  isValidCPF, // NOVO: Importando isValidCPF
 } from '../utils/formatters';
 import { Parceiro, Motorista, Veiculo, PermissoInternacional } from '../types';
 import { format, isValid } from 'date-fns';
@@ -30,6 +31,7 @@ import { showError } from '../utils/toast';
 import { CNPJService } from '../services/cnpjService'; // Importando CNPJService
 import { VehicleService } from '../services/vehicleService'; // Importando VehicleService
 import { PlacaData } from '../services/vehicleService'; // Importando PlacaData
+import { CPFService, CPFData } from '../services/cpfService'; // NOVO: Importando CPFService
 
 // Tipagem para o formulário de Veículo (corrigida)
 interface VeiculoFormData extends Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'permisso' | 'ano' | 'capacidade'> {
@@ -149,17 +151,24 @@ const Parceiros: React.FC = () => {
   // Estados de Consulta de API
   const [consultandoCNPJ, setConsultandoCNPJ] = useState(false);
   const [cnpjConsultado, setCnpjConsultado] = useState(false);
-  const [cnpjError, setCnpjError] = useState(''); // NOVO: Mensagem de erro de CNPJ
+  const [cnpjError, setCnpjError] = useState('');
+  
+  // NOVO: Estados para consulta de CPF
+  const [consultandoCPF, setConsultandoCPF] = useState(false);
+  const [cpfConsultado, setCpfConsultado] = useState(false);
+  const [cpfError, setCpfError] = useState('');
+  
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
   const [placaConsultada, setPlacaConsultada] = useState(false);
   const [placaError, setPlacaError] = useState('');
   
   // NOVO: Estado para consulta de CNPJ do PIX
   const [consultandoPixCnpj, setConsultandoPixCnpj] = useState(false);
-  const [pixCnpjError, setPixCnpjError] = useState(''); // NOVO: Mensagem de erro de CNPJ PIX
+  const [pixCnpjError, setPixCnpjError] = useState('');
   
   // NOVO: Rastreamento do último valor consultado (limpo)
   const [lastConsultedCnpj, setLastConsultedCnpj] = useState('');
+  const [lastConsultedCpf, setLastConsultedCpf] = useState(''); // NOVO
   const [lastConsultedPlaca, setLastConsultedPlaca] = useState('');
 
   // Filtros
@@ -221,9 +230,15 @@ const Parceiros: React.FC = () => {
     setEditingParceiroId(null);
     setCnpjConsultado(false);
     setConsultandoCNPJ(false);
-    setCnpjError(''); // Limpa erro
-    setPixCnpjError(''); // Limpa erro PIX
-    setLastConsultedCnpj(''); // Limpa rastreamento
+    setCnpjError('');
+    setPixCnpjError('');
+    setLastConsultedCnpj('');
+    
+    // NOVO: Reset de estados de CPF
+    setCpfConsultado(false);
+    setConsultandoCPF(false);
+    setCpfError('');
+    setLastConsultedCpf('');
   };
 
   const resetMotoristaForm = () => {
@@ -237,21 +252,22 @@ const Parceiros: React.FC = () => {
     setPlacaConsultada(false);
     setConsultandoPlaca(false);
     setPlacaError('');
-    setLastConsultedPlaca(''); // Limpa rastreamento
+    setLastConsultedPlaca('');
   };
 
   // --- PARCEIRO CRUD ---
   const handleEditParceiro = (parceiro: Parceiro) => {
     const cleanCnpj = parseDocument(parceiro.documento || '');
+    const cleanCpf = parseDocument(parceiro.documento || '');
     
     setParceiroFormData({
       ...parceiro,
       documento: formatDocument(parceiro.documento || '', parceiro.tipo),
       telefone: formatContact(parceiro.telefone || ''),
-      responsavel: (parceiro as any).responsavel || '', // NOVO CAMPO
+      responsavel: (parceiro as any).responsavel || '',
       pixKey: parceiro.pixKey ? formatPixKey(parceiro.pixKey, parceiro.pixKeyType || '') : '',
-      numero: (parceiro as any).numero || '', // NOVO CAMPO
-      complemento: (parceiro as any).complemento || '', // NOVO CAMPO
+      numero: (parceiro as any).numero || '',
+      complemento: (parceiro as any).complemento || '',
       
       // NOVOS CAMPOS DE IDENTIFICAÇÃO
       rg: parceiro.rg || undefined,
@@ -262,18 +278,27 @@ const Parceiros: React.FC = () => {
           : undefined,
     });
     setEditingParceiroId(parceiro.id);
-    setShowParceiroForm(true);
     setShowDetailModal(false);
-    setCnpjError(''); // Limpa erro
-    setPixCnpjError(''); // Limpa erro PIX
+    setShowParceiroForm(true);
+    setCnpjError('');
+    setPixCnpjError('');
     
-    // Se for PJ e tiver documento, marca como consultado e rastreia
+    // Lógica de rastreamento CNPJ
     if (parceiro.tipo === 'PJ' && cleanCnpj.length === 14) {
         setCnpjConsultado(true);
         setLastConsultedCnpj(cleanCnpj);
     } else {
         setCnpjConsultado(false);
         setLastConsultedCnpj('');
+    }
+    
+    // Lógica de rastreamento CPF (NOVO)
+    if (parceiro.tipo === 'PF' && cleanCpf.length === 11) {
+        setCpfConsultado(true);
+        setLastConsultedCpf(cleanCpf);
+    } else {
+        setCpfConsultado(false);
+        setLastConsultedCpf('');
     }
   };
 
@@ -290,8 +315,8 @@ const Parceiros: React.FC = () => {
             return;
         }
     } else if (parceiroFormData.tipo === 'PF') {
-        if (cleanDocument.length !== 11) {
-            showError('CPF deve ter 11 dígitos.');
+        if (!isValidCPF(cleanDocument)) {
+            setCpfError('CPF inválido. Verifique os dígitos.');
             return;
         }
     }
@@ -312,7 +337,7 @@ const Parceiros: React.FC = () => {
       ...parceiroFormData,
       documento: cleanDocument,
       telefone: parseDocument(parceiroFormData.telefone || ''),
-      responsavel: parceiroFormData.responsavel, // NOVO CAMPO
+      responsavel: parceiroFormData.responsavel,
       pixKey: cleanPixKeyVal,
       pixTitular: parceiroFormData.pixTitular || parceiroFormData.nome,
       nomeFantasia: parceiroFormData.tipo === 'PF' ? undefined : parceiroFormData.nomeFantasia,
@@ -362,12 +387,10 @@ const Parceiros: React.FC = () => {
     }
   };
   
-  // NOVO: Função para bloquear/desbloquear parceiro
   const handleToggleBlock = (parceiro: Parceiro) => {
     const newStatus = !(parceiro.isActive ?? true);
     try {
         updateParceiro(parceiro.id, { isActive: newStatus });
-        // showSuccess(`Parceiro ${parceiro.nome} ${newStatus ? 'desbloqueado' : 'bloqueado'} com sucesso.`); // REMOVIDO
     } catch (e) {
         showError(e instanceof Error ? e.message : 'Erro ao alterar status de bloqueio.');
     }
@@ -378,7 +401,6 @@ const Parceiros: React.FC = () => {
     resetMotoristaForm();
     setMotoristaFormData(prev => ({ ...prev, parceiroId }));
     setShowMotoristaForm(true);
-    // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
   };
 
   const handleEditMotorista = (motorista: Motorista) => {
@@ -398,7 +420,6 @@ const Parceiros: React.FC = () => {
     });
     setEditingMotoristaId(motorista.id);
     setShowMotoristaForm(true);
-    // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
   };
 
   const handleSubmitMotorista = (e: React.FormEvent) => {
@@ -444,7 +465,6 @@ const Parceiros: React.FC = () => {
     if (motorista) {
       setDeleteTarget({ id, name: motorista.nome, type: 'motorista' });
       setShowDeleteConfirm(true);
-      // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
     }
   };
 
@@ -453,7 +473,6 @@ const Parceiros: React.FC = () => {
     resetVeiculoForm();
     setVeiculoFormData(prev => ({ ...prev, parceiroId }));
     setShowVeiculoForm(true);
-    // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
   };
 
   const handleEditVeiculo = (veiculo: Veiculo) => {
@@ -475,17 +494,10 @@ const Parceiros: React.FC = () => {
       motoristaVinculado: veiculo.motoristaVinculado || '',
       carretasSelecionadas: veiculo.carretasSelecionadas || [],
       isActive: veiculo.isActive ?? true,
-      // Campos removidos do tipo Veiculo, mas mantidos no VeiculoFormData para evitar erros de TS
-      // placaCarreta1: '', // REMOVIDO
-      // placaCarreta2: '', // REMOVIDO
-      // placaDolly: '', // REMOVIDO
-      // quantidadeCarretas: 0, // REMOVIDO
-      // possuiDolly: false, // REMOVIDO
       userId: veiculo.userId || '',
     });
     setEditingVeiculoId(veiculo.id);
     setShowVeiculoForm(true);
-    // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
     
     // Se tiver placa completa, marca como consultada e rastreia
     if (placaLimpa.length === 7) {
@@ -551,7 +563,6 @@ const Parceiros: React.FC = () => {
     if (veiculo) {
       setDeleteTarget({ id, name: veiculo.placa || veiculo.placaCavalo || 'Veículo', type: 'veiculo' });
       setShowDeleteConfirm(true);
-      // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
     }
   };
   
@@ -559,7 +570,6 @@ const Parceiros: React.FC = () => {
   const handleOpenPermissoModal = (veiculo: Veiculo) => {
     setPermissoTargetVeiculo(veiculo);
     setShowPermissoModal(true);
-    // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
   };
   
   const handleSavePermisso = (veiculoId: string, data: PermissoData, newChassi?: string) => {
@@ -605,13 +615,11 @@ const Parceiros: React.FC = () => {
     
     if (cnpjLimpo.length !== 14) return;
     
-    // 1. Validação de Dígitos
     if (!CNPJService.validarCNPJ(cnpjLimpo)) {
         setCnpjError('CNPJ inválido. Verifique os dígitos.');
         return;
     }
     
-    // 2. Verifica se o CNPJ já foi consultado e não foi alterado
     if (cnpjLimpo === lastConsultedCnpj && cnpjConsultado && !consultandoCNPJ) {
         return;
     }
@@ -619,7 +627,7 @@ const Parceiros: React.FC = () => {
     if (consultandoCNPJ) return;
 
     setConsultandoCNPJ(true);
-    setCnpjConsultado(false); // Reset antes de consultar
+    setCnpjConsultado(false);
     
     try {
       const dados = await CNPJService.consultarCNPJ(cnpj);
@@ -629,32 +637,87 @@ const Parceiros: React.FC = () => {
           ...prev,
           nome: dados.razaoSocial || prev.nome,
           nomeFantasia: dados.nomeFantasia || prev.nomeFantasia,
-          // CORRIGIDO: Garantindo que o telefone seja string antes de formatar
           telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
-          numero: dados.numero || prev.numero, // NOVO CAMPO
-          complemento: dados.complemento || prev.complemento, // NOVO CAMPO
+          numero: dados.numero || prev.numero,
+          complemento: dados.complemento || prev.complemento,
           cidade: dados.cidade || prev.cidade,
-          uf: dados.uf || prev.uf, // RENOMEADO
+          uf: dados.uf || prev.uf,
           cep: dados.cep || prev.cep,
         }));
         setCnpjConsultado(true);
-        setLastConsultedCnpj(cnpjLimpo); // Rastreia o CNPJ consultado
+        setLastConsultedCnpj(cnpjLimpo);
         setCnpjError('');
         if (dados.simulado) {
           showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.');
         }
       } else {
-        // CNPJ válido, mas não encontrado na base externa
         setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
-        setLastConsultedCnpj(''); // Não rastreia se falhou
+        setLastConsultedCnpj('');
       }
     } catch (err) {
       console.error('Erro ao consultar CNPJ:', err);
       setCnpjError(err instanceof Error ? err.message : 'Erro ao consultar CNPJ. Verifique o número e tente novamente.');
-      setLastConsultedCnpj(''); // Não rastreia se falhou
+      setLastConsultedCnpj('');
     } finally {
       setConsultandoCNPJ(false);
+    }
+  };
+  
+  // --- CONSULTA API CPF (NOVO) ---
+  const handleCPFConsultation = async (cpf: string) => {
+    if (parceiroFormData.tipo !== 'PF') return;
+    const cpfLimpo = parseDocument(cpf);
+    setCpfError('');
+    
+    if (cpfLimpo.length !== 11) return;
+    
+    // 1. Validação de Dígitos
+    if (!isValidCPF(cpfLimpo)) {
+        setCpfError('CPF inválido. Verifique os dígitos.');
+        return;
+    }
+    
+    // 2. Verifica se o CPF já foi consultado e não foi alterado
+    if (cpfLimpo === lastConsultedCpf && cpfConsultado && !consultandoCPF) {
+        return;
+    }
+    
+    if (consultandoCPF) return;
+
+    setConsultandoCPF(true);
+    setCpfConsultado(false);
+    
+    try {
+      const dados = await CPFService.consultarCPF(cpf); 
+      
+      if (dados) {
+        setParceiroFormData(prev => ({
+          ...prev,
+          nome: dados.nome || prev.nome,
+          // Mapeamento de data de nascimento (string YYYY-MM-DD)
+          dataNascimentoStr: dados.dataNascimento || prev.dataNascimentoStr,
+          rg: dados.rg || prev.rg,
+          orgaoEmissor: dados.orgaoEmissor || prev.orgaoEmissor,
+          email: dados.email || prev.email,
+          telefone: dados.telefone || prev.telefone,
+        }));
+        setCpfConsultado(true);
+        setLastConsultedCpf(cpfLimpo);
+        setCpfError('');
+        if (dados.simulado) {
+          showError('Não foi possível conectar com a API de CPF. Usando dados simulados como fallback.');
+        }
+      } else {
+        setCpfError('CPF válido, mas não encontrado na base de dados externa.');
+        setLastConsultedCpf('');
+      }
+    } catch (err) {
+      console.error('Erro ao consultar CPF:', err);
+      setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
+      setLastConsultedCpf('');
+    } finally {
+      setConsultandoCPF(false);
     }
   };
   
@@ -726,19 +789,18 @@ const Parceiros: React.FC = () => {
           modelo: data.modelo || prev.modelo,
           ano: data.ano?.toString() || prev.ano,
           chassis: data.chassi ? forceUpperCase(data.chassi) : prev.chassis,
-          carroceria: (data as any).carroceria || prev.carroceria, // CORRIGIDO: Acessando carroceria via any
-          // Capacidade não vem da API base, mantemos o valor existente
+          carroceria: (data as any).carroceria || prev.carroceria,
         }));
         setPlacaConsultada(true);
-        setLastConsultedPlaca(placaLimpa); // Rastreia a placa consultada
+        setLastConsultedPlaca(placaLimpa);
       } else {
         setPlacaError('Placa não encontrada na base de dados externa.');
-        setLastConsultedPlaca(''); // Não rastreia se falhou
+        setLastConsultedPlaca('');
       }
     } catch (err) {
       console.error('Erro ao consultar placa:', err);
       setPlacaError(err instanceof Error ? err.message : 'Falha ao consultar placa. Verifique a conexão ou o token da API.');
-      setLastConsultedPlaca(''); // Não rastreia se falhou
+      setLastConsultedPlaca('');
     } finally {
       setConsultandoPlaca(false);
     }
@@ -757,7 +819,6 @@ const Parceiros: React.FC = () => {
       } else if (deleteTarget.type === 'veiculo') {
         deleteVeiculo(deleteTarget.id);
       }
-      // showSuccess(`${deleteTarget.name} excluído com sucesso.`); // REMOVIDO
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao excluir.');
     } finally {
@@ -833,7 +894,7 @@ const Parceiros: React.FC = () => {
                 setDetailTargetParceiro(parceiro);
                 setShowDetailModal(true);
               }}
-              onToggleBlock={handleToggleBlock} // NOVO: Passando o handler
+              onToggleBlock={handleToggleBlock}
             />
           ))
         )}
@@ -890,10 +951,9 @@ const Parceiros: React.FC = () => {
                           documento: '', 
                           nome: '', 
                           nomeFantasia: '',
-                          responsavel: '', // Reset responsavel
+                          responsavel: '',
                           isMotorista: novoTipo === 'PF' ? prev.isMotorista : false,
                           cnh: novoTipo === 'PF' ? prev.cnh : '',
-                          // Limpa campos de identificação PF se mudar para PJ
                           dataNascimento: novoTipo === 'PJ' ? undefined : prev.dataNascimento,
                           dataNascimentoStr: novoTipo === 'PJ' ? undefined : prev.dataNascimentoStr,
                           rg: novoTipo === 'PJ' ? undefined : prev.rg,
@@ -902,7 +962,11 @@ const Parceiros: React.FC = () => {
                         setCnpjConsultado(false);
                         setConsultandoCNPJ(false);
                         setCnpjError('');
-                        setLastConsultedCnpj(''); // Reset rastreamento
+                        setLastConsultedCnpj('');
+                        setCpfConsultado(false);
+                        setConsultandoCPF(false);
+                        setCpfError('');
+                        setLastConsultedCpf('');
                       }}
                       className="input-field"
                       disabled={!!editingParceiroId}
@@ -913,43 +977,89 @@ const Parceiros: React.FC = () => {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {parceiroFormData.tipo === 'PJ' ? 'CNPJ *' : 'CPF *'}
-                      {consultandoCNPJ && <span className="ml-2 text-blue-500 text-xs">Consultando...</span>}
-                    </label>
-                    <input
-                      type="text"
-                      value={parceiroFormData.documento}
-                      onChange={(e) => {
-                        const formatted = formatDocument(e.target.value, parceiroFormData.tipo);
-                        const limpo = parseDocument(formatted);
-                        
-                        // Se o documento for alterado, reseta o estado de consulta
-                        if (limpo !== parseDocument(parceiroFormData.documento || '')) {
-                            setCnpjConsultado(false);
-                        }
-                        
-                        setParceiroFormData(prev => ({ ...prev, documento: formatted }));
-                        setCnpjError(''); // Limpa erro ao digitar
-                        
-                        if (parceiroFormData.tipo === 'PJ' && limpo.length === 14) {
-                          // Dispara a consulta se for um CNPJ completo, independentemente do estado 'consultado'
-                          handleCNPJConsultation(formatted);
-                        }
-                      }}
-                      className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
-                      placeholder={parceiroFormData.tipo === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
-                      disabled={consultandoCNPJ}
-                      required
-                    />
-                    {cnpjError && (
-                        <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
-                            <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
-                            <p className="text-xs text-red-700 dark:text-red-400">{cnpjError}</p>
-                        </div>
-                    )}
-                    {parceiroFormData.tipo === 'PJ' && cnpjConsultado && !cnpjError && (
-                      <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                    {parceiroFormData.tipo === 'PJ' ? (
+                      <>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CNPJ *
+                          {consultandoCNPJ && (
+                            <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroFormData.documento}
+                          onChange={(e) => {
+                            const formatted = formatDocument(e.target.value, 'PJ');
+                            const limpo = parseDocument(formatted);
+                            
+                            if (limpo !== parseDocument(parceiroFormData.documento || '')) {
+                                setCnpjConsultado(false);
+                            }
+                            
+                            setParceiroFormData(prev => ({ ...prev, documento: formatted }));
+                            setCnpjError('');
+                            
+                            if (limpo.length === 14) {
+                              handleCNPJConsultation(formatted);
+                            }
+                          }}
+                          className={`input-field ${consultandoCNPJ ? 'opacity-50' : ''}`}
+                          placeholder={'00.000.000/0000-00'}
+                          disabled={consultandoCNPJ}
+                          required
+                        />
+                        {cnpjError && (
+                            <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                                <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                                <p className="text-xs text-red-700 dark:text-red-400">{cnpjError}</p>
+                            </div>
+                        )}
+                        {parceiroFormData.tipo === 'PJ' && cnpjConsultado && !cnpjError && (
+                          <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          CPF *
+                          {consultandoCPF && (
+                            <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={parceiroFormData.documento}
+                          onChange={(e) => {
+                            const formatted = formatDocument(e.target.value, 'PF');
+                            const limpo = parseDocument(formatted);
+                            
+                            // Se o documento for alterado, reseta o estado de consulta
+                            if (limpo !== parseDocument(parceiroFormData.documento || '')) {
+                                setCpfConsultado(false);
+                            }
+                            
+                            setParceiroFormData(prev => ({ ...prev, documento: formatted }));
+                            setCpfError(''); // Limpa erro ao digitar
+                            
+                            if (limpo.length === 11) {
+                              handleCPFConsultation(formatted); // NOVO: Chama consulta CPF
+                            }
+                          }}
+                          className={`input-field ${consultandoCPF ? 'opacity-50' : ''}`}
+                          placeholder={'000.000.000-00'}
+                          disabled={consultandoCPF}
+                          required
+                        />
+                        {cpfError && (
+                            <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
+                                <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
+                                <p className="text-xs text-red-700 dark:text-red-400">{cpfError}</p>
+                            </div>
+                        )}
+                        {parceiroFormData.tipo === 'PF' && cpfConsultado && !cpfError && (
+                          <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -984,7 +1094,7 @@ const Parceiros: React.FC = () => {
                   )}
                 </div>
                 
-                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO (PF) */}
+                {/* NOVOS CAMPOS DE IDENTIFICAÇÃO (PF) - ATUALIZADO */}
                 {parceiroFormData.tipo === 'PF' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border border-gray-200 dark:border-gray-700 p-4 rounded-lg">
                         <div className="md:col-span-3">
@@ -995,7 +1105,7 @@ const Parceiros: React.FC = () => {
                             <input
                                 type="date"
                                 value={parceiroFormData.dataNascimentoStr || ''}
-                                onChange={(e) => setParceiroFormData(prev => ({ ...prev, dataNascimentoStr: e.target.value }))}
+                                onChange={(e) => setParceiroFormData(prev => ({ ...prev, dataNascimentoStr: e.target.value, dataNascimento: undefined }))} // dataNascimento é atualizado no submit
                                 className="input-field"
                             />
                         </div>
@@ -1069,7 +1179,7 @@ const Parceiros: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Endereço, Número e Complemento (NOVO LAYOUT) */}
+                {/* Endereço, Número e Complemento (Apenas para PJ) */}
                 {parceiroFormData.tipo === 'PJ' && (
                     <>
                         <div>
@@ -1169,9 +1279,8 @@ const Parceiros: React.FC = () => {
                                 onChange={(e) => {
                                     const formatted = formatPixKey(e.target.value, parceiroFormData.pixKeyType || '');
                                     setParceiroFormData(prev => ({ ...prev, pixKey: formatted }));
-                                    setPixCnpjError(''); // Limpa erro ao digitar
+                                    setPixCnpjError('');
                                     
-                                    // Lógica de consulta de CNPJ para PIX
                                     if (parceiroFormData.pixKeyType === 'CNPJ') {
                                         const cleanCnpj = parseDocument(formatted);
                                         if (cleanCnpj.length === 14) {
@@ -1249,7 +1358,7 @@ const Parceiros: React.FC = () => {
                 
                 <div className="flex justify-end gap-2 pt-4">
                   <button type="button" className="btn-secondary" onClick={() => { setShowParceiroForm(false); resetParceiroForm(); }}>Cancelar</button>
-                  <button type="submit" className="btn-primary" disabled={consultandoCNPJ || consultandoPixCnpj || !!cnpjError || !!pixCnpjError}>
+                  <button type="submit" className="btn-primary" disabled={consultandoCNPJ || consultandoCPF || consultandoPixCnpj || !!cnpjError || !!cpfError || !!pixCnpjError}>
                     {editingParceiroId ? 'Salvar alterações' : 'Adicionar Parceiro'}
                   </button>
                 </div>
