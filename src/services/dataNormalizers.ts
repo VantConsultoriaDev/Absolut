@@ -20,7 +20,7 @@ export const normalizeClienteCreate = (d: Omit<Cliente, 'id' | 'createdAt' | 'up
   nomeFantasia: d.nomeFantasia,
   endereco: d.endereco,
   cidade: d.cidade,
-  estado: d.estado,
+  uf: d.uf, // RENOMEADO
   observacoes: d.observacoes,
 });
 
@@ -30,7 +30,7 @@ export const normalizeParceiroCreate = (d: Omit<Parceiro, 'id' | 'createdAt' | '
   nomeFantasia: d.nomeFantasia,
   endereco: d.endereco,
   cidade: d.cidade,
-  estado: d.estado,
+  uf: d.uf, // RENOMEADO
   observacoes: d.observacoes,
 });
 

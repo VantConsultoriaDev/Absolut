@@ -82,7 +82,7 @@ const initialParceiroFormData: Parceiro = {
   pixTitular: '',
   endereco: '',
   cidade: '',
-  estado: '',
+  uf: '', // RENOMEADO
   cep: '',
   observacoes: '',
   isMotorista: false,
@@ -523,7 +523,7 @@ const Parceiros: React.FC = () => {
           telefone: formatContact(dados.telefone || prev.telefone || ''),
           endereco: dados.endereco || prev.endereco,
           cidade: dados.cidade || prev.cidade,
-          estado: dados.uf || prev.estado,
+          uf: dados.uf || prev.uf, // RENOMEADO
           cep: dados.cep || prev.cep,
         }));
         setCnpjConsultado(true);
@@ -880,11 +880,11 @@ const Parceiros: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
                     <input
                       type="text"
-                      value={parceiroFormData.estado}
-                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, estado: e.target.value }))}
+                      value={parceiroFormData.uf}
+                      onChange={(e) => setParceiroFormData(prev => ({ ...prev, uf: e.target.value }))}
                       className="input-field"
                     />
                   </div>

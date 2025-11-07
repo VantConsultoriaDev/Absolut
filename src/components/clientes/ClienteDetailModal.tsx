@@ -116,9 +116,9 @@ const ClienteDetailModal: React.FC<ClienteDetailModalProps> = ({
                 <p className="detail-value flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-500" /> 
                     {cliente.endereco || 'N/A'}
-                    {cliente.cidade && cliente.estado && (
+                    {cliente.cidade && cliente.uf && (
                         <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
-                            {cliente.cidade} - {cliente.estado} ({cliente.cep})
+                            {cliente.cidade} - {cliente.uf} ({cliente.cep})
                         </span>
                     )}
                 </p>

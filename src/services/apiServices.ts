@@ -24,7 +24,6 @@ export interface CNPJData {
     bairro: string;
     municipio: string;
     uf: string;
-    cep: string;
   };
   telefone?: string;
   email?: string;

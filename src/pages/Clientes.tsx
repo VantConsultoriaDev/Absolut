@@ -33,7 +33,7 @@ const Clientes: React.FC = () => {
     telefone: '',
     endereco: '',
     cidade: '',
-    estado: '',
+    uf: '', // RENOMEADO
     cep: '',
     observacoes: '',
     isActive: true as boolean,
@@ -90,7 +90,7 @@ const Clientes: React.FC = () => {
       telefone: '',
       endereco: '',
       cidade: '',
-      estado: '',
+      uf: '', // RENOMEADO
       cep: '',
       observacoes: '',
       isActive: true,
@@ -115,7 +115,7 @@ const Clientes: React.FC = () => {
       telefone: c.telefone || '',
       endereco: c.endereco || '',
       cidade: c.cidade || '',
-      estado: c.estado || '',
+      uf: c.uf || '', // RENOMEADO
       cep: c.cep || '',
       observacoes: c.observacoes || '',
       isActive: c.isActive ?? true,
@@ -203,7 +203,7 @@ const Clientes: React.FC = () => {
             telefone: form.telefone,
             endereco: form.endereco,
             cidade: form.cidade,
-            estado: form.estado,
+            uf: form.uf, // RENOMEADO
             cep: form.cep,
             observacoes: form.observacoes,
             isActive: form.isActive,
@@ -250,7 +250,7 @@ const Clientes: React.FC = () => {
           telefone: dados.telefone || prev.telefone,
           endereco: dados.endereco || prev.endereco,
           cidade: dados.cidade || prev.cidade,
-          estado: dados.uf || prev.estado,
+          uf: dados.uf || prev.uf, // RENOMEADO
           cep: dados.cep || prev.cep
         }))
         setCnpjConsultado(true)
@@ -609,11 +609,11 @@ const Clientes: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">UF</label>
                     <input
                       type="text"
-                      value={form.estado}
-                      onChange={(e) => setForm(prev => ({ ...prev, estado: e.target.value }))}
+                      value={form.uf}
+                      onChange={(e) => setForm(prev => ({ ...prev, uf: e.target.value }))}
                       className="input-field"
                     />
                   </div>

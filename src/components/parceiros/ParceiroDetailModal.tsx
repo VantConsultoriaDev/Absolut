@@ -132,9 +132,9 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
           <p className="detail-label flex items-center gap-1"><MapPin className="h-4 w-4" /> Endereço</p>
           <p className="detail-value">
             {parceiro.endereco || 'N/A'}
-            {parceiro.cidade && parceiro.estado && (
+            {parceiro.cidade && parceiro.uf && (
               <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                ({parceiro.cidade} - {parceiro.estado}, {parceiro.cep})
+                ({parceiro.cidade} - {parceiro.uf}, {parceiro.cep})
               </span>
             )}
           </p>

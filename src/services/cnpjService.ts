@@ -13,7 +13,7 @@ interface CNPJData {
   complemento: string;
   bairro: string;
   cidade: string;
-  uf: string;
+  uf: string; // RENOMEADO
   cep: string;
   telefone: string;
   email: string;
@@ -137,7 +137,7 @@ export class CNPJService {
       
       // --- FIM MAPEAMENTO DE NOMES ---
 
-      const resultado = {
+      const resultado: CNPJData = {
         razaoSocial: razaoSocialFinal,
         nomeFantasia: nomeFantasiaFinal, 
         cnpj: payload.cnpj || cnpjFormatado,
@@ -147,7 +147,7 @@ export class CNPJService {
         complemento: payload.complemento || '',
         bairro: payload.bairro || '',
         cidade: municipioNormalizado,
-        uf: payload.uf || payload.estado || '',
+        uf: payload.uf || payload.estado || '', // USANDO 'uf'
         cep: payload.cep || '',
         telefone: telefoneCompleto || payload.telefone || '',
         email: payload.email || '',
@@ -180,7 +180,7 @@ export class CNPJService {
         complemento: 'Sala 1',
         bairro: 'Centro',
         cidade: 'São Paulo',
-        uf: 'SP',
+        uf: 'SP', // USANDO 'uf'
         cep: '01000-000',
         telefone: '(11) 99999-9999',
         email: 'contato@empresa.com.br',

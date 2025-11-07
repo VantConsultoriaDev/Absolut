@@ -13,7 +13,7 @@ export interface Endereco {
   logradouro: string
   bairro: string
   cidade: string
-  estado: string
+  uf: string // RENOMEADO
 }
 
 export interface Cliente {
@@ -26,7 +26,7 @@ export interface Cliente {
   telefone?: string
   endereco?: string
   cidade?: string
-  estado?: string
+  uf?: string // RENOMEADO
   cep?: string
   observacoes?: string
   isActive?: boolean
@@ -49,7 +49,7 @@ export interface Parceiro {
   pixTitular?: string // NOVO: Titular da chave Pix
   endereco?: string
   cidade?: string
-  estado?: string
+  uf?: string // RENOMEADO
   cep?: string
   observacoes?: string
   isMotorista?: boolean
