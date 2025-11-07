@@ -237,6 +237,13 @@ const Parceiros: React.FC = () => {
     setShowDetailModal(false);
     setCnpjError(''); // Limpa erro
     setPixCnpjError(''); // Limpa erro PIX
+    
+    // Se for PJ e tiver documento, marca como consultado para evitar consulta automática ao abrir
+    if (parceiro.tipo === 'PJ' && parceiro.documento && parseDocument(parceiro.documento).length === 14) {
+        setCnpjConsultado(true);
+    } else {
+        setCnpjConsultado(false);
+    }
   };
 
   const handleSubmitParceiro = (e: React.FormEvent) => {
@@ -419,6 +426,14 @@ const Parceiros: React.FC = () => {
     setEditingVeiculoId(veiculo.id);
     setShowVeiculoForm(true);
     // REMOVIDO: setShowDetailModal(false); // Permite empilhamento
+    
+    // Se tiver placa completa, marca como consultada para evitar consulta automática ao abrir
+    const placa = veiculo.placa || veiculo.placaCavalo || veiculo.placaCarreta || '';
+    if (placa.replace(/[^A-Z0-9]/gi, '').length === 7) {
+        setPlacaConsultada(true);
+    } else {
+        setPlacaConsultada(false);
+    }
   };
 
   const handleSubmitVeiculo = (e: React.FormEvent) => {
@@ -820,8 +835,15 @@ const Parceiros: React.FC = () => {
                       onChange={(e) => {
                         const formatted = formatDocument(e.target.value, parceiroFormData.tipo);
                         const limpo = formatted.replace(/\D/g, '');
+                        
+                        // Se o documento for alterado, reseta o estado de consulta
+                        if (limpo !== parseDocument(parceiroFormData.documento || '')) {
+                            setCnpjConsultado(false);
+                        }
+                        
                         setParceiroFormData(prev => ({ ...prev, documento: formatted }));
                         setCnpjError(''); // Limpa erro ao digitar
+                        
                         if (parceiroFormData.tipo === 'PJ' && limpo.length === 14 && !cnpjConsultado) {
                           handleCNPJConsultation(formatted);
                         }
