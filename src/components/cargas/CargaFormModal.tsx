@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { X, AlertTriangle, Plus, Minus } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
-import StandardCheckbox from '../StandardCheckbox'; // Importando o StandardCheckbox
-import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants'; // Importando listas de UF
-import CityAutocompleteInput from '../CityAutocompleteInput'; // NOVO: Importando CityAutocompleteInput
+import StandardCheckbox from '../StandardCheckbox';
+import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants';
+import CityAutocompleteInput from '../CityAutocompleteInput';
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
 export interface TrajetoForm extends Omit<Trajeto, 'valor' | 'dataColeta' | 'dataEntrega'> {
@@ -73,6 +73,63 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
     closeOnOutsideClick: !hasUnsavedChanges,
     closeOnEscape: !hasUnsavedChanges,
   });
+  
+  // NOVO ESTADO: Apenas para o sufixo numérico do CRT
+  const [crtSuffix, setCrtSuffix] = useState('');
+  
+  // Efeito para inicializar o crtSuffix ao editar
+  useEffect(() => {
+      if (editingCarga && formData.crt) {
+          // Tenta extrair o sufixo numérico do CRT completo
+          const prefix = getCrtPrefix(formData.trajetos[0]?.ufOrigem, formData.trajetos[formData.trajetos.length - 1]?.ufDestino);
+          if (formData.crt.startsWith(prefix)) {
+              setCrtSuffix(formData.crt.substring(prefix.length));
+          } else {
+              // Se não for um CRT padrão, usa o CRT completo como sufixo (fallback)
+              setCrtSuffix(formData.crt);
+          }
+      } else if (!editingCarga) {
+          setCrtSuffix('');
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCarga, formData.crt]);
+  
+  // 1. Função para calcular o prefixo do CRT
+  const getCrtPrefix = (ufOrigem: string | undefined, ufDestino: string | undefined): string => {
+      if (!ufOrigem && !ufDestino) return '';
+      
+      // Regra 1: UF ORIGEM é Argentina, Chile ou Uruguai
+      if (ufOrigem === 'AR') return 'BR5708';
+      if (ufOrigem === 'CL') return 'BR5846';
+      if (ufOrigem === 'UY') return 'BR5709';
+      
+      // Regra 2: UF ORIGEM não é estrangeira, mas UF DESTINO é Argentina ou Chile
+      if (ufDestino === 'AR') return 'AR5708';
+      if (ufDestino === 'CL') return 'CL5846';
+      
+      return '';
+  };
+  
+  // 2. Valor total do CRT (Prefix + Suffix)
+  const fullCrt = useMemo(() => {
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      const prefix = getCrtPrefix(ufOrigem, ufDestino);
+      
+      // Se não houver prefixo, o CRT é o sufixo (ou vazio)
+      if (!prefix) return crtSuffix;
+      
+      // Se houver prefixo, concatena com o sufixo (apenas números)
+      const cleanSuffix = crtSuffix.replace(/\D/g, '').slice(0, 6);
+      return prefix + cleanSuffix;
+  }, [formData.trajetos, crtSuffix]);
+  
+  // 3. Atualiza o CRT no formData sempre que o fullCrt mudar
+  useEffect(() => {
+      onFormChange('crt', fullCrt);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullCrt]);
+
 
   // Calcula o valor total da carga somando os trajetos
   const valorTotalCarga = useMemo(() => {
@@ -137,6 +194,19 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
       // Se não houver transbordo, e for o primeiro trajeto (index 1), não mostra sufixo
       return '';
   };
+  
+  // Verifica se o CRT deve ser gerado automaticamente
+  const shouldGenerateCrt = useMemo(() => {
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      return !!getCrtPrefix(ufOrigem, ufDestino);
+  }, [formData.trajetos]);
+  
+  const crtPrefix = useMemo(() => {
+      const ufOrigem = formData.trajetos[0]?.ufOrigem;
+      const ufDestino = formData.trajetos[formData.trajetos.length - 1]?.ufDestino;
+      return getCrtPrefix(ufOrigem, ufDestino);
+  }, [formData.trajetos]);
 
 
   return (
@@ -180,21 +250,26 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   </select>
                 </div>
                 
-                <div>
+                {/* Cliente */}
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    CRT
+                    Cliente
                   </label>
-                  <input
-                    type="text"
-                    value={formData.crt}
-                    onChange={(e) => onFormChange('crt', e.target.value.slice(0, 10))}
-                    placeholder="Ex: BR722"
+                  <select
+                    value={formData.clienteId || ''}
+                    onChange={(e) => onFormChange('clienteId', e.target.value)}
                     className="input-field"
-                    maxLength={10}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Máximo 10 caracteres</p>
+                  >
+                    <option value="">Selecione um cliente</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.tipo === 'PJ' && c.nomeFantasia ? c.nomeFantasia : c.nome}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
+                
+                {/* Status */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Status
@@ -210,24 +285,6 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     <option value="armazenada">Armazenada</option>
                     <option value="entregue">Entregue</option>
                     <option value="cancelada">Cancelada</option>
-                  </select>
-                </div>
-                
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Cliente
-                  </label>
-                  <select
-                    value={formData.clienteId || ''}
-                    onChange={(e) => onFormChange('clienteId', e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.tipo === 'PJ' && c.nomeFantasia ? c.nomeFantasia : c.nome}
-                      </option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -446,10 +503,10 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                 )}
               </div>
               
-              {/* Seção 3: Datas e Peso (Datas globais removidas, mantendo apenas peso) */}
+              {/* Seção 3: Peso e CRT (REORGANIZADA) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Datas globais removidas, pois agora estão no trajeto */}
                 
+                {/* Peso */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Peso (toneladas) *
@@ -465,6 +522,39 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">Máximo 1000 toneladas</p>
+                </div>
+                
+                {/* CRT (NOVO LAYOUT) */}
+                <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        CRT {shouldGenerateCrt ? '(Automático)' : ''}
+                    </label>
+                    <div className="flex">
+                        {shouldGenerateCrt && (
+                            <div className="flex items-center bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg px-3 text-sm font-mono text-gray-700 dark:text-gray-300">
+                                {crtPrefix}
+                            </div>
+                        )}
+                        <input
+                            type="text"
+                            value={crtSuffix}
+                            onChange={(e) => {
+                                // Permite apenas números e limita a 6 dígitos
+                                const cleanValue = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                setCrtSuffix(cleanValue);
+                            }}
+                            placeholder={shouldGenerateCrt ? 'XXXXXX' : 'CRT Manual'}
+                            className={`input-field font-mono ${shouldGenerateCrt ? 'rounded-l-none' : ''}`}
+                            maxLength={shouldGenerateCrt ? 6 : 10}
+                            disabled={!shouldGenerateCrt && editingCarga} // Desabilita edição manual se já existe CRT
+                        />
+                    </div>
+                    {shouldGenerateCrt && (
+                        <p className="text-xs text-gray-500 mt-1">CRT Completo: {fullCrt}</p>
+                    )}
+                    {!shouldGenerateCrt && (
+                        <p className="text-xs text-gray-500 mt-1">CRT Manual (Máx. 10 caracteres)</p>
+                    )}
                 </div>
               </div>
               
