@@ -1,0 +1,284 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    /* Ajuste: Usando slate-900 em vez de slate-950 para um fundo escuro mais suave */
+    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-200 leading-relaxed;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50;
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-slate-900 dark:text-slate-50;
+  }
+
+  p {
+    @apply text-slate-600 dark:text-slate-400;
+  }
+}
+
+@layer components {
+  /* Ocultar scrollbars visualmente mas manter rolagem por wheel */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  /* Marquee horizontal on hover for truncated text */
+  .marquee-container {
+    position: relative;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .marquee-text {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+  }
+  @keyframes marquee-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-1 * var(--marquee-distance, 0px))); }
+  }
+  /* Trigger animation somente quando houver overflow e em hover do item (class group) */
+  .group:hover .marquee-container .marquee-text.marquee-active {
+    animation: marquee-left 6s linear alternate both;
+  }
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 border border-slate-200 dark:border-slate-700;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+  
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+  
+  .btn-warning {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-amber-600 hover:bg-amber-700 active:bg-amber-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+  
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+  
+  .btn-info {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+  }
+
+  /* Input Fields */
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent;
+    /* Removido: não forçar caixa alta por padrão nos inputs */
+  }
+  
+  .input-field:invalid {
+    @apply border-red-300 dark:border-red-700 focus:ring-red-500;
+  }
+
+  .input-field:disabled {
+    @apply bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 cursor-not-allowed;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply card cursor-pointer hover:border-slate-300 dark:hover:border-slate-600;
+  }
+
+  .card-interactive {
+    @apply card-hover hover:shadow-lg;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200;
+  }
+  
+  .badge-success {
+    @apply badge bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300;
+  }
+  
+  .badge-warning {
+    @apply badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300;
+  }
+  
+  .badge-danger {
+    @apply badge bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300;
+  }
+  
+  .badge-info {
+    @apply badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300;
+  }
+  
+  .badge-gray {
+    @apply badge bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300;
+  }
+
+  /* Tables - Novo Estilo Card-Row */
+  
+  /* Container da Tabela - Remove o overflow-hidden para que a sombra da linha apareça */
+  .table-container {
+    @apply rounded-xl shadow-none overflow-visible;
+  }
+  
+  .table-container table {
+    /* Remove border-spacing e border-collapse: separate */
+    border-collapse: collapse;
+    @apply w-full;
+  }
+  
+  /* Cabeçalho da Tabela */
+  .table-container thead {
+    @apply sticky top-0 z-10;
+  }
+  
+  .table-header {
+    @apply bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-semibold text-sm uppercase tracking-wider px-6 py-3 border-b border-slate-200 dark:border-slate-700;
+  }
+  
+  /* Célula da Tabela */
+  .table-cell {
+    @apply px-6 py-3 text-sm text-slate-700 dark:text-slate-300;
+  }
+  
+  .table-cell-nowrap {
+    @apply table-cell whitespace-nowrap;
+  }
+  
+  /* Linha da Tabela (Onde o estilo de card será aplicado) */
+  .table-body-row {
+    /* Remove bordas internas e zebra stripes antigas */
+    @apply bg-white dark:bg-slate-800 transition-all duration-150;
+  }
+  
+  /* Novo estilo de linha: Linha separada com relevo e contraste */
+  .table-card-row {
+    /* Aplica o estilo de card na linha */
+    @apply bg-white dark:bg-slate-800 transition-all duration-150 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm;
+    /* Adiciona margem vertical para separação */
+    margin-bottom: 12px;
+    /* Garante que a linha se comporte como um bloco para que a margem funcione */
+    display: table-row;
+  }
+  
+  /* Ajuste para o corpo da tabela para criar o espaçamento entre as linhas */
+  .table-card-body {
+    /* Adiciona padding vertical para compensar a margem da primeira/última linha */
+    @apply py-3;
+  }
+  
+  /* Ajuste para as células dentro da linha de card */
+  .table-card-body .table-cell {
+    /* Remove o padding vertical padrão e aplica o padding da linha */
+    @apply py-4;
+  }
+  
+  .table-card-row:hover {
+    @apply shadow-md border-blue-400 dark:border-blue-500 bg-blue-50/50 dark:hover:bg-slate-700/70 cursor-pointer;
+  }
+  
+  /* Remove a borda inferior das células do corpo */
+  .table-container tbody tr td {
+    @apply border-b-0;
+  }
+  
+  /* Remove a borda inferior da última linha (se houver) */
+  .table-card-body > tr:last-child > td {
+    border-bottom: none;
+  }
+  
+  /* Stats/KPI Cards */
+  .stat-card {
+    /* Reduz o padding de p-6 para p-4 */
+    @apply card p-4 space-y-2; 
+  }
+
+  .stat-label {
+    /* Reduz o tamanho da fonte do label */
+    @apply text-xs font-medium text-slate-600 dark:text-slate-400;
+  }
+
+  .stat-value {
+    /* Reduz o tamanho da fonte do valor */
+    @apply text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-50;
+  }
+
+  .stat-change {
+    @apply text-xs font-semibold inline-flex items-center gap-1;
+  }
+
+  /* Dividers */
+  .divider {
+    @apply border-t border-slate-200 dark:border-slate-700;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  /* Override: disable uppercase in specific contexts (e.g., Login page) */
+  .no-uppercase .input-field {
+    text-transform: none;
+  }
+
+  /* Email and password inputs should not be uppercased */
+  input.input-field[type="email"],
+  input.input-field[type="password"] {
+    text-transform: none;
+  }
+}

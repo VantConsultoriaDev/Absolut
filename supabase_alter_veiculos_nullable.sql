@@ -1,0 +1,17 @@
+-- Torna colunas opcionais no frontend como NULLABLE no Supabase
+ALTER TABLE veiculos ALTER COLUMN placa DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN placa_cavalo DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN placa_carreta DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN placa_carreta1 DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN placa_carreta2 DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN placa_dolly DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN modelo DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN fabricante DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN ano DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN capacidade DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN chassis DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN carroceria DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN quantidade_carretas DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN possui_dolly DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN motorista_vinculado DROP NOT NULL;
+ALTER TABLE veiculos ALTER COLUMN is_active DROP NOT NULL;
