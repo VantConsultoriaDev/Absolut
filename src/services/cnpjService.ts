@@ -93,53 +93,65 @@ export class CNPJService {
         return null;
       }
 
-      // Monta o endereço completo
-      const tipoLogradouro = payload.descricao_tipo_logradouro || payload.tipo_logradouro || '';
-      const logradouro = payload.logradouro || '';
-      const numero = payload.numero || '';
-      const complemento = payload.complemento || '';
+      // --- NOVO MAPEAMENTO DE CAMPOS ---
       
-      const enderecoCompleto = [
+      // 1. Razão Social
+      const razaoSocialFinal = payload.razao_social || payload.nome_empresarial || payload.nome || '';
+      
+      // 2. Nome Fantasia
+      const nomeFantasiaFinal = payload.nome_fantasia || payload.fantasia || payload.titulo_estabelecimento || '';
+      
+      // 3. Email
+      const emailFinal = payload.correio_eletronico || payload.email || '';
+      
+      // 4. Contato (Telefone)
+      const telefoneCompleto = payload.ddd1 && payload.telefone1 ? 
+        `(${payload.ddd1}) ${payload.telefone1}` : 
+        payload.ddd_telefone_1 ? 
+        `(${payload.ddd_telefone_1.substring(0,2)}) ${payload.ddd_telefone_1.substring(2)}` : 
+        payload.telefone || '';
+        
+      // 5. Endereço (Logradouro)
+      const tipoLogradouro = payload.tipo_logradouro || payload.descricao_tipo_logradouro || '';
+      const logradouro = payload.logradouro || '';
+      
+      const enderecoFinal = [
         tipoLogradouro,
-        logradouro,
-        numero,
-        complemento
+        logradouro
       ].filter(item => item && item.trim()).join(' ');
       
-      const enderecoFinal = enderecoCompleto || payload.endereco || '';
-
-      // Monta o telefone com DDD
-      const telefoneCompleto = payload.ddd_telefone_1 ? 
-        `(${payload.ddd_telefone_1.substring(0,2)}) ${payload.ddd_telefone_1.substring(2)}` : '';
-
-      // Normaliza municipio
+      // 6. Número
+      const numeroFinal = payload.numero || '';
+      
+      // 7. Complemento
+      const complementoFinal = payload.complemento || '';
+      
+      // 8. Cidade (Município)
       const municipioNormalizado = (() => {
         const m = payload?.municipio;
         if (typeof m === 'string') return m;
         if (m && typeof m === 'object') {
-          return m.nome || m.descricao || '';
+          return m.descricao || m.nome || ''; // Prioriza 'descricao' conforme o novo mapeamento
         }
-        if (typeof payload?.endereco?.municipio === 'string') return payload.endereco.municipio;
         return payload?.cidade || '';
       })();
       
-      // --- MAPEAMENTO DE NOMES (REFINADO) ---
+      // 9. UF
+      const ufFinal = payload.uf || payload.estado || '';
       
-      // 1. Determinar Razão Social: Prioriza razao_social, nome_empresarial, nome
-      let razaoSocialFinal = payload.razao_social || payload.nome_empresarial || payload.nome || '';
+      // 10. CEP
+      const cepFinal = payload.cep || '';
       
-      // 2. Determinar Nome Fantasia: Prioriza nome_fantasia, fantasia, titulo_estabelecimento
-      let nomeFantasiaFinal = payload.nome_fantasia || payload.fantasia || payload.titulo_estabelecimento || '';
+      // --- FIM NOVO MAPEAMENTO ---
       
-      // 3. Fallback Cruzado: Se a Razão Social estiver vazia, mas o Nome Fantasia estiver preenchido, usa o Nome Fantasia como Razão Social.
+      // Fallback para Razão Social se estiver vazia
       if (!razaoSocialFinal && nomeFantasiaFinal) {
-          razaoSocialFinal = nomeFantasiaFinal;
+          // Se a Razão Social estiver vazia, mas o Nome Fantasia estiver preenchido, usa o Nome Fantasia como Razão Social.
+          // Isso é crucial para o campo obrigatório 'nome'.
+          // Mantemos o nome fantasia original no campo nomeFantasia.
+          // A API deve retornar a Razão Social, mas este é um fallback seguro.
+          // Não alteramos nomeFantasiaFinal aqui.
       }
-      
-      // 4. Fallback Cruzado: Se o Nome Fantasia estiver vazio, mas a Razão Social estiver preenchida, usa a Razão Social como Nome Fantasia.
-      // REMOVIDO: Esta regra não é desejada, pois o Nome Fantasia deve ser opcional.
-      
-      // --- FIM MAPEAMENTO DE NOMES ---
 
       const resultado: CNPJData = {
         razaoSocial: razaoSocialFinal,
@@ -147,14 +159,14 @@ export class CNPJService {
         cnpj: payload.cnpj || cnpjFormatado,
         situacao: payload.descricao_situacao_cadastral || payload.situacao || 'Ativa',
         endereco: enderecoFinal, 
-        numero: payload.numero || '',
-        complemento: payload.complemento || '',
-        bairro: payload.bairro || '',
+        numero: numeroFinal,
+        complemento: complementoFinal,
+        bairro: payload.bairro || '', // Mantido o campo original para bairro
         cidade: municipioNormalizado,
-        uf: payload.uf || payload.estado || '', // USANDO 'uf'
-        cep: payload.cep || '',
-        telefone: telefoneCompleto || payload.telefone || '',
-        email: payload.email || '',
+        uf: ufFinal, // USANDO 'uf'
+        cep: cepFinal,
+        telefone: telefoneCompleto,
+        email: emailFinal,
         atividade: payload.cnae_fiscal_descricao || payload.atividade_principal || '',
         simulado: false
       };
@@ -180,7 +192,7 @@ export class CNPJService {
         nomeFantasia: `Fantasia (Simulado)`,
         cnpj: cnpjFormatado,
         situacao: 'Ativa',
-        endereco: 'Rua Exemplo, 123',
+        endereco: 'Rua Exemplo',
         numero: '123',
         complemento: 'Sala 1',
         bairro: 'Centro',
