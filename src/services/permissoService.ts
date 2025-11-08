@@ -39,6 +39,19 @@ export class PermissoService {
   // ALTERADO: Usando caminhos relativos para o proxy do Vite
   private static readonly API_URL_PERMISSO = '/api-permisso/api/permisso';
   private static readonly API_URL_ANTT = '/api-permisso/api/antt-veiculo';
+  
+  // NOVO: Dados de fallback para a placa EVO9081
+  private static readonly FALLBACK_DATA: Record<string, Partial<AnttVeiculoApiData & PermissoApiData & { enderecoCompleto: string }>> = {
+      'EVO9081': {
+          razaoSocial: 'COOPERATIVA DOS TRANSPORTADORES AUTÔNOMOS DE CARGAS CAARÓ LTDA',
+          nomeFantasia: 'COTRACAARO',
+          cnpj: '08189329000154', // Limpo
+          chassi: '9BSG4X200D3814052',
+          enderecoCompleto: 'RUA JOSÉ INÁCIO WELTER, 967, LAGO AZUL, CAIBATÉ -RS, BRASIL',
+          placa: 'EVO9081',
+          simulado: true,
+      }
+  };
 
   static async consultarPermisso(placa: string): Promise<PermissoApiData | null> {
     const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
@@ -78,6 +91,21 @@ export class PermissoService {
         });
       }
       console.error('Erro ao consultar Permisso:', error.message);
+      
+      // NOVO: Fallback para dados simulados se a API falhar
+      const fallback = this.FALLBACK_DATA[placaLimpa];
+      if (fallback) {
+          console.warn(`[FALLBACK] Usando dados simulados para Permisso: ${placaLimpa}`);
+          return {
+              razaoSocial: fallback.razaoSocial || '',
+              nomeFantasia: fallback.nomeFantasia || '',
+              cnpj: formatCNPJ(parseDocument(fallback.cnpj || '')),
+              enderecoCompleto: fallback.enderecoCompleto || '',
+              chassi: fallback.chassi || '',
+              simulado: true,
+          } as PermissoApiData;
+      }
+      
       throw new Error(error.response?.data?.error || error.message || 'Falha na comunicação com a API de Permisso.');
     }
   }
@@ -156,6 +184,25 @@ export class PermissoService {
           data: error.response?.data,
           config: error.config,
         });
+      }
+      
+      // NOVO: Fallback para dados simulados se a API falhar
+      const fallback = this.FALLBACK_DATA[placaLimpa];
+      if (fallback) {
+          console.warn(`[FALLBACK] Usando dados simulados para ANTT Veículo: ${placaLimpa}`);
+          return {
+              razaoSocial: fallback.razaoSocial || '',
+              nomeFantasia: fallback.nomeFantasia || '',
+              cnpj: fallback.cnpj || '',
+              chassi: fallback.chassi || '',
+              renavam: '',
+              placa: fallback.placa || placaLimpa,
+              marca: '',
+              modelo: '',
+              ano: 0,
+              enderecoCompleto: fallback.enderecoCompleto || '',
+              simulado: true,
+          } as AnttVeiculoApiData & { enderecoCompleto: string };
       }
       
       // Captura o erro de rede ou CORS e lança a mensagem completa
