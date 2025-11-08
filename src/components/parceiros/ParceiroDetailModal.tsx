@@ -99,11 +99,11 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
         filtered = filtered.filter(v => v.tipo === veiculoFilterType);
     }
     
-    // Ordenação: Cavalo (1), Truck (2), Carreta (3)
+    // Ordenação: 1º Cavalo, 2º Carreta, 3º Truck
     const typeOrder = (type: string) => {
         if (type === 'Cavalo') return 1;
-        if (type === 'Truck') return 2;
-        if (type === 'Carreta') return 3;
+        if (type === 'Carreta') return 2;
+        if (type === 'Truck') return 3;
         return 4;
     };
     
