@@ -72,6 +72,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
     return 'placa';
   }, [formData.tipo]);
   
+  // A placa no estado já está sem hífen (graças ao formatPlaca no onChange)
   const placaValue = formData[placaField] || '';
 
   // Handler unificado para Placa (Cavalo, Truck, Carreta)
@@ -81,24 +82,24 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
     // 1. Limpa o valor para obter apenas caracteres alfanuméricos e limita a 7
     const placaLimpa = value.replace(/[^A-Z0-9]/gi, '').toUpperCase().substring(0, 7);
     
-    // 2. Aplica formatação de placa (apenas para visualização)
+    // 2. Aplica formatação de placa (que agora retorna sem hífen)
     const formatted = formatPlaca(value); 
     
-    // 3. Atualiza o estado com o valor formatado
+    // 3. Atualiza o estado com o valor formatado (sem hífen)
     setFormData(prev => ({ ...prev, [placaField]: formatted }));
     
     // 4. Dispara a consulta se a placa estiver completa (7 caracteres alfanuméricos)
     if (placaLimpa.length === 7 && !consultandoPlaca) {
-        // Passamos o valor formatado para a consulta
-        handlePlacaConsultation(formatted, formData.tipo);
+        // Passamos a placa limpa para a consulta
+        handlePlacaConsultation(placaLimpa, formData.tipo);
     }
   };
   
   // Handler para forçar maiúsculas no blur (para todos os campos de placa)
   const handlePlacaBlur = () => {
-    // Garante que o valor final seja formatado e em maiúsculas
+    // Garante que o valor final seja limpo e em maiúsculas (formatPlaca já faz isso)
     const finalFormatted = formatPlaca(placaValue);
-    setFormData(prev => ({ ...prev, [placaField]: forceUpperCase(finalFormatted) }));
+    setFormData(prev => ({ ...prev, [placaField]: finalFormatted }));
   };
   
   // Determina se o campo de carroceria deve ser exibido
@@ -119,7 +120,8 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
         setPlacaError('Preencha a placa corretamente antes de sincronizar o Permisso.');
         return;
     }
-    handlePermissoConsultation(placa);
+    // Passa a placa limpa para a consulta
+    handlePermissoConsultation(placa.replace(/[^A-Z0-9]/gi, ''));
   };
   
   const isPermissoDataLoaded = !!formData.permissoRazaoSocial || !!formData.permissoCnpj;
@@ -323,7 +325,6 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                         value={formData.permissoRazaoSocial}
                         onChange={(e) => handlePermissoChange('permissoRazaoSocial', e.target.value)}
                         className="input-field"
-                        // Removido required
                       />
                     </div>
                     <div>
@@ -343,7 +344,6 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                         onChange={(e) => handlePermissoChange('permissoCnpj', parseDocument(e.target.value))}
                         className="input-field"
                         placeholder="00.000.000/0000-00"
-                        // Removido required
                       />
                     </div>
                     <div className="md:col-span-2">

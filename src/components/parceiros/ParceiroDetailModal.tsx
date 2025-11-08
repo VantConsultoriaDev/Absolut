@@ -323,7 +323,8 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
       ) : (
         <div className="space-y-3">
           {filteredAndSortedVeiculos.map(v => {
-            const placaDisplay = v.placa || v.placaCavalo || v.placaCarreta || 'N/A';
+            // ALTERADO: formatPlaca agora retorna sem hífen
+            const placaDisplay = formatPlaca(v.placa || v.placaCavalo || v.placaCarreta || 'N/A');
             const permisso = getPermissoByVeiculoId(v.id);
             const isCavaloOuTruck = v.tipo === 'Cavalo' || v.tipo === 'Truck';
             
@@ -333,7 +334,7 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
                   <Truck className={`h-6 w-6 ${isCavaloOuTruck ? 'text-amber-600' : 'text-gray-600'} flex-shrink-0`} />
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{v.fabricante} {v.modelo} ({v.ano})</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{formatPlaca(placaDisplay)} ({v.tipo})</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{placaDisplay} ({v.tipo})</p>
                     {v.chassis && (
                         <p className="text-xs text-gray-500 dark:text-gray-400">Chassis: {v.chassis}</p>
                     )}

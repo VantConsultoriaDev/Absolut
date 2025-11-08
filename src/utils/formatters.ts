@@ -177,21 +177,16 @@ export const formatCurrency = (value: string | number): string => {
 };
 
 /**
- * Formatação de placa: Padroniza para XXX-XXXX se for uma placa de 7 caracteres.
- * @param value Placa bruta (ex: ABC1234, ABC1D23)
- * @returns Placa formatada (ex: ABC-1234)
+ * Formatação de placa: Padroniza para 7 caracteres sem hífen.
+ * @param value Placa bruta (ex: ABC1234, ABC-1234, ABC1D23)
+ * @returns Placa formatada sem hífen (ex: ABC1234)
  */
 export const formatPlaca = (value: string): string => {
   // Remove caracteres não alfanuméricos (case-insensitive) e limita a 7 caracteres, sem forçar caixa
   const alphanumeric = value.replace(/[^A-Z0-9]/gi, '').substring(0, 7).toUpperCase();
   
-  // Se a placa não estiver completa, retorna o valor bruto (sem formatação)
-  if (alphanumeric.length < 7) {
-      return value;
-  }
-  
-  // Aplica o formato XXX-XXXX para qualquer placa de 7 caracteres (antiga ou Mercosul)
-  return alphanumeric.replace(/^([A-Z]{3})([A-Z0-9]{4})$/i, '$1-$2');
+  // Retorna a placa limpa e em maiúsculas, sem hífen
+  return alphanumeric;
 };
 
 // Função para converter valor monetário formatado para número
@@ -202,6 +197,19 @@ export const parseCurrency = (value: string): number => {
 
 // Função para converter documento formatado para apenas números
 export const parseDocument = (value: string): string => {
+  // CORREÇÃO: Garante que a placa não seja limpa aqui, pois ela pode conter letras
+  // A placa deve ser limpa usando a lógica específica de placa (formatPlaca ou replace)
+  // Esta função é primariamente para CPF/CNPJ.
+  
+  // Se o valor for uma placa (7 caracteres alfanuméricos), não limpa completamente
+  const isLikelyPlaca = value.length >= 7 && /^[A-Z0-9-]+$/i.test(value);
+  
+  if (isLikelyPlaca) {
+      // Se for placa, remove apenas o hífen (se houver)
+      return value.replace(/-/g, '');
+  }
+  
+  // Para documentos (CPF/CNPJ), remove tudo exceto dígitos
   return value.replace(/\D/g, '');
 };
 
