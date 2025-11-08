@@ -85,7 +85,7 @@ const initialParceiroFormData: Parceiro = {
   pixKey: '',
   pixTitular: '',
   
-  // NOVOS CAMPOS DE IDENTIFICAÇÃO
+  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
   dataNascimento: undefined,
   rg: undefined,
   orgaoEmissor: undefined,
@@ -157,6 +157,7 @@ const Parceiros: React.FC = () => {
   const [consultandoCPF, setConsultandoCPF] = useState(false);
   const [cpfConsultado, setCpfConsultado] = useState(false);
   const [cpfError, setCpfError] = useState('');
+  const [lastConsultedCpf, setLastConsultedCpf] = useState('');
   
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
   const [placaConsultada, setPlacaConsultada] = useState(false);
@@ -407,7 +408,7 @@ const Parceiros: React.FC = () => {
     setMotoristaFormData({
       parceiroId: motorista.parceiroId,
       nome: motorista.nome,
-      cpf: formatDocument(motorista.cpf, 'PF'),
+      cpf: formatDocument(motorista.cpf, motorista.nacionalidade === 'Brasileiro' ? 'PF' : 'INTERNACIONAL'), // Usa INTERNACIONAL para não formatar
       cnh: motorista.cnh,
       nacionalidade: motorista.nacionalidade || 'Brasileiro',
       categoriaCnh: motorista.categoriaCnh || '',
@@ -432,14 +433,28 @@ const Parceiros: React.FC = () => {
   const handleSubmitMotorista = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const cleanCpf = parseDocument(motoristaFormData.cpf);
-    const cleanTelefone = parseDocument(motoristaFormData.telefone || '');
-
-    if (cleanCpf.length !== 11) {
-        showError('CPF inválido.');
-        return;
+    const isBrasileiro = motoristaFormData.nacionalidade === 'Brasileiro';
+    let finalDocument = motoristaFormData.cpf.trim();
+    
+    if (isBrasileiro) {
+        // Para brasileiro, limpamos e validamos o CPF
+        finalDocument = parseDocument(finalDocument);
+        
+        if (finalDocument.length !== 11 || !isValidCPF(finalDocument)) {
+            showError('CPF inválido. Verifique o número e os dígitos.');
+            return;
+        }
+    } else {
+        // Estrangeiro: Apenas verifica se o campo Documento está preenchido
+        if (!finalDocument) {
+            showError('Documento é obrigatório para motoristas estrangeiros.');
+            return;
+        }
+        // Para estrangeiro, o documento é mantido como está (pode conter letras/símbolos)
     }
     
+    const cleanTelefone = parseDocument(motoristaFormData.telefone || '');
+
     // 1. Converte data de nascimento de volta para Date
     const dataNascimentoDate = motoristaFormData.dataNascimentoStr 
         ? createLocalDate(motoristaFormData.dataNascimentoStr) 
@@ -447,7 +462,7 @@ const Parceiros: React.FC = () => {
         
     const payload: Omit<Motorista, 'id' | 'createdAt' | 'updatedAt'> = {
       ...motoristaFormData,
-      cpf: cleanCpf,
+      cpf: finalDocument, // Usa o documento final (limpo para BR, bruto para Estrangeiro)
       telefone: cleanTelefone,
       validadeCnh: motoristaFormData.validadeCnh ? createLocalDate(motoristaFormData.validadeCnh) : undefined,
       isActive: true, // Força como ativo (não há controle de status na UI)
@@ -466,7 +481,7 @@ const Parceiros: React.FC = () => {
       }
       setShowMotoristaForm(false);
       resetMotoristaForm();
-      // REABRE O MODAL DE DETALHES (se ele foi fechado pelo clique externo no modal secundário)
+      // Reabre o modal de detalhes (se ele foi fechado pelo clique externo no modal secundário)
       const parceiro = parceiros.find(p => p.id === motoristaFormData.parceiroId);
       if (parceiro) {
           setDetailTargetParceiro(parceiro);
