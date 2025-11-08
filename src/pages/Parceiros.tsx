@@ -580,9 +580,15 @@ const Parceiros: React.FC = () => {
     let permissoPayload: PermissoInternacional | undefined = undefined;
     const isPermissoRequired = veiculoFormData.tipo === 'Cavalo' || veiculoFormData.tipo === 'Truck';
     
-    if (isPermissoRequired) {
+    // NOVO: Verifica se algum campo de Permisso foi preenchido
+    const isPermissoFilled = !!veiculoFormData.permissoRazaoSocial || !!veiculoFormData.permissoCnpj || !!veiculoFormData.permissoEnderecoCompleto;
+    
+    if (isPermissoRequired && isPermissoFilled) {
+        // Se for Cavalo/Truck E o usuário preencheu algum campo, criamos o payload
+        
+        // Validação mínima se o usuário tentou preencher
         if (!veiculoFormData.permissoRazaoSocial || !veiculoFormData.permissoCnpj) {
-            showError('Razão Social e CNPJ do Permisso são obrigatórios para Cavalo/Truck.');
+            showError('Se você preencher o Permisso, Razão Social e CNPJ são obrigatórios.');
             return;
         }
         
@@ -615,7 +621,7 @@ const Parceiros: React.FC = () => {
       carroceria: veiculoFormData.carroceria,
       isActive: true,
       
-      // Adiciona o Permisso ao payload do Veículo
+      // Adiciona o Permisso ao payload do Veículo (undefined se não for Cavalo/Truck ou se não foi preenchido)
       permisso: permissoPayload,
     };
 
@@ -685,7 +691,7 @@ const Parceiros: React.FC = () => {
                 permissoNomeFantasia: permissoData?.nomeFantasia || anttData?.nomeFantasia || prev.permissoNomeFantasia,
                 permissoCnpj: parseDocument(permissoData?.cnpj || anttData?.cnpj || prev.permissoCnpj),
                 permissoEnderecoCompleto: permissoData?.enderecoCompleto || anttData?.enderecoCompleto || prev.permissoEnderecoCompleto,
-                permissoSimulado: false, // Assume que a consulta foi real
+                permissoSimulado: (permissoData as any)?.simulado || (anttData as any)?.simulado || false, // Verifica se algum dos dados é simulado
                 permissoDataConsulta: new Date(),
                 permissoChassiAtualizado: newChassis,
             };
@@ -1286,7 +1292,7 @@ const Parceiros: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Endereço, Número e Complemento (Apenas para PJ) */}
                 {parceiroFormData.tipo === 'PJ' && (
                     <>

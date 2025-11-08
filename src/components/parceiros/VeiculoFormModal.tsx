@@ -280,7 +280,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                   <div className="flex items-center justify-between">
                     <h4 className="text-md font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <FileText className="h-5 w-5 text-purple-600" />
-                      Dados do Permisso Internacional
+                      Dados do Permisso Internacional (Opcional)
                     </h4>
                     <button
                       type="button"
@@ -317,13 +317,13 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razão Social</label>
                       <input
                         type="text"
                         value={formData.permissoRazaoSocial}
                         onChange={(e) => handlePermissoChange('permissoRazaoSocial', e.target.value)}
                         className="input-field"
-                        required
+                        // Removido required
                       />
                     </div>
                     <div>
@@ -336,14 +336,14 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ</label>
                       <input
                         type="text"
                         value={formatDocument(formData.permissoCnpj, 'PJ')}
                         onChange={(e) => handlePermissoChange('permissoCnpj', parseDocument(e.target.value))}
                         className="input-field"
                         placeholder="00.000.000/0000-00"
-                        required
+                        // Removido required
                       />
                     </div>
                     <div className="md:col-span-2">
