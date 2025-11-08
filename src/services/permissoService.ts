@@ -41,13 +41,13 @@ export class PermissoService {
   private static readonly API_URL_ANTT = '/api-permisso/api/antt-veiculo';
 
   static async consultarPermisso(placa: string): Promise<PermissoApiData | null> {
+    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
+    if (placaLimpa.length < 7) {
+      throw new Error('Placa inválida para consulta.');
+    }
+    
     try {
-      const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      
-      if (placaLimpa.length < 7) {
-        throw new Error('Placa inválida para consulta.');
-      }
-
       const response = await axios.get(this.API_URL_PERMISSO, {
         params: { placa: placaLimpa },
         timeout: 30000, // Aumentado para 30 segundos
@@ -69,23 +69,30 @@ export class PermissoService {
       };
 
     } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        console.error('AXIOS ERROR DETAILS (Permisso):', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config,
+        });
+      }
       console.error('Erro ao consultar Permisso:', error.message);
       throw new Error(error.response?.data?.error || error.message || 'Falha na comunicação com a API de Permisso.');
     }
   }
   
   static async consultarAnttVeiculo(placa: string): Promise<AnttVeiculoApiData & { enderecoCompleto: string } | null> {
-    try {
-      const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      
-      if (placaLimpa.length < 7) {
-        throw new Error('Placa inválida para consulta.');
-      }
+    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
+    if (placaLimpa.length < 7) {
+      throw new Error('Placa inválida para consulta.');
+    }
 
-      // Construção da URL com a placa
-      // ALTERADO: Usando o caminho do proxy
-      const url = `${this.API_URL_ANTT}/${placaLimpa}`;
-      
+    // Construção da URL com a placa
+    const url = `${this.API_URL_ANTT}/${placaLimpa}`;
+    
+    try {
       // Simplificando a chamada para GET sem configurações extras, exceto timeout
       const response = await axios.get(url, {
         timeout: 30000, // Aumentado para 30 segundos
@@ -143,7 +150,7 @@ export class PermissoService {
     } catch (error: any) {
       // Loga o erro completo do Axios para diagnóstico no console
       if (axios.isAxiosError(error)) {
-        console.error('AXIOS ERROR DETAILS:', {
+        console.error('AXIOS ERROR DETAILS (ANTT Veiculo):', {
           message: error.message,
           status: error.response?.status,
           data: error.response?.data,
