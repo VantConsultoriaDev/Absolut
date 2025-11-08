@@ -652,12 +652,15 @@ const Parceiros: React.FC = () => {
     setConsultandoPermisso(true);
     setPermissoError('');
     
+    // NOVO: Limpa a placa removendo o hífen e outros caracteres não alfanuméricos
+    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    
     try {
         // 1. Consulta ANTT Veículo (para dados básicos e endereço)
-        const anttData: AnttVeiculoApiData & { enderecoCompleto: string } | null = await PermissoService.consultarAnttVeiculo(placa);
+        const anttData: AnttVeiculoApiData & { enderecoCompleto: string } | null = await PermissoService.consultarAnttVeiculo(placaLimpa);
         
         // 2. Consulta Permisso (para dados de Razão Social e CNPJ)
-        const permissoData: PermissoApiData | null = await PermissoService.consultarPermisso(placa);
+        const permissoData: PermissoApiData | null = await PermissoService.consultarPermisso(placaLimpa);
         
         if (!anttData && !permissoData) {
             setPermissoError('Nenhum dado ANTT ou Permisso encontrado para esta placa.');
@@ -986,6 +989,7 @@ const Parceiros: React.FC = () => {
         {filteredParceiros.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">Nenhum parceiro encontrado.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Tente ajustar sua busca ou adicione um novo parceiro.</p>
           </div>
         ) : (
           filteredParceiros.map(p => (
@@ -1316,7 +1320,6 @@ const Parceiros: React.FC = () => {
                           </div>
                         </div>
                         
-                        {/* Cidade, UF, CEP */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
