@@ -71,10 +71,8 @@ export const normalizeVeiculoCreate = (d: Omit<Veiculo, 'id' | 'createdAt' | 'up
   placa: d.placa,
   placaCavalo: d.placaCavalo,
   placaCarreta: d.placaCarreta,
-  // REMOVIDO: placaCarreta1: d.placaCarreta1,
-  // REMOVIDO: placaCarreta2: d.placaCarreta2,
-  // REMOVIDO: placaDolly: d.placaDolly,
   chassis: d.chassis, // Garantindo que chassis esteja aqui
+  permisso: d.permisso, // NOVO: Incluindo o Permisso
 });
 
 export const normalizeCargaCreate = (d: Omit<Carga, 'id' | 'createdAt' | 'updatedAt'>) => ({
@@ -86,12 +84,7 @@ export const normalizeCargaCreate = (d: Omit<Carga, 'id' | 'createdAt' | 'update
   observacoes: d.observacoes,
 });
 
-export const normalizePermissoCreate = (d: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'>) => ({
-  ...d,
-  razaoSocial: d.razaoSocial,
-  nomeFantasia: d.nomeFantasia,
-  enderecoCompleto: d.enderecoCompleto,
-});
+// REMOVIDO: normalizePermissoCreate
 
 export const normalizeCompromissoCreate = (d: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => ({
   ...d,
@@ -138,7 +131,14 @@ export const applyUpdateMotorista = (current: Motorista, changes: Partial<Motori
 
 export const applyUpdateVeiculo = (current: Veiculo, changes: Partial<Veiculo>): Veiculo => {
   const c = stripUndefined(changes);
-  const merged: Veiculo = { ...current, ...c };
+  
+  // Se 'permisso' estiver presente em changes, ele deve substituir o objeto inteiro.
+  const merged: Veiculo = { 
+      ...current, 
+      ...c,
+      permisso: c.permisso !== undefined ? c.permisso : current.permisso,
+  };
+  
   merged.updatedAt = new Date();
   return merged;
 };

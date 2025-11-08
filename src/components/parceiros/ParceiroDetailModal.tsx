@@ -21,7 +21,7 @@ interface ParceiroDetailModalProps {
   onEditVeiculo: (veiculo: Veiculo) => void;
   onDeleteMotorista: (id: string) => void;
   onDeleteVeiculo: (id: string) => void;
-  onOpenPermissoModal: (veiculo: Veiculo) => void;
+  // REMOVIDO: onOpenPermissoModal: (veiculo: Veiculo) => void;
 }
 
 const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
@@ -39,7 +39,7 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
   onEditVeiculo,
   onDeleteMotorista,
   onDeleteVeiculo,
-  onOpenPermissoModal,
+  // REMOVIDO: onOpenPermissoModal,
 }) => {
   const { modalRef } = useModal({ isOpen, onClose });
   const [activeTab, setActiveTab] = useState<'detalhes' | 'motoristas' | 'veiculos'>('detalhes');
@@ -358,11 +358,6 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
                   <button onClick={() => onEditVeiculo(v)} className="text-blue-600 hover:text-blue-800 p-1" title="Editar">
                     <Edit className="h-4 w-4" />
                   </button>
-                  {isCavaloOuTruck && (
-                    <button onClick={() => onOpenPermissoModal(v)} className="text-purple-600 hover:text-purple-800 p-1" title="Gerenciar Permisso">
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                  )}
                   <button onClick={() => onDeleteVeiculo(v.id)} className="text-red-600 hover:text-red-800 p-1" title="Excluir">
                     <Trash2 className="h-4 w-4" />
                   </button>

@@ -24,21 +24,14 @@ import { format, isValid } from 'date-fns';
 import ParceiroCard from '../components/parceiros/ParceiroCard';
 import ParceiroDetailModal from '../components/parceiros/ParceiroDetailModal';
 import MotoristaFormModal, { MotoristaFormData } from '../components/parceiros/MotoristaFormModal';
-import VeiculoFormModal from '../components/parceiros/VeiculoFormModal';
-import PermissoModal, { PermissoData } from '../components/parceiros/PermissoModal'; // Importando PermissoData
+import VeiculoFormModal, { VeiculoFormData } from '../components/parceiros/VeiculoFormModal'; // Importando VeiculoFormData
 import ConfirmationModal from '../components/ConfirmationModal';
 import { showError } from '../utils/toast';
 import { CNPJService } from '../services/cnpjService'; // Importando CNPJService
 import { VehicleService } from '../services/vehicleService'; // Importando VehicleService
 import { PlacaData } from '../services/vehicleService'; // Importando PlacaData
 import { CPFService } from '../services/cpfService'; // NOVO: Importando CPFService
-
-// Tipagem para o formulário de Veículo (corrigida)
-interface VeiculoFormData extends Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'permisso' | 'ano' | 'capacidade'> {
-  parceiroId: string;
-  ano: string;
-  capacidade: string;
-}
+import { PermissoService, PermissoApiData, AnttVeiculoApiData } from '../services/permissoService'; // Importando PermissoService
 
 // Dados iniciais (inferred)
 const initialMotoristaFormData: MotoristaFormData = {
@@ -69,6 +62,15 @@ const initialVeiculoFormData: VeiculoFormData = {
   carretasSelecionadas: [],
   isActive: true,
   userId: '',
+  
+  // Permisso fields (NOVO)
+  permissoRazaoSocial: '',
+  permissoNomeFantasia: '',
+  permissoCnpj: '',
+  permissoEnderecoCompleto: '',
+  permissoSimulado: false,
+  permissoDataConsulta: undefined,
+  permissoChassiAtualizado: undefined,
 };
 
 const initialParceiroFormData: Parceiro = {
@@ -121,7 +123,6 @@ const Parceiros: React.FC = () => {
     deleteVeiculo,
     getMotoristasByParceiro,
     getVeiculosByParceiro,
-    createPermisso,
     getPermissoByVeiculoId,
   } = useDatabase();
 
@@ -139,8 +140,9 @@ const Parceiros: React.FC = () => {
   const [editingVeiculoId, setEditingVeiculoId] = useState<string | null>(null);
   const [veiculoFormData, setVeiculoFormData] = useState<VeiculoFormData>(initialVeiculoFormData);
   
-  const [showPermissoModal, setShowPermissoModal] = useState(false);
-  const [permissoTargetVeiculo, setPermissoTargetVeiculo] = useState<Veiculo | null>(null);
+  // REMOVIDO: Permisso Modal State
+  // const [showPermissoModal, setShowPermissoModal] = useState(false);
+  // const [permissoTargetVeiculo, setPermissoTargetVeiculo] = useState<Veiculo | null>(null);
   
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailTargetParceiro, setDetailTargetParceiro] = useState<Parceiro | null>(null);
@@ -157,7 +159,7 @@ const Parceiros: React.FC = () => {
   const [consultandoCPF, setConsultandoCPF] = useState(false);
   const [cpfConsultado, setCpfConsultado] = useState(false);
   const [cpfError, setCpfError] = useState('');
-  const [lastConsultedCpf, setLastConsultedCpf] = useState(''); // <-- Declaração única
+  const [lastConsultedCpf, setLastConsultedCpf] = useState('');
   
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
   const [placaConsultada, setPlacaConsultada] = useState(false);
@@ -170,6 +172,10 @@ const Parceiros: React.FC = () => {
   // NOVO: Rastreamento do último valor consultado (limpo)
   const [lastConsultedCnpj, setLastConsultedCnpj] = useState('');
   const [lastConsultedPlaca, setLastConsultedPlaca] = useState('');
+  
+  // NOVO: Estado de consulta de Permisso
+  const [consultandoPermisso, setConsultandoPermisso] = useState(false);
+  const [permissoError, setPermissoError] = useState('');
 
   // Filtros
   const [query, setQuery] = useState('');
@@ -186,12 +192,12 @@ const Parceiros: React.FC = () => {
       setShowParceiroForm(false);
       setShowMotoristaForm(false);
       setShowVeiculoForm(false);
-      setShowPermissoModal(false);
+      // REMOVIDO: setShowPermissoModal(false);
       setShowDetailModal(false);
       setEditingParceiroId(null);
       setEditingMotoristaId(null);
       setEditingVeiculoId(null);
-      setPermissoTargetVeiculo(null);
+      // REMOVIDO: setPermissoTargetVeiculo(null);
       setDetailTargetParceiro(null);
       resetParceiroForm();
       resetMotoristaForm();
@@ -253,6 +259,10 @@ const Parceiros: React.FC = () => {
     setConsultandoPlaca(false);
     setPlacaError('');
     setLastConsultedPlaca('');
+    
+    // NOVO: Reset de estados de Permisso
+    setConsultandoPermisso(false);
+    setPermissoError('');
   };
 
   // --- PARCEIRO CRUD ---
@@ -510,6 +520,9 @@ const Parceiros: React.FC = () => {
     const placa = veiculo.placa || veiculo.placaCavalo || veiculo.placaCarreta || '';
     const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '');
     
+    // Mapeia os dados do Permisso existente para o estado do formulário
+    const permisso = getPermissoByVeiculoId(veiculo.id);
+    
     setVeiculoFormData({
       parceiroId: veiculo.parceiroId,
       placa: veiculo.placa || '',
@@ -526,6 +539,15 @@ const Parceiros: React.FC = () => {
       carretasSelecionadas: veiculo.carretasSelecionadas || [],
       isActive: veiculo.isActive ?? true,
       userId: veiculo.userId || '',
+      
+      // Dados do Permisso
+      permissoRazaoSocial: permisso?.razaoSocial || '',
+      permissoNomeFantasia: permisso?.nomeFantasia || '',
+      permissoCnpj: permisso?.cnpj || '',
+      permissoEnderecoCompleto: permisso?.enderecoCompleto || '',
+      permissoSimulado: permisso?.simulado || false,
+      permissoDataConsulta: permisso?.dataConsulta,
+      permissoChassiAtualizado: undefined, // Limpa o chassi atualizado
     });
     setEditingVeiculoId(veiculo.id);
     setShowVeiculoForm(true);
@@ -554,7 +576,31 @@ const Parceiros: React.FC = () => {
     // 1. Padroniza a placa para XXX-XXXX e força maiúsculas
     const formattedPlaca = forceUpperCase(formatPlaca(placaValue));
     
-    // 2. Cria o payload
+    // 2. Prepara o payload do Permisso (se aplicável)
+    let permissoPayload: PermissoInternacional | undefined = undefined;
+    const isPermissoRequired = veiculoFormData.tipo === 'Cavalo' || veiculoFormData.tipo === 'Truck';
+    
+    if (isPermissoRequired) {
+        if (!veiculoFormData.permissoRazaoSocial || !veiculoFormData.permissoCnpj) {
+            showError('Razão Social e CNPJ do Permisso são obrigatórios para Cavalo/Truck.');
+            return;
+        }
+        
+        permissoPayload = {
+            id: editingVeiculoId ? getPermissoByVeiculoId(editingVeiculoId)?.id || '' : '', // ID é opcional na criação
+            veiculoId: editingVeiculoId || '', // Será preenchido no contexto se for criação
+            razaoSocial: veiculoFormData.permissoRazaoSocial,
+            nomeFantasia: veiculoFormData.permissoNomeFantasia,
+            cnpj: parseDocument(veiculoFormData.permissoCnpj),
+            enderecoCompleto: veiculoFormData.permissoEnderecoCompleto,
+            dataConsulta: veiculoFormData.permissoDataConsulta || new Date(),
+            simulado: veiculoFormData.permissoSimulado,
+            createdAt: new Date(), // Placeholder
+            updatedAt: new Date(), // Placeholder
+        } as PermissoInternacional;
+    }
+    
+    // 3. Cria o payload do Veículo
     const payload: Omit<Veiculo, 'id' | 'createdAt' | 'updatedAt'> = {
       ...veiculoFormData,
       // Aplica a placa formatada e em maiúsculas
@@ -565,8 +611,12 @@ const Parceiros: React.FC = () => {
       // Campos numéricos e de texto
       ano: parseInt(veiculoFormData.ano) || undefined,
       capacidade: parseFloat(veiculoFormData.capacidade) || undefined,
-      chassis: forceUpperCase(veiculoFormData.chassis || ''),
-      isActive: true, // Força como ativo (não há controle de status na UI)
+      chassis: veiculoFormData.permissoChassiAtualizado || forceUpperCase(veiculoFormData.chassis || ''), // Prioriza o chassi da consulta Permisso
+      carroceria: veiculoFormData.carroceria,
+      isActive: true,
+      
+      // Adiciona o Permisso ao payload do Veículo
+      permisso: permissoPayload,
     };
 
     try {
@@ -597,47 +647,70 @@ const Parceiros: React.FC = () => {
     }
   };
   
-  // --- PERMISSO ---
-  const handleOpenPermissoModal = (veiculo: Veiculo) => {
-    setPermissoTargetVeiculo(veiculo);
-    setShowPermissoModal(true);
+  // --- CONSULTA API PERMISSO/ANTT ---
+  const handlePermissoConsultation = async (placa: string) => {
+    setConsultandoPermisso(true);
+    setPermissoError('');
+    
+    try {
+        // 1. Consulta ANTT Veículo (para dados básicos e endereço)
+        const anttData: AnttVeiculoApiData & { enderecoCompleto: string } | null = await PermissoService.consultarAnttVeiculo(placa);
+        
+        // 2. Consulta Permisso (para dados de Razão Social e CNPJ)
+        const permissoData: PermissoApiData | null = await PermissoService.consultarPermisso(placa);
+        
+        if (!anttData && !permissoData) {
+            setPermissoError('Nenhum dado ANTT ou Permisso encontrado para esta placa.');
+            return;
+        }
+        
+        // 3. Consolida e atualiza o formulário
+        setVeiculoFormData(prev => {
+            const newChassis = anttData?.chassi || permissoData?.chassi || prev.chassis;
+            
+            return {
+                ...prev,
+                // Dados do Veículo (ANTT)
+                fabricante: anttData?.marca || prev.fabricante,
+                modelo: anttData?.modelo || prev.modelo,
+                ano: anttData?.ano?.toString() || prev.ano,
+                chassis: newChassis || prev.chassis,
+                carroceria: anttData?.carroceria || prev.carroceria,
+                
+                // Dados do Permisso (Prioriza Permisso, fallback para ANTT)
+                permissoRazaoSocial: permissoData?.razaoSocial || anttData?.razaoSocial || prev.permissoRazaoSocial,
+                permissoNomeFantasia: permissoData?.nomeFantasia || anttData?.nomeFantasia || prev.permissoNomeFantasia,
+                permissoCnpj: parseDocument(permissoData?.cnpj || anttData?.cnpj || prev.permissoCnpj),
+                permissoEnderecoCompleto: permissoData?.enderecoCompleto || anttData?.enderecoCompleto || prev.permissoEnderecoCompleto,
+                permissoSimulado: false, // Assume que a consulta foi real
+                permissoDataConsulta: new Date(),
+                permissoChassiAtualizado: newChassis,
+            };
+        });
+        
+        setPermissoError('');
+        showError('Dados de Permisso/ANTT sincronizados com sucesso.');
+        
+    } catch (err) {
+        console.error('Erro na consulta Permisso/ANTT:', err);
+        setPermissoError(err instanceof Error ? err.message : 'Falha na sincronização. Verifique a placa e tente novamente.');
+        
+        // Se falhar, tenta preencher com dados ANTT se existirem, mas marca como simulado
+        if (permissoError.includes('token') || permissoError.includes('autorização')) {
+            showError('Erro de autorização na API. Verifique o token VITE_APIBRASIL_TOKEN.');
+        }
+        
+        // Fallback para dados simulados se a API falhar completamente
+        setVeiculoFormData(prev => ({
+            ...prev,
+            permissoSimulado: true,
+            permissoDataConsulta: new Date(),
+        }));
+    } finally {
+        setConsultandoPermisso(false);
+    }
   };
   
-  const handleSavePermisso = (veiculoId: string, data: PermissoData, newChassi?: string) => {
-    // 1. Cria/Atualiza o Permisso no contexto
-    const existing = getPermissoByVeiculoId(veiculoId);
-    
-    // Mapeia PermissoData para PermissoInternacional (apenas os campos relevantes)
-    const permissoPayload: Partial<PermissoInternacional> = {
-        razaoSocial: data.razaoSocial,
-        nomeFantasia: data.nomeFantasia,
-        cnpj: parseDocument(data.cnpj), // Garante que o CNPJ seja limpo
-        enderecoCompleto: data.enderecoCompleto,
-        simulado: data.simulado,
-    };
-    
-    if (existing) {
-        // Se existir, atualiza o Permisso
-        updateVeiculoContext(veiculoId, { permisso: { ...existing, ...permissoPayload } });
-    } else {
-        // Se não existir, cria um novo Permisso
-        // CORREÇÃO: Adicionando veiculoId ao payload de criação
-        createPermisso({ ...permissoPayload, veiculoId } as Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'> & { veiculoId: string }, veiculoId);
-    }
-    
-    // 2. Atualiza o CHASSI do veículo se um novo foi encontrado
-    if (newChassi) {
-        updateVeiculoContext(veiculoId, { chassis: newChassi });
-    }
-    
-    // 3. Reabre o modal de detalhes
-    const parceiro = parceiros.find(p => p.id === veiculos.find(v => v.id === veiculoId)?.parceiroId);
-    if (parceiro) {
-        setDetailTargetParceiro(parceiro);
-        setShowDetailModal(true);
-    }
-  };
-
   // --- CONSULTA API CNPJ (Geral) ---
   const handleCNPJConsultation = async (cnpj: string) => {
     if (parceiroFormData.tipo !== 'PJ') return;
@@ -680,7 +753,7 @@ const Parceiros: React.FC = () => {
         setLastConsultedCnpj(cnpjLimpo);
         setCnpjError('');
         if (dados.simulado) {
-          showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.');
+          showError('Não foi possível conectar com a API de CNPJ. Usando dados simulados como fallback.')
         }
       } else {
         setCnpjError('CNPJ válido, mas não encontrado na base de dados externa.');
@@ -951,7 +1024,7 @@ const Parceiros: React.FC = () => {
           onEditVeiculo={handleEditVeiculo}
           onDeleteMotorista={handleDeleteMotorista}
           onDeleteVeiculo={handleDeleteVeiculo}
-          onOpenPermissoModal={handleOpenPermissoModal}
+          onOpenPermissoModal={() => {}} // REMOVIDO: Não faz nada, pois o modal foi removido
         />
       )}
 
@@ -1438,25 +1511,14 @@ const Parceiros: React.FC = () => {
           placaConsultada={placaConsultada}
           placaError={placaError}
           handlePlacaConsultation={handlePlacaConsultation}
+          
+          // NOVO: Permisso Props
+          consultandoPermisso={consultandoPermisso}
+          permissoError={permissoError}
+          handlePermissoConsultation={handlePermissoConsultation}
         />
       )}
       
-      {/* Modal de Permisso Internacional */}
-      {showPermissoModal && permissoTargetVeiculo && (
-        <PermissoModal
-          isOpen={showPermissoModal}
-          veiculo={permissoTargetVeiculo}
-          onClose={() => { 
-            setShowPermissoModal(false); 
-            setPermissoTargetVeiculo(null);
-            // Reabre o modal de detalhes
-            if (detailTargetParceiro) setShowDetailModal(true);
-          }}
-          onSave={handleSavePermisso}
-          existingPermisso={getPermissoByVeiculoId(permissoTargetVeiculo.id)}
-        />
-      )}
-
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirm && deleteTarget && (
         <ConfirmationModal

@@ -362,10 +362,7 @@ export interface DatabaseContextType {
   deleteVeiculo: (id: string) => boolean
   getVeiculosByParceiro: (parceiroId: string) => Veiculo[]
   
-  // Permisso operations (Novo)
-  // CORREÇÃO: O tipo de entrada agora inclui veiculoId, pois é necessário para a criação
-  createPermisso: (permisso: CreateType<Omit<PermissoInternacional, 'dataConsulta' | 'veiculoId'>> & { veiculoId: string }, veiculoId: string) => PermissoInternacional
-  updatePermisso: (id: string, permisso: Partial<PermissoInternacional>) => PermissoInternacional | null
+  // Permisso operations (REMOVIDAS AS FUNÇÕES DE CRUD DE PERMISSO)
   getPermissoByVeiculoId: (veiculoId: string) => PermissoInternacional | null
 
   // Movimentacao operations

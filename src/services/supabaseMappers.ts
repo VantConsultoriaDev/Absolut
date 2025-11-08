@@ -82,9 +82,6 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         placa: veiculoItem.placa, 
         placa_cavalo: veiculoItem.placaCavalo, 
         placa_carreta: veiculoItem.placaCarreta, 
-        // REMOVIDO: placa_carreta1: veiculoItem.placaCarreta1, 
-        // REMOVIDO: placa_carreta2: veiculoItem.placaCarreta2, 
-        // REMOVIDO: placa_dolly: veiculoItem.placaDolly, 
         modelo: veiculoItem.modelo, 
         fabricante: veiculoItem.fabricante, 
         // Garante que ano e capacidade sejam números ou null (se não existirem)
@@ -93,8 +90,6 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         chassis: veiculoItem.chassis, 
         carroceria: veiculoItem.carroceria, 
         tipo: veiculoItem.tipo, 
-        // REMOVIDO: quantidade_carretas: veiculoItem.quantidadeCarretas ? Number(veiculoItem.quantidadeCarretas) : null, 
-        // REMOVIDO: possui_dolly: veiculoItem.possuiDolly, 
         motorista_vinculado: veiculoItem.motoristaVinculado, 
         // GARANTINDO QUE SEJA UM ARRAY VAZIO SE NÃO EXISTIR
         carretas_selecionadas: veiculoItem.carretasSelecionadas || [], 
@@ -213,9 +208,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
       const veiculo: Veiculo = {
         ...base,
         parceiroId: item.parceiro_id, placa: item.placa, placaCavalo: item.placa_cavalo, placaCarreta: item.placa_carreta, 
-        // REMOVIDO: placaCarreta1: item.placa_carreta1, placaCarreta2: item.placa_carreta2, placaDolly: item.placa_dolly, 
         modelo: item.modelo, fabricante: item.fabricante, ano: item.ano, capacidade: item.capacidade, chassis: item.chassis, carroceria: item.carroceria, tipo: item.tipo, 
-        // REMOVIDO: quantidadeCarretas: item.quantidade_carretas, possuiDolly: item.possui_dolly, 
         motoristaVinculado: item.motorista_vinculado, carretasSelecionadas: item.carretas_selecionadas || [], isActive: item.is_active,
       } as Veiculo;
       

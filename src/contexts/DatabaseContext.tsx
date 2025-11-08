@@ -66,6 +66,8 @@ export const initializeDemoData = () => {
         // Novos campos de endereço (garante que existam)
         numero: d.numero || undefined,
         complemento: d.complemento || undefined,
+        // Permisso (se existir)
+        permisso: d.permisso ? { ...d.permisso, dataConsulta: new Date(d.permisso.dataConsulta) } : undefined,
       })) : [];
     } catch (e) {
       console.error(`Failed to load ${key} from localStorage`, e);
@@ -584,8 +586,23 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         carretasSelecionadas: veiculoData.carretasSelecionadas || [], 
         // INJETANDO user_id AQUI PARA GARANTIR QUE O RLS FUNCIONE NO INSERT
         userId: user?.id, 
+        // Adiciona o Permisso se estiver presente no payload de criação
+        permisso: veiculoData.permisso ? { ...veiculoData.permisso, veiculoId: veiculoData.id || generateId() } : undefined,
       }
+      
+      // Se houver Permisso, ele precisa de um ID
+      if (newVeiculo.permisso) {
+          newVeiculo.permisso.id = generateId();
+          newVeiculo.permisso.veiculoId = newVeiculo.id;
+      }
+      
       setVeiculos(prev => [...prev, newVeiculo])
+      
+      // Se houver Permisso, adiciona a ação de criação de Permisso também
+      if (newVeiculo.permisso) {
+          setPermissoes(prev => [...prev, newVeiculo.permisso!]);
+          handleSyncAction({ type: 'create_permisso_internacional', description: '', data: { newRecord: newVeiculo.permisso } } as UndoAction);
+      }
       
       undoService.addUndoAction({
           type: 'create_veiculo',
@@ -593,6 +610,9 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           data: { newRecord: newVeiculo },
           undoFunction: async () => {
               setVeiculos(prev => prev.filter(v => v.id !== newVeiculo.id));
+              if (newVeiculo.permisso) {
+                  setPermissoes(prev => prev.filter(p => p.id !== newVeiculo.permisso!.id));
+              }
           }
       });
       // O handleSyncAction agora receberá o objeto com o userId
@@ -614,14 +634,56 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         if (veiculo.id === id) {
           originalVeiculo = veiculo;
           const updated = applyUpdateVeiculo(veiculo, veiculoData);
-          // Garante que o userId seja mantido no objeto atualizado
           updated.userId = veiculo.userId || user?.id; 
           
-          // Se o permisso existir no objeto original, ele deve ser mantido no updated,
-          // a menos que veiculoData o sobrescreva (o que não deve acontecer aqui).
-          if (veiculo.permisso && !updated.permisso) {
-              updated.permisso = veiculo.permisso;
+          // --- Lógica de Permisso ---
+          const isPermissoInPayload = veiculoData.permisso !== undefined;
+          
+          if (isPermissoInPayload) {
+              const permissoPayload = veiculoData.permisso;
+              
+              if (permissoPayload && permissoPayload.razaoSocial) {
+                  // Se o payload tem dados de permisso, atualiza/cria o registro de permisso
+                  const existingPermisso = veiculo.permisso;
+                  
+                  if (existingPermisso) {
+                      // Atualiza Permisso existente
+                      const updatedPermisso = applyUpdatePermisso(existingPermisso, {
+                          ...permissoPayload,
+                          dataConsulta: new Date(),
+                      });
+                      updated.permisso = updatedPermisso;
+                      
+                      // Atualiza o estado de permissoes e sincroniza
+                      setPermissoes(prevP => prevP.map(p => p.id === updatedPermisso.id ? updatedPermisso : p));
+                      handleSyncAction({ type: 'update_permisso_internacional', description: '', data: { updatedData: updatedPermisso } } as UndoAction);
+                      
+                  } else {
+                      // Cria novo Permisso
+                      const newPermisso: PermissoInternacional = {
+                          ...normalizePermissoCreate(permissoPayload),
+                          id: generateId(),
+                          veiculoId: id,
+                          dataConsulta: new Date(),
+                          createdAt: new Date(),
+                          updatedAt: new Date(),
+                      } as PermissoInternacional;
+                      updated.permisso = newPermisso;
+                      
+                      // Atualiza o estado de permissoes e sincroniza
+                      setPermissoes(prevP => [...prevP, newPermisso]);
+                      handleSyncAction({ type: 'create_permisso_internacional', description: '', data: { newRecord: newPermisso } } as UndoAction);
+                  }
+              } else {
+                  // Se o payload for null/vazio, remove o permisso
+                  updated.permisso = undefined;
+                  if (veiculo.permisso) {
+                      setPermissoes(prevP => prevP.filter(p => p.id !== veiculo.permisso!.id));
+                      handleSyncAction({ type: 'delete_permisso_internacional', description: '', data: { deletedData: veiculo.permisso } } as UndoAction);
+                  }
+              }
           }
+          // Se permisso não estiver no payload, mantém o valor atual (veiculo.permisso)
           
           updatedVeiculo = updated;
           return updated;
@@ -641,6 +703,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
               data: { updatedData: vehicle },
               undoFunction: async () => {
                   setVeiculos(prev => prev.map(v => v.id === id ? originalVeiculo! : v));
+                  // A reversão do Permisso é tratada pela reversão do objeto Veiculo
               }
           });
           // CORREÇÃO: Garante que o objeto enviado para sincronização contenha o chassis atualizado
@@ -662,12 +725,21 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       setVeiculos(prev => prev.filter(veiculo => veiculo.id !== id))
       
       if (deletedVeiculo) {
+          // Se houver Permisso, remove-o também
+          if (deletedVeiculo.permisso) {
+              setPermissoes(prev => prev.filter(p => p.id !== deletedVeiculo.permisso!.id));
+              handleSyncAction({ type: 'delete_permisso_internacional', description: '', data: { deletedData: deletedVeiculo.permisso } } as UndoAction);
+          }
+          
           undoService.addUndoAction({
               type: 'delete_veiculo',
               description: `Veículo "${deletedVeiculo.placa || deletedVeiculo.placaCavalo || deletedVeiculo.placaCarreta}" excluído`,
               data: { deletedData: deletedVeiculo },
               undoFunction: async () => {
                   setVeiculos(prev => [...prev, deletedVeiculo]);
+                  if (deletedVeiculo.permisso) {
+                      setPermissoes(prev => [...prev, deletedVeiculo.permisso!]);
+                  }
               }
           });
           handleSyncAction({ type: 'delete_veiculo', description: '', data: { deletedData: deletedVeiculo } } as UndoAction);
@@ -684,85 +756,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return veiculos.filter(v => v.parceiroId === parceiroId);
   }
   
-  // --- PERMISSO OPERATIONS ---
-  const createPermisso = (permissoData: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt' | 'dataConsulta'> & { veiculoId: string }, veiculoId: string): PermissoInternacional => {
-    try {
-      const newPermisso: PermissoInternacional = {
-        ...normalizePermissoCreate(permissoData),
-        id: generateId(),
-        veiculoId: veiculoId,
-        dataConsulta: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      setPermissoes(prev => [...prev, newPermisso])
-      
-      // ATUALIZA O OBJETO VEÍCULO NO ESTADO LOCAL
-      setVeiculos(prev => prev.map(v => v.id === veiculoId ? { ...v, permisso: newPermisso } : v));
-      
-      undoService.addUndoAction({
-          type: 'create_permisso_internacional',
-          description: `Permisso para Veículo ${veiculoId} criado`,
-          data: { newRecord: newPermisso },
-          undoFunction: async () => {
-              setPermissoes(prev => prev.filter(p => p.id !== newPermisso.id));
-              setVeiculos(prev => prev.map(v => v.id === veiculoId ? { ...v, permisso: undefined } : v));
-          }
-      });
-      handleSyncAction({ type: 'create_permisso_internacional', description: '', data: { newRecord: newPermisso } } as UndoAction);
-      // showSuccess(`Permisso para Veículo ${veiculoId} criado com sucesso.`); // REMOVIDO
-      return newPermisso
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Erro ao criar permisso.');
-      throw e;
-    }
-  }
-
-  const updatePermisso = (id: string, permissoData: Partial<PermissoInternacional>): PermissoInternacional | null => {
-    try {
-      let updatedPermisso: PermissoInternacional | null = null;
-      let originalPermisso: PermissoInternacional | null = null;
-      
-      setPermissoes(prev => prev.map(permisso => {
-        if (permisso.id === id) {
-          originalPermisso = permisso;
-          const updated = applyUpdatePermisso(permisso, permissoData);
-          updated.dataConsulta = new Date();
-          updatedPermisso = updated;
-          return updated;
-        }
-        return permisso;
-      }));
-      
-      if (updatedPermisso && originalPermisso) {
-          const permisso = updatedPermisso as PermissoInternacional;
-          
-          // ATUALIZA O OBJETO VEÍCULO NO ESTADO LOCAL
-          setVeiculos(prev => prev.map(v => v.id === permisso.veiculoId ? { ...v, permisso: permisso } : v));
-          
-          undoService.addUndoAction({
-              type: 'update_permisso_internacional',
-              description: `Permisso para Veículo ${permisso.veiculoId} atualizado`,
-              data: { updatedData: permisso },
-              undoFunction: async () => {
-                  setPermissoes(prev => prev.map(p => p.id === id ? originalPermisso! : p));
-                  setVeiculos(prev => prev.map(v => v.id === permisso.veiculoId ? { ...v, permisso: originalPermisso! } : v));
-              }
-          });
-          handleSyncAction({ type: 'update_permisso_internacional', description: '', data: { updatedData: permisso } } as UndoAction);
-          
-          // CORREÇÃO: A mensagem de sucesso do Permisso deve ser mais informativa
-          // showSuccess(`Permisso para Veículo ${permisso.veiculoId} atualizado com sucesso.`); // REMOVIDO
-      }
-      return updatedPermisso;
-    } catch (e) {
-      showError(e instanceof Error ? e.message : 'Erro ao atualizar permisso.');
-      throw e;
-    }
-  }
+  // --- PERMISSO OPERATIONS (REMOVIDAS AS FUNÇÕES DE CRUD) ---
   
   const getPermissoByVeiculoId = (veiculoId: string): PermissoInternacional | null => {
-    // CORREÇÃO: Busca o Permisso diretamente do objeto Veiculo no estado veiculos
+    // Busca o Permisso diretamente do objeto Veiculo no estado veiculos
     const veiculo = veiculos.find(v => v.id === veiculoId);
     return veiculo?.permisso || null;
   }
@@ -1312,8 +1309,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     getVeiculosByParceiro,
     
     // Permisso operations
-    createPermisso,
-    updatePermisso,
     getPermissoByVeiculoId,
 
     // Movimentacao operations
