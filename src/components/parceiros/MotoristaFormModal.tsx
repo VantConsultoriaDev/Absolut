@@ -179,6 +179,31 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
 
           <form onSubmit={handleSubmitWrapper} className="space-y-4">
             
+            {/* NOVO: Nacionalidade (Primeiro Campo) */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nacionalidade *</label>
+                <select
+                  value={formData.nacionalidade}
+                  onChange={(e) => {
+                    const newNacionalidade = e.target.value as Motorista['nacionalidade'];
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        nacionalidade: newNacionalidade,
+                        // Limpa o campo de documento/cpf ao mudar a nacionalidade
+                        cpf: '', 
+                    }));
+                    setCpfError('');
+                    setCpfConsultado(false);
+                    setLastConsultedCpf('');
+                  }}
+                  className="input-field"
+                  required
+                >
+                  <option value="Brasileiro">Brasileiro</option>
+                  <option value="Estrangeiro">Estrangeiro</option>
+                </select>
+            </div>
+            
             {/* Nome e CPF/Documento */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -314,7 +339,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
               </div>
             </div>
             
-            {/* Contato e Nacionalidade */}
+            {/* Contato */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
@@ -325,28 +350,6 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                   className="input-field"
                   placeholder="Ex: (11) 98765-4321"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nacionalidade</label>
-                <select
-                  value={formData.nacionalidade}
-                  onChange={(e) => {
-                    const newNacionalidade = e.target.value as Motorista['nacionalidade'];
-                    setFormData(prev => ({ 
-                        ...prev, 
-                        nacionalidade: newNacionalidade,
-                        // Limpa o campo de documento/cpf ao mudar a nacionalidade
-                        cpf: '', 
-                    }));
-                    setCpfError('');
-                    setCpfConsultado(false);
-                    setLastConsultedCpf('');
-                  }}
-                  className="input-field"
-                >
-                  <option value="Brasileiro">Brasileiro</option>
-                  <option value="Estrangeiro">Estrangeiro</option>
-                </select>
               </div>
             </div>
             
