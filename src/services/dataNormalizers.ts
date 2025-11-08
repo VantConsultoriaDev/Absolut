@@ -84,7 +84,17 @@ export const normalizeCargaCreate = (d: Omit<Carga, 'id' | 'createdAt' | 'update
   observacoes: d.observacoes,
 });
 
-// REMOVIDO: normalizePermissoCreate
+// REINTRODUZIDO: normalizePermissoCreate
+export const normalizePermissoCreate = (d: Omit<PermissoInternacional, 'id' | 'createdAt' | 'updatedAt'>) => ({
+  ...d,
+  razaoSocial: d.razaoSocial,
+  nomeFantasia: d.nomeFantasia,
+  cnpj: d.cnpj,
+  enderecoCompleto: d.enderecoCompleto,
+  dataConsulta: d.dataConsulta,
+  simulado: d.simulado,
+});
+
 
 export const normalizeCompromissoCreate = (d: Omit<Compromisso, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => ({
   ...d,

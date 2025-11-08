@@ -587,7 +587,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         // INJETANDO user_id AQUI PARA GARANTIR QUE O RLS FUNCIONE NO INSERT
         userId: user?.id, 
         // Adiciona o Permisso se estiver presente no payload de criação
-        permisso: veiculoData.permisso ? { ...veiculoData.permisso, veiculoId: veiculoData.id || generateId() } : undefined,
+        permisso: veiculoData.permisso ? { ...normalizePermissoCreate(veiculoData.permisso), veiculoId: veiculoData.id || generateId() } : undefined,
       }
       
       // Se houver Permisso, ele precisa de um ID
