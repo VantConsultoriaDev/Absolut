@@ -157,7 +157,7 @@ const Parceiros: React.FC = () => {
   const [consultandoCPF, setConsultandoCPF] = useState(false);
   const [cpfConsultado, setCpfConsultado] = useState(false);
   const [cpfError, setCpfError] = useState('');
-  const [lastConsultedCpf, setLastConsultedCpf] = useState('');
+  const [lastConsultedCpf, setLastConsultedCpf] = useState(''); // <-- Declaração única
   
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
   const [placaConsultada, setPlacaConsultada] = useState(false);
@@ -169,7 +169,6 @@ const Parceiros: React.FC = () => {
   
   // NOVO: Rastreamento do último valor consultado (limpo)
   const [lastConsultedCnpj, setLastConsultedCnpj] = useState('');
-  const [lastConsultedCpf, setLastConsultedCpf] = useState(''); // NOVO
   const [lastConsultedPlaca, setLastConsultedPlaca] = useState('');
 
   // Filtros
