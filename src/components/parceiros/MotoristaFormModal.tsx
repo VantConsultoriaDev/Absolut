@@ -48,7 +48,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
   useEffect(() => {
     if (isOpen) {
         const cleanCpf = parseDocument(formData.cpf || '');
-        if (cleanCpf.length === 11) {
+        if (formData.nacionalidade === 'Brasileiro' && cleanCpf.length === 11) {
             setCpfConsultado(true);
             setLastConsultedCpf(cleanCpf);
         } else {
@@ -58,10 +58,12 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
         setCpfError('');
         setConsultandoCPF(false);
     }
-  }, [isOpen, formData.cpf]);
+  }, [isOpen, formData.cpf, formData.nacionalidade]);
   
   // --- CONSULTA API CPF ---
   const handleCPFConsultation = async (cpf: string) => {
+    if (formData.nacionalidade === 'Estrangeiro') return;
+    
     const cpfLimpo = parseDocument(cpf);
     setCpfError('');
     
@@ -108,7 +110,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
     } catch (err) {
       console.error('Erro ao consultar CPF:', err);
       setCpfError(err instanceof Error ? err.message : 'Erro ao consultar CPF. Verifique o número e tente novamente.');
-      setConsultandoCPF(false); // CORRIGIDO: setLastConsultandoCPF -> setConsultandoCPF
+      setConsultandoCPF(false);
     } finally {
       setConsultandoCPF(false);
     }
@@ -118,15 +120,30 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
     e.preventDefault();
     
     const cleanCpf = parseDocument(formData.cpf);
-    if (!isValidCPF(cleanCpf)) {
-        setCpfError('CPF inválido. Verifique os dígitos.');
-        return;
+    
+    // NOVO: Validação condicional
+    if (formData.nacionalidade === 'Brasileiro') {
+        if (cleanCpf.length !== 11) {
+            setCpfError('CPF inválido.');
+            return;
+        }
+        if (!isValidCPF(cleanCpf)) {
+            setCpfError('CPF inválido. Verifique os dígitos.');
+            return;
+        }
+    } else {
+        // Estrangeiro: Apenas verifica se o campo Documento está preenchido
+        if (!formData.cpf.trim()) {
+            setCpfError('O campo Documento é obrigatório para motoristas estrangeiros.');
+            return;
+        }
     }
     
     // Ajustamos o `formData` antes de chamar `onSubmit`
     setFormData(prev => ({
         ...prev,
-        cpf: cleanCpf,
+        // Para estrangeiros, o CPF é o valor bruto do documento
+        cpf: formData.nacionalidade === 'Estrangeiro' ? prev.cpf.trim() : cleanCpf,
         telefone: parseDocument(prev.telefone || ''),
         validadeCnh: prev.validadeCnh, // Mantido como string para o submit do pai
         dataNascimentoStr: prev.dataNascimentoStr, // Mantido como string para o submit do pai
@@ -162,7 +179,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
 
           <form onSubmit={handleSubmitWrapper} className="space-y-4">
             
-            {/* Nome e CPF */}
+            {/* Nome e CPF/Documento */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome *</label>
@@ -174,10 +191,12 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                   required
                 />
               </div>
+              
+              {/* CPF / Documento Estrangeiro */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    CPF *
-                    {consultandoCPF && (
+                    {formData.nacionalidade === 'Estrangeiro' ? 'Documento *' : 'CPF *'}
+                    {formData.nacionalidade === 'Brasileiro' && consultandoCPF && (
                         <span className="ml-2 text-blue-500 text-xs">Consultando...</span>
                     )}
                 </label>
@@ -185,32 +204,45 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                   type="text"
                   value={formData.cpf}
                   onChange={(e) => {
-                    const formatted = formatDocument(e.target.value, 'PF');
-                    const limpo = parseDocument(formatted);
+                    const isEstrangeiro = formData.nacionalidade === 'Estrangeiro';
+                    let newValue = e.target.value;
                     
-                    if (limpo !== parseDocument(formData.cpf || '')) {
-                        setCpfConsultado(false);
-                    }
-                    
-                    setFormData(prev => ({ ...prev, cpf: formatted }));
-                    setCpfError('');
-                    
-                    if (limpo.length === 11) {
-                        handleCPFConsultation(formatted);
+                    if (!isEstrangeiro) {
+                        // Aplica formatação e consulta apenas para Brasileiro (CPF)
+                        const formatted = formatDocument(newValue, 'PF');
+                        const limpo = parseDocument(formatted);
+                        
+                        if (limpo !== parseDocument(formData.cpf || '')) {
+                            setCpfConsultado(false);
+                        }
+                        
+                        setFormData(prev => ({ ...prev, cpf: formatted }));
+                        setCpfError('');
+                        
+                        if (limpo.length === 11) {
+                            handleCPFConsultation(formatted);
+                        }
+                    } else {
+                        // Estrangeiro: Sem formatação, apenas atualiza o valor bruto
+                        setFormData(prev => ({ ...prev, cpf: newValue }));
+                        setCpfError('');
+                        setCpfConsultado(false); // Garante que o status de consulta seja limpo
                     }
                   }}
-                  className={`input-field ${consultandoCPF ? 'opacity-50' : ''}`}
-                  placeholder="000.000.000-00"
-                  disabled={consultandoCPF}
+                  className={`input-field ${formData.nacionalidade === 'Brasileiro' && consultandoCPF ? 'opacity-50' : ''}`}
+                  placeholder={formData.nacionalidade === 'Estrangeiro' ? 'Documento de Identificação' : '000.000.000-00'}
+                  disabled={formData.nacionalidade === 'Brasileiro' && consultandoCPF}
                   required
                 />
-                {cpfError && (
+                
+                {/* Mensagens de Erro/Status (Apenas para Brasileiro) */}
+                {formData.nacionalidade === 'Brasileiro' && cpfError && (
                     <div className="mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center">
                         <AlertTriangle className="h-4 w-4 text-red-600 mr-2" />
                         <p className="text-xs text-red-700 dark:text-red-400">{cpfError}</p>
                     </div>
                 )}
-                {cpfConsultado && !cpfError && (
+                {formData.nacionalidade === 'Brasileiro' && cpfConsultado && !cpfError && (
                     <p className="text-green-600 text-xs mt-1">✓ Dados consultados automaticamente</p>
                 )}
               </div>
@@ -298,7 +330,18 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nacionalidade</label>
                 <select
                   value={formData.nacionalidade}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nacionalidade: e.target.value as Motorista['nacionalidade'] }))}
+                  onChange={(e) => {
+                    const newNacionalidade = e.target.value as Motorista['nacionalidade'];
+                    setFormData(prev => ({ 
+                        ...prev, 
+                        nacionalidade: newNacionalidade,
+                        // Limpa o campo de documento/cpf ao mudar a nacionalidade
+                        cpf: '', 
+                    }));
+                    setCpfError('');
+                    setCpfConsultado(false);
+                    setLastConsultedCpf('');
+                  }}
                   className="input-field"
                 >
                   <option value="Brasileiro">Brasileiro</option>
