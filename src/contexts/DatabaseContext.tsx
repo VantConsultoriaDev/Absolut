@@ -577,9 +577,11 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         throw new Error('Parceiro ID é obrigatório para criar um veículo.');
       }
       
+      const newVeiculoId = generateId(); // GERA O ID DO VEÍCULO AQUI
+      
       const newVeiculo: Veiculo = {
         ...normalizeVeiculoCreate(veiculoData),
-        id: generateId(),
+        id: newVeiculoId, // USA O ID GERADO
         createdAt: new Date(),
         updatedAt: new Date(),
         // Garante que carretasSelecionadas seja um array vazio se não estiver presente
@@ -592,7 +594,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
             id: generateId(), // CORREÇÃO 1: Adiciona ID
             createdAt: new Date(), // CORREÇÃO 1: Adiciona createdAt
             updatedAt: new Date(), // CORREÇÃO 1: Adiciona updatedAt
-            veiculoId: veiculoData.id || generateId(), // CORREÇÃO 2: Usa o ID do veículo (que será o ID do novo veículo)
+            veiculoId: newVeiculoId, // CORREÇÃO 2: Usa o ID do novo veículo
             // INJETANDO user_id NO PERMISSO
             userId: user?.id,
         } as PermissoInternacional : undefined, // CORREÇÃO: Permisso é undefined se for Carreta
