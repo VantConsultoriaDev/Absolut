@@ -28,6 +28,13 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
     id: cleanedItem.id,
   };
 
+  // Função auxiliar para formatar Date para string YYYY-MM-DD (para colunas DATE)
+  const formatDateToSupabase = (date: Date | undefined): string | null => {
+      if (!date || isNaN(date.getTime())) return null;
+      // Supabase espera o formato YYYY-MM-DD para colunas DATE
+      return date.toISOString().split('T')[0];
+  };
+
   switch (tableName) {
     case 'clientes':
       return {
@@ -40,7 +47,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         cidade: cleanedItem.cidade, uf: cleanedItem.uf, cep: cleanedItem.cep, observacoes: cleanedItem.observacoes, is_active: cleanedItem.isActive, avatar_url: cleanedItem.avatarUrl,
         
         // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
-        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        data_nascimento: formatDateToSupabase(cleanedItem.dataNascimento),
         rg: cleanedItem.rg,
         orgao_emissor: cleanedItem.orgaoEmissor,
       };
@@ -54,7 +61,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         pix_titular: cleanedItem.pixTitular, // NOVO
         
         // Novos campos de identificação
-        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        data_nascimento: formatDateToSupabase(cleanedItem.dataNascimento),
         rg: cleanedItem.rg,
         orgao_emissor: cleanedItem.orgaoEmissor,
         
@@ -66,10 +73,10 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
     case 'motoristas':
       return {
         ...base,
-        parceiro_id: cleanedItem.parceiroId, nome: cleanedItem.nome || '', cpf: cleanedItem.cpf || '', cnh: cleanedItem.cnh || '', nacionalidade: cleanedItem.nacionalidade, categoria_cnh: cleanedItem.categoriaCnh, validade_cnh: cleanedItem.validadeCnh?.toISOString().split('T')[0], telefone: cleanedItem.telefone, is_active: cleanedItem.isActive,
+        parceiro_id: cleanedItem.parceiroId, nome: cleanedItem.nome || '', cpf: cleanedItem.cpf || '', cnh: cleanedItem.cnh || '', nacionalidade: cleanedItem.nacionalidade, categoria_cnh: cleanedItem.categoriaCnh, validade_cnh: formatDateToSupabase(cleanedItem.validadeCnh), telefone: cleanedItem.telefone, is_active: cleanedItem.isActive,
         
         // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
-        data_nascimento: cleanedItem.dataNascimento?.toISOString().split('T')[0],
+        data_nascimento: formatDateToSupabase(cleanedItem.dataNascimento),
         rg: cleanedItem.rg,
         orgao_emissor: cleanedItem.orgaoEmissor,
       };
