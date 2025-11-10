@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { X, RefreshCw, CheckCircle, Truck, FileText, AlertTriangle } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
-import { Parceiro, Veiculo, PermissoInternacional } from '../../types';
+import { Parceiro, Veiculo } from '../../types';
 import { formatPlaca, forceUpperCase, formatDocument, parseDocument } from '../../utils/formatters';
-import { format, isValid } from 'date-fns';
+import { format } from 'date-fns';
 
 // Tipagem para o formulário (string para campos numéricos)
 // NOTE: Esta interface deve ser mantida em sincronia com a definição em Parceiros.tsx
@@ -116,8 +116,10 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   // Handler para o botão Sincronizar Permisso
   const handleSyncPermisso = () => {
     const placa = formData.placa || formData.placaCavalo || formData.placaCarreta;
+    
+    // CORREÇÃO DO ERRO 6: Usando a função de erro de permisso
     if (!placa || placa.replace(/[^A-Z0-9]/gi, '').length < 7) {
-        setPlacaError('Preencha a placa corretamente antes de sincronizar o Permisso.');
+        handlePermissoConsultation(''); // Chama com placa vazia para forçar erro de validação
         return;
     }
     // Passa a placa limpa para a consulta

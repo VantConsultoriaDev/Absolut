@@ -1022,7 +1022,6 @@ const Parceiros: React.FC = () => {
           onEditVeiculo={handleEditVeiculo}
           onDeleteMotorista={handleDeleteMotorista}
           onDeleteVeiculo={handleDeleteVeiculo}
-          onOpenPermissoModal={() => {}} // REMOVIDO: Não faz nada, pois o modal foi removido
         />
       )}
 

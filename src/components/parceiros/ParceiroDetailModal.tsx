@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, RefreshCw, Search, Calendar, FileBadge } from 'lucide-react';
+import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, Search, Calendar, FileBadge } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista, Veiculo, PermissoInternacional } from '../../types';
 import { formatDocument, formatContact, formatPlaca, formatPixKey } from '../../utils/formatters';
@@ -102,8 +102,8 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
     // Ordenação: 1º Cavalo, 2º Carreta, 3º Truck
     const typeOrder = (type: string) => {
         if (type === 'Cavalo') return 1;
-        if (type === 'Carreta') return 2;
         if (type === 'Truck') return 3;
+        if (type === 'Carreta') return 2;
         return 4;
     };
     

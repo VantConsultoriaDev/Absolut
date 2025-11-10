@@ -589,15 +589,18 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         // Adiciona o Permisso se estiver presente no payload de criação
         permisso: veiculoData.permisso && (veiculoData.tipo === 'Cavalo' || veiculoData.tipo === 'Truck') ? { 
             ...normalizePermissoCreate(veiculoData.permisso), 
-            veiculoId: veiculoData.id || generateId(),
+            id: generateId(), // CORREÇÃO 1: Adiciona ID
+            createdAt: new Date(), // CORREÇÃO 1: Adiciona createdAt
+            updatedAt: new Date(), // CORREÇÃO 1: Adiciona updatedAt
+            veiculoId: veiculoData.id || generateId(), // CORREÇÃO 2: Usa o ID do veículo (que será o ID do novo veículo)
             // INJETANDO user_id NO PERMISSO
             userId: user?.id,
-        } : undefined, // CORREÇÃO: Permisso é undefined se for Carreta
+        } as PermissoInternacional : undefined, // CORREÇÃO: Permisso é undefined se for Carreta
       }
       
       // Se houver Permisso, ele precisa de um ID
       if (newVeiculo.permisso) {
-          newVeiculo.permisso.id = generateId();
+          // O ID do Permisso já foi gerado acima, mas precisamos garantir que o veiculoId esteja correto
           newVeiculo.permisso.veiculoId = newVeiculo.id;
       }
       
