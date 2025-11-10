@@ -4,16 +4,17 @@ import { formatCNPJ, parseDocument } from '../utils/formatters';
 // Interface para a resposta da API externa
 export interface PermissoApiData {
   razaoSocial: string;
-  nomeFantasia?: string; // NOVO
+  nomeFantasia?: string;
   cnpj: string;
   enderecoCompleto: string;
-  chassi: string; // Novo campo para o CHASSI
+  chassi: string;
+  simulado?: boolean;
 }
 
-// Interface para a resposta da API de ANTT Veículo
+// Interface para a resposta da API de ANTT Veículo (Mantida para tipagem interna, mas não usada para consulta direta)
 export interface AnttVeiculoApiData {
   razaoSocial: string;
-  nomeFantasia?: string; // ADICIONADO
+  nomeFantasia?: string;
   cnpj: string;
   chassi: string;
   renavam: string;
@@ -21,10 +22,8 @@ export interface AnttVeiculoApiData {
   marca: string;
   modelo: string;
   ano: number;
-  // Outros campos que podem ser úteis
   capacidade?: number;
   carroceria?: string;
-  // Adicionando campos que podem vir na resposta bruta
   endereco?: string; 
   logradouro?: string;
   numero?: string;
@@ -36,23 +35,26 @@ export interface AnttVeiculoApiData {
 }
 
 export class PermissoService {
-  // ALTERADO: Usando caminhos relativos para o proxy do Vite
-  private static readonly API_URL_PERMISSO = '/api-permisso/api/permisso';
-  private static readonly API_URL_ANTT = '/api-permisso/api/antt-veiculo';
+  // ALTERADO: Usando o novo caminho de API
+  private static readonly API_URL_PERMISSO = '/api-permisso/api';
   
-  // NOVO: Dados de fallback para a placa EVO9081
-  private static readonly FALLBACK_DATA: Record<string, Partial<AnttVeiculoApiData & PermissoApiData & { enderecoCompleto: string }>> = {
+  // Dados de fallback para a placa EVO9081
+  private static readonly FALLBACK_DATA: Record<string, Partial<PermissoApiData>> = {
       'EVO9081': {
           razaoSocial: 'COOPERATIVA DOS TRANSPORTADORES AUTÔNOMOS DE CARGAS CAARÓ LTDA',
           nomeFantasia: 'COTRACAARO',
           cnpj: '08189329000154', // Limpo
           chassi: '9BSG4X200D3814052',
           enderecoCompleto: 'RUA JOSÉ INÁCIO WELTER, 967, LAGO AZUL, CAIBATÉ -RS, BRASIL',
-          placa: 'EVO9081',
           simulado: true,
       }
   };
 
+  /**
+   * Consulta dados de Permisso e Chassi usando a nova API.
+   * @param placa Placa limpa (7 caracteres).
+   * @returns Dados do Permisso e Chassi.
+   */
   static async consultarPermisso(placa: string): Promise<PermissoApiData | null> {
     const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     
@@ -61,9 +63,9 @@ export class PermissoService {
     }
     
     try {
-      const response = await axios.get(this.API_URL_PERMISSO, {
-        params: { placa: placaLimpa },
-        timeout: 30000, // Aumentado para 30 segundos
+      // NOVO ENDPOINT: /api/PLACA
+      const response = await axios.get(`${this.API_URL_PERMISSO}/${placaLimpa}`, {
+        timeout: 30000,
       });
 
       const data = response.data;
@@ -72,13 +74,14 @@ export class PermissoService {
         throw new Error(data?.error || 'Nenhum permisso encontrado para esta placa.');
       }
       
-      // Normaliza o CNPJ e retorna os dados
+      // Mapeamento dos dados da resposta (assumindo que a resposta é um objeto plano com os campos)
       return {
-        razaoSocial: data.razaoSocial || '',
-        nomeFantasia: data.nomeFantasia || '',
+        razaoSocial: data.razaoSocial || data.razao_social || '',
+        nomeFantasia: data.nomeFantasia || data.nome_fantasia || '',
         cnpj: formatCNPJ(parseDocument(data.cnpj || '')),
-        enderecoCompleto: data.enderecoCompleto || '',
+        enderecoCompleto: data.enderecoCompleto || data.endereco_completo || '',
         chassi: data.chassi || '',
+        simulado: false,
       };
 
     } catch (error: any) {
@@ -87,12 +90,11 @@ export class PermissoService {
           message: error.message,
           status: error.response?.status,
           data: error.response?.data,
-          config: error.config,
         });
       }
       console.error('Erro ao consultar Permisso:', error.message);
       
-      // NOVO: Fallback para dados simulados se a API falhar
+      // Fallback para dados simulados se a API falhar
       const fallback = this.FALLBACK_DATA[placaLimpa];
       if (fallback) {
           console.warn(`[FALLBACK] Usando dados simulados para Permisso: ${placaLimpa}`);
@@ -110,104 +112,8 @@ export class PermissoService {
     }
   }
   
-  static async consultarAnttVeiculo(placa: string): Promise<AnttVeiculoApiData & { enderecoCompleto: string } | null> {
-    const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    
-    if (placaLimpa.length < 7) {
-      throw new Error('Placa inválida para consulta.');
-    }
-
-    // Construção da URL com a placa
-    const url = `${this.API_URL_ANTT}/${placaLimpa}`;
-    
-    try {
-      // Simplificando a chamada para GET sem configurações extras, exceto timeout
-      const response = await axios.get(url, {
-        timeout: 30000, // Aumentado para 30 segundos
-      });
-
-      const data = response.data;
-
-      if (!data || data.error) {
-        throw new Error(data?.error || 'Nenhum dado ANTT encontrado para esta placa.');
-      }
-      
-      // Lógica de mapeamento de endereço:
-      let enderecoCompleto = '';
-      
-      // 1. Prioriza o campo 'endereco' se existir (como no exemplo fornecido pelo usuário)
-      if (data.endereco) {
-          enderecoCompleto = data.endereco;
-      } else {
-          // 2. Constrói a partir de campos granulares se o campo 'endereco' não existir
-          const enderecoParts = [
-            data.logradouro,
-            data.numero,
-            data.complemento,
-            data.bairro,
-            data.municipio,
-            data.uf,
-            data.cep
-          ].filter(p => p && typeof p === 'string' && p.trim() !== '');
-          
-          enderecoCompleto = enderecoParts.join(', ');
-      }
-      
-      // Se o endereço ainda estiver vazio, tenta o logradouro
-      if (!enderecoCompleto && data.logradouro) {
-          enderecoCompleto = data.logradouro;
-      }
-
-      // Retorna os dados brutos da ANTT
-      return {
-        razaoSocial: data.razaoSocial || '',
-        nomeFantasia: data.nomeFantasia || '', // ADICIONADO
-        cnpj: data.cnpj || '',
-        chassi: data.chassi || '', // GARANTINDO QUE O CHASSI ESTEJA AQUI
-        renavam: data.renavam || '',
-        placa: data.placa || placaLimpa,
-        marca: data.marca || '',
-        modelo: data.modelo || '',
-        ano: data.ano || 0,
-        capacidade: data.capacidade,
-        carroceria: data.carroceria,
-        // Adicionando o endereço completo mapeado
-        enderecoCompleto: enderecoCompleto,
-      } as AnttVeiculoApiData & { enderecoCompleto: string };
-
-    } catch (error: any) {
-      // Loga o erro completo do Axios para diagnóstico no console
-      if (axios.isAxiosError(error)) {
-        console.error('AXIOS ERROR DETAILS (ANTT Veiculo):', {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          config: error.config,
-        });
-      }
-      
-      // NOVO: Fallback para dados simulados se a API falhar
-      const fallback = this.FALLBACK_DATA[placaLimpa];
-      if (fallback) {
-          console.warn(`[FALLBACK] Usando dados simulados para ANTT Veículo: ${placaLimpa}`);
-          return {
-              razaoSocial: fallback.razaoSocial || '',
-              nomeFantasia: fallback.nomeFantasia || '',
-              cnpj: fallback.cnpj || '',
-              chassi: fallback.chassi || '',
-              renavam: '',
-              placa: fallback.placa || placaLimpa,
-              marca: '',
-              modelo: '',
-              ano: 0,
-              enderecoCompleto: fallback.enderecoCompleto || '',
-              simulado: true,
-          } as AnttVeiculoApiData & { enderecoCompleto: string };
-      }
-      
-      // Captura o erro de rede ou CORS e lança a mensagem completa
-      const errorMessage = error.response?.data?.error || error.message || 'Falha na comunicação com a API ANTT.';
-      throw new Error(errorMessage);
-    }
+  // REMOVIDO: A função consultarAnttVeiculo não é mais necessária, pois a nova API consolida a consulta.
+  static async consultarAnttVeiculo(_placa: string): Promise<AnttVeiculoApiData & { enderecoCompleto: string } | null> {
+      return null;
   }
 }

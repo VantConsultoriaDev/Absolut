@@ -31,7 +31,7 @@ import { CNPJService } from '../services/cnpjService'; // Importando CNPJService
 import { VehicleService } from '../services/vehicleService'; // Importando VehicleService
 import { PlacaData } from '../services/vehicleService'; // Importando PlacaData
 import { CPFService } from '../services/cpfService'; // NOVO: Importando CPFService
-import { PermissoService, PermissoApiData, AnttVeiculoApiData } from '../services/permissoService'; // Importando PermissoService
+import { PermissoService, PermissoApiData } from '../services/permissoService'; // Importando PermissoService
 
 // Dados iniciais (inferred)
 const initialMotoristaFormData: MotoristaFormData = {
@@ -573,7 +573,7 @@ const Parceiros: React.FC = () => {
         return;
     }
     
-    // 1. Padroniza a placa para XXX-XXXX e força maiúsculas
+    // 1. Padroniza a placa para 7 caracteres e força maiúsculas
     const formattedPlaca = forceUpperCase(formatPlaca(placaValue));
     
     // 2. Prepara o payload do Permisso (se aplicável)
@@ -662,52 +662,40 @@ const Parceiros: React.FC = () => {
     const placaLimpa = placa.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     
     try {
-        // 1. Consulta ANTT Veículo (para dados básicos e endereço)
-        const anttData: AnttVeiculoApiData & { enderecoCompleto: string } | null = await PermissoService.consultarAnttVeiculo(placaLimpa);
-        
-        // 2. Consulta Permisso (para dados de Razão Social e CNPJ)
+        // 1. Consulta Permisso (que agora retorna dados consolidados)
         const permissoData: PermissoApiData | null = await PermissoService.consultarPermisso(placaLimpa);
         
-        if (!anttData && !permissoData) {
-            setPermissoError('Nenhum dado ANTT ou Permisso encontrado para esta placa.');
+        if (!permissoData) {
+            setPermissoError('Nenhum dado de Permisso encontrado para esta placa.');
             return;
         }
         
-        // 3. Consolida e atualiza o formulário
+        // 2. Consolida e atualiza o formulário
         setVeiculoFormData(prev => {
-            const newChassis = anttData?.chassi || permissoData?.chassi || prev.chassis;
+            const newChassis = permissoData?.chassi || prev.chassis;
             
             return {
                 ...prev,
-                // Dados do Veículo (ANTT)
-                fabricante: anttData?.marca || prev.fabricante,
-                modelo: anttData?.modelo || prev.modelo,
-                ano: anttData?.ano?.toString() || prev.ano,
-                chassis: newChassis || prev.chassis,
-                carroceria: anttData?.carroceria || prev.carroceria,
-                
-                // Dados do Permisso (Prioriza Permisso, fallback para ANTT)
-                permissoRazaoSocial: permissoData?.razaoSocial || anttData?.razaoSocial || prev.permissoRazaoSocial,
-                permissoNomeFantasia: permissoData?.nomeFantasia || anttData?.nomeFantasia || prev.permissoNomeFantasia,
-                permissoCnpj: parseDocument(permissoData?.cnpj || anttData?.cnpj || prev.permissoCnpj),
-                permissoEnderecoCompleto: permissoData?.enderecoCompleto || anttData?.enderecoCompleto || prev.permissoEnderecoCompleto,
-                permissoSimulado: (permissoData as any)?.simulado || (anttData as any)?.simulado || false, // Verifica se algum dos dados é simulado
+                // Dados do Permisso
+                permissoRazaoSocial: permissoData?.razaoSocial || prev.permissoRazaoSocial,
+                permissoNomeFantasia: permissoData?.nomeFantasia || prev.permissoNomeFantasia,
+                permissoCnpj: parseDocument(permissoData?.cnpj || prev.permissoCnpj),
+                permissoEnderecoCompleto: permissoData?.enderecoCompleto || prev.permissoEnderecoCompleto,
+                permissoSimulado: permissoData?.simulado || false,
                 permissoDataConsulta: new Date(),
-                permissoChassiAtualizado: newChassis,
+                permissoChassiAtualizado: newChassis, // Atualiza o chassi do veículo
+                
+                // Não altera outros campos do veículo (fabricante, modelo, ano)
             };
         });
         
         setPermissoError('');
-        showError('Dados de Permisso/ANTT sincronizados com sucesso.');
+        showError('Dados de Permisso sincronizados com sucesso.');
         
     } catch (err) {
-        console.error('Erro na consulta Permisso/ANTT:', err);
-        setPermissoError(err instanceof Error ? err.message : 'Falha na sincronização. Verifique a placa e tente novamente.');
-        
-        // Se falhar, tenta preencher com dados ANTT se existirem, mas marca como simulado
-        if (permissoError.includes('token') || permissoError.includes('autorização')) {
-            showError('Erro de autorização na API. Verifique o token VITE_APIBRASIL_TOKEN.');
-        }
+        console.error('Erro na consulta Permisso:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Falha na sincronização. Verifique a placa e tente novamente.';
+        setPermissoError(errorMessage);
         
         // Fallback para dados simulados se a API falhar completamente
         setVeiculoFormData(prev => ({
