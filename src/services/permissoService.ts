@@ -74,12 +74,33 @@ export class PermissoService {
         throw new Error(data?.error || 'Nenhum permisso encontrado para esta placa.');
       }
       
+      // --- Lógica para construir o Endereço Completo ---
+      let enderecoCompleto = data.enderecoCompleto || data.endereco_completo || '';
+
+      if (!enderecoCompleto) {
+          const logradouro = data.logradouro || '';
+          const numero = data.numero || '';
+          const complemento = data.complemento || '';
+          const bairro = data.bairro || '';
+          const cidade = data.municipio || '';
+          const uf = data.uf || '';
+          
+          if (logradouro) {
+              enderecoCompleto = `${logradouro}${numero ? `, ${numero}` : ''}`;
+              if (complemento) enderecoCompleto += ` (${complemento})`;
+              if (bairro) enderecoCompleto += ` - ${bairro}`;
+              if (cidade && uf) enderecoCompleto += `, ${cidade}/${uf}`;
+              else if (cidade) enderecoCompleto += `, ${cidade}`;
+          }
+      }
+      // --- Fim Lógica de Endereço ---
+      
       // Mapeamento dos dados da resposta (assumindo que a resposta é um objeto plano com os campos)
       return {
         razaoSocial: data.razaoSocial || data.razao_social || '',
         nomeFantasia: data.nomeFantasia || data.nome_fantasia || '',
         cnpj: formatCNPJ(parseDocument(data.cnpj || '')),
-        enderecoCompleto: data.enderecoCompleto || data.endereco_completo || '',
+        enderecoCompleto: enderecoCompleto,
         chassi: data.chassi || '',
         simulado: false,
       };
