@@ -587,7 +587,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         // INJETANDO user_id AQUI PARA GARANTIR QUE O RLS FUNCIONE NO INSERT
         userId: user?.id, 
         // Adiciona o Permisso se estiver presente no payload de criação
-        permisso: veiculoData.permisso ? { ...normalizePermissoCreate(veiculoData.permisso), veiculoId: veiculoData.id || generateId() } : undefined,
+        permisso: veiculoData.permisso ? { 
+            ...normalizePermissoCreate(veiculoData.permisso), 
+            veiculoId: veiculoData.id || generateId(),
+            // INJETANDO user_id NO PERMISSO
+            userId: user?.id,
+        } : undefined,
       }
       
       // Se houver Permisso, ele precisa de um ID
@@ -651,6 +656,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
                       const updatedPermisso = applyUpdatePermisso(existingPermisso, {
                           ...permissoPayload,
                           dataConsulta: new Date(),
+                          // INJETANDO user_id NO PERMISSO
+                          userId: user?.id,
                       });
                       updated.permisso = updatedPermisso;
                       
@@ -667,6 +674,8 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
                           dataConsulta: new Date(),
                           createdAt: new Date(),
                           updatedAt: new Date(),
+                          // INJETANDO user_id NO PERMISSO
+                          userId: user?.id,
                       } as PermissoInternacional;
                       updated.permisso = newPermisso;
                       

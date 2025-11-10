@@ -110,6 +110,7 @@ export interface PermissoInternacional {
   enderecoCompleto?: string
   dataConsulta: Date
   simulado?: boolean // CORRIGIDO: Adicionado simulado
+  userId?: string // NOVO: Para RLS
   createdAt: Date
   updatedAt: Date
 }

@@ -96,8 +96,11 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         is_active: veiculoItem.isActive,
       };
     case 'permisso_internacional':
+      // CORREÇÃO: Usa o user_id do item local (injetado no DatabaseContext) se existir, senão usa o base.user_id
+      const permissoUserId = cleanedItem.userId || base.user_id;
       return {
         ...base,
+        user_id: permissoUserId, // GARANTINDO user_id AQUI
         veiculo_id: cleanedItem.veiculoId, razao_social: cleanedItem.razaoSocial, nome_fantasia: cleanedItem.nomeFantasia, cnpj: cleanedItem.cnpj, endereco_completo: cleanedItem.enderecoCompleto, data_consulta: cleanedItem.dataConsulta.toISOString(),
       };
     case 'cargas':
@@ -227,6 +230,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
     case 'permisso_internacional':
       return {
         ...base,
+        userId: item.user_id, // NOVO: Mapeando userId
         veiculoId: item.veiculo_id, razaoSocial: item.razao_social, nomeFantasia: item.nome_fantasia, cnpj: item.cnpj, enderecoCompleto: item.endereco_completo, dataConsulta: new Date(item.data_consulta), simulado: item.simulado,
       } as PermissoInternacional;
     case 'cargas':
