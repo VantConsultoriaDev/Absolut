@@ -587,12 +587,12 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
         // INJETANDO user_id AQUI PARA GARANTIR QUE O RLS FUNCIONE NO INSERT
         userId: user?.id, 
         // Adiciona o Permisso se estiver presente no payload de criação
-        permisso: veiculoData.permisso ? { 
+        permisso: veiculoData.permisso && (veiculoData.tipo === 'Cavalo' || veiculoData.tipo === 'Truck') ? { 
             ...normalizePermissoCreate(veiculoData.permisso), 
             veiculoId: veiculoData.id || generateId(),
             // INJETANDO user_id NO PERMISSO
             userId: user?.id,
-        } : undefined,
+        } : undefined, // CORREÇÃO: Permisso é undefined se for Carreta
       }
       
       // Se houver Permisso, ele precisa de um ID
@@ -644,7 +644,10 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
           // --- Lógica de Permisso ---
           const isPermissoInPayload = veiculoData.permisso !== undefined;
           
-          if (isPermissoInPayload) {
+          // CORREÇÃO: Permisso só é permitido para Cavalo ou Truck
+          const shouldHavePermisso = updated.tipo === 'Cavalo' || updated.tipo === 'Truck';
+          
+          if (isPermissoInPayload && shouldHavePermisso) {
               const permissoPayload = veiculoData.permisso;
               
               if (permissoPayload && permissoPayload.razaoSocial) {
@@ -690,6 +693,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
                       setPermissoes(prevP => prevP.filter(p => p.id !== veiculo.permisso!.id));
                       handleSyncAction({ type: 'delete_permisso_internacional', description: '', data: { deletedData: veiculo.permisso } } as UndoAction);
                   }
+              }
+          } else if (isPermissoInPayload && !shouldHavePermisso) {
+              // Se for Carreta, ignora o payload de permisso e garante que seja undefined
+              updated.permisso = undefined;
+              if (veiculo.permisso) {
+                  setPermissoes(prevP => prevP.filter(p => p.id !== veiculo.permisso!.id));
+                  handleSyncAction({ type: 'delete_permisso_internacional', description: '', data: { deletedData: veiculo.permisso } } as UndoAction);
               }
           }
           // Se permisso não estiver no payload, mantém o valor atual (veiculo.permisso)

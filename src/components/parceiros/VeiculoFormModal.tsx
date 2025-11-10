@@ -105,8 +105,8 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   // Determina se o campo de carroceria deve ser exibido
   const showCarroceria = formData.tipo === 'Truck';
   
-  // Determina se a seção Permisso deve ser exibida (Cavalo, Truck ou Carreta)
-  const showPermissoSection = formData.tipo === 'Cavalo' || formData.tipo === 'Truck' || formData.tipo === 'Carreta';
+  // Determina se a seção Permisso deve ser exibida (Cavalo ou Truck)
+  const showPermissoSection = formData.tipo === 'Cavalo' || formData.tipo === 'Truck';
   
   // Handler para mudança nos campos do Permisso
   const handlePermissoChange = (field: keyof VeiculoFormData, value: any) => {
@@ -276,7 +276,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                 </div>
               </div>
               
-              {/* Seção 2: Permisso Internacional (Cavalo, Truck ou Carreta) */}
+              {/* Seção 2: Permisso Internacional (Cavalo ou Truck) */}
               {showPermissoSection && (
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-4">
                   <div className="flex items-center justify-between">
