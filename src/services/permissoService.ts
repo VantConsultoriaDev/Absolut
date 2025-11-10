@@ -75,8 +75,15 @@ export class PermissoService {
       }
       
       // --- Lógica para construir o Endereço Completo ---
+      // 1. Tenta usar o campo completo (enderecoCompleto ou endereco_completo)
       let enderecoCompleto = data.enderecoCompleto || data.endereco_completo || '';
+      
+      // 2. Tenta usar o campo 'endereco' como fallback
+      if (!enderecoCompleto) {
+          enderecoCompleto = data.endereco || '';
+      }
 
+      // 3. Se ainda estiver vazio, tenta construir a partir de partes
       if (!enderecoCompleto) {
           const logradouro = data.logradouro || '';
           const numero = data.numero || '';
