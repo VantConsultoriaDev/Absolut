@@ -622,7 +622,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       
       // Se houver Permisso, adiciona a ação de criação de Permisso também
       if (newVeiculo.permisso) {
-          setPermissoes(prev => [...prev, newVeiculo.permisso!]);
+          setPermissoes(prev => prev.filter(p => p.id !== newVeiculo.permisso!.id));
           handleSyncAction({ type: 'create_permisso_internacional', description: '', data: { newRecord: newVeiculo.permisso } } as UndoAction);
       }
       
@@ -812,6 +812,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       // --- Lógica de Parcelamento ---
       if (movimentacaoData.isInstallment && movimentacaoData.installmentCount && movimentacaoData.installmentCount >= 2) {
           // totalValueForInstallment é o valor da parcela se o usuário escolheu 'parcela', ou undefined se escolheu 'total'
+          // CORREÇÃO: totalValueForInstallment é removido do objeto MovimentacaoFinanceira antes de ser usado
           const { isInstallment, installmentCount, totalValueForInstallment, ...baseData } = movimentacaoData;
           
           const totalValue = baseData.valor;

@@ -166,6 +166,9 @@ export interface MovimentacaoFinanceira {
   installmentIndex?: number; // Número da parcela (ex: 1, 2, 3...)
   installmentGroupId?: string; // UUID para ligar todas as parcelas
   
+  // NOVO: Campo auxiliar para criação de parcelamento (não persistido)
+  totalValueForInstallment?: number; 
+  
   createdAt: Date
   updatedAt: Date
 }
