@@ -70,6 +70,9 @@ const Financeiro: React.FC = () => {
   const [showStatusDowngradeConfirm, setShowStatusDowngradeConfirm] = useState(false);
   const [downgradeTarget, setDowngradeTarget] = useState<{ mov: MovimentacaoFinanceira, newStatus: string } | null>(null);
   
+  // NOVO: Estado para confirmação de exclusão (recorrente/parcelado)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
   const { modalRef } = useModal({
     isOpen: showForm,
     onClose: () => {
@@ -192,8 +195,8 @@ const Financeiro: React.FC = () => {
 
   // Modal de gerenciamento de categorias
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
-  const [catType, setCatType] = useState<'receita' | 'despesa'>('receita')
-  const [newCategory, setNewCategory] = useState('')
+  // const [catType, setCatType] = useState<'receita' | 'despesa'>('receita') // REMOVIDO
+  // const [newCategory, setNewCategory] = useState('') // REMOVIDO
 
   // FUNÇÃO AUSENTE 1: addCategory
   const addCategory = (type: 'receita' | 'despesa', category: string) => {

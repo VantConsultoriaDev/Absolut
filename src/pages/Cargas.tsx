@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
 import { format } from 'date-fns';
@@ -35,6 +35,15 @@ import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade, getBaseCrt } from '../u
 // Tipagem para a configuração de ordenação
 type SortKey = 'crt' | 'origem' | 'destino' | 'dataColeta' | 'valor' | 'status';
 type SortDirection = 'asc' | 'desc';
+
+// NOVO: Definição da ordem de status para ordenação
+const STATUS_ORDER: Record<Carga['status'], number> = {
+  a_coletar: 1,
+  em_transito: 2,
+  armazenada: 3,
+  entregue: 4,
+  cancelada: 5,
+};
 
 const Cargas: React.FC = () => {
   const location = useLocation();
