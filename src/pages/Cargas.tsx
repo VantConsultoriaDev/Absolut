@@ -12,7 +12,6 @@ import {
   RefreshCw,
   Upload,
   CreditCard,
-  Calendar,
   Edit,
   Trash2,
   ArrowUp, // Ícone de ordenação
@@ -371,7 +370,6 @@ const Cargas: React.FC = () => {
           // const newLastTrajeto = newTrajetos[newTrajetos.length - 1]; // REMOVIDO TS6133
           // Se o destino final da carga original era o destino do trajeto removido,
           // precisamos restaurar o destino final no novo último trajeto.
-          // Simplificando: apenas garantimos que o destino do novo último trajeto não seja limpo.
           // Como a lógica de remoção não limpa o destino do penúltimo, isso deve funcionar.
       }
       
@@ -1163,26 +1161,6 @@ const Cargas: React.FC = () => {
   };
   
   // --- Handlers do Calendário Unificado ---
-  const handleOpenUnifiedCalendar = (e: React.MouseEvent<HTMLButtonElement>, type: DateFilterType) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setCalendarPosition({
-      top: rect.bottom + 5,
-      left: rect.left
-    });
-    setCalendarType(type);
-    
-    const startStr = type === 'coleta' ? filterColetaStartDate : filterEntregaStartDate;
-    const endStr = type === 'coleta' ? filterColetaEndDate : filterEntregaEndDate;
-    
-    const s = startStr ? createLocalDate(startStr) : null;
-    const ed = endStr ? createLocalDate(endStr) : null;
-    
-    setTempStart(s);
-    setTempEnd(ed);
-    setCalendarMonth(s || new Date());
-    setShowUnifiedCalendar(true);
-  };
-  
   const handleSelectDate = (d: Date) => {
     if (!tempStart || (tempStart && tempEnd)) {
       setTempStart(d);
@@ -1223,22 +1201,6 @@ const Cargas: React.FC = () => {
     setTempEnd(null);
     setShowUnifiedCalendar(false);
   };
-  
-  const getFilterDisplay = (type: DateFilterType) => {
-    const startStr = type === 'coleta' ? filterColetaStartDate : filterEntregaStartDate;
-    const endStr = type === 'coleta' ? filterColetaEndDate : filterEntregaEndDate;
-    
-    if (startStr && endStr) {
-      return `${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(endStr), 'dd/MM/yyyy', { locale: ptBR })}`;
-    }
-    if (startStr) {
-      return `De ${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })}`;
-    }
-    return 'Selecionar período';
-  };
-  
-  const getCalendarStart = () => calendarType === 'coleta' && filterColetaStartDate ? createLocalDate(filterColetaStartDate) : calendarType === 'entrega' && filterEntregaStartDate ? createLocalDate(filterEntregaStartDate) : null;
-  const getCalendarEnd = () => calendarType === 'coleta' && filterColetaEndDate ? createLocalDate(filterColetaEndDate) : calendarType === 'entrega' && filterEntregaEndDate ? createLocalDate(filterEntregaEndDate) : null;
   
   // --- Configuração do Filtro de Data Unificado ---
   const dateFilterOptions = useMemo(() => [

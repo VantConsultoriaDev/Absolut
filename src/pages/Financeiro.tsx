@@ -18,7 +18,6 @@ import {
   Clock,
   AlertTriangle,
   RefreshCw,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
   FileText,
@@ -27,7 +26,6 @@ import {
 } from 'lucide-react'
 import { MovimentacaoFinanceira } from '../types'
 import StatusChangeModal from '../components/StatusChangeModal'
-import RangeCalendar from '../components/RangeCalendar'
 import MultiSelectStatus from '../components/MultiSelectStatus'
 import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetailModal'
 import ConfirmationModal from '../components/ConfirmationModal'
@@ -57,7 +55,6 @@ const Financeiro: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false)
   const [editingMovimentacao, setEditingMovimentacao] = useState<any>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{id: string, descricao: string} | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentTarget, setPaymentTarget] = useState<{id: string, descricao: string} | null>(null)
@@ -109,7 +106,7 @@ const Financeiro: React.FC = () => {
     
     // Recorrência
     isRecurring: false,
-    recurrencePeriod: 'monthly',
+    recurrencePeriod: 'monthly' as MovimentacaoFinanceira['recurrencePeriod'], // Corrigido para o tipo correto
     recurrenceEndDateStr: '' as string, // String for input type="date"
     
     // NOVO: Parcelamento
@@ -220,7 +217,6 @@ const Financeiro: React.FC = () => {
       // Fechar modais e limpar estados auxiliares
       setShowForm(false)
       setEditingMovimentacao(null)
-      setShowDeleteConfirm(false)
       setDeleteTarget(null)
       setShowPaymentModal(false)
       setPaymentTarget(null)
@@ -549,7 +545,13 @@ const Financeiro: React.FC = () => {
         id: id,
         descricao: movimentacao.descricao
       })
-      setShowDeleteConfirm(true)
+      // Se for recorrente ou parcelado, o modal de confirmação deve ser exibido
+      if (movimentacao.isRecurring || movimentacao.isInstallment) {
+          setShowDeleteConfirm(true);
+      } else {
+          // Para movimentação única, exclui diretamente
+          deleteMovimentacao(id, false);
+      }
     }
   }
 
