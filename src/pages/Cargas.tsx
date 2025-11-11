@@ -4,7 +4,7 @@ import { useDatabase } from '../contexts/DatabaseContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters';
-import { undoService } from '../services/undoService';
+import { undoService, UndoAction } from '../services/undoService';
 import { Carga, MovimentacaoFinanceira, Trajeto, IntegrateData, initialIntegrateData } from '../types';
 import {
   Plus,
