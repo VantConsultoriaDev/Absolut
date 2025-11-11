@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Check, ChevronDown, X } from 'lucide-react';
-// Removido: import { useModal } from '../hooks/useModal';
 
 interface StatusOption {
   key: string;
@@ -39,6 +38,8 @@ const MultiSelectStatus: React.FC<MultiSelectStatusProps> = ({
     };
   }, [dropdownRef]);
 
+  const allKeys = useMemo(() => options.map(o => o.key), [options]);
+  const isAllSelected = selectedKeys.length === allKeys.length && allKeys.length > 0;
 
   const handleToggle = (key: string) => {
     if (selectedKeys.includes(key)) {
@@ -48,16 +49,24 @@ const MultiSelectStatus: React.FC<MultiSelectStatusProps> = ({
     }
   };
   
+  const handleToggleAll = () => {
+    if (isAllSelected) {
+      onChange([]); // Deselect all
+    } else {
+      onChange(allKeys); // Select all
+    }
+  };
+  
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange([]);
     setIsOpen(false);
   };
 
-  const displayLabel = selectedKeys.length === 0 
+  const finalDisplayLabel = selectedKeys.length === 0 
     ? label 
-    : selectedKeys.length === options.length
-      ? 'Todos selecionados'
+    : isAllSelected
+      ? 'Todas'
       : `${selectedKeys.length} selecionado(s)`;
 
   return (
@@ -68,7 +77,7 @@ const MultiSelectStatus: React.FC<MultiSelectStatusProps> = ({
         className="input-field flex items-center justify-between h-11 text-sm w-full"
       >
         <span className="text-sm text-slate-900 dark:text-slate-50 truncate">
-          {displayLabel}
+          {finalDisplayLabel}
         </span>
         <div className="flex items-center gap-1">
             {selectedKeys.length > 0 && (
@@ -88,6 +97,26 @@ const MultiSelectStatus: React.FC<MultiSelectStatusProps> = ({
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full min-w-[200px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           <div className="p-2 space-y-1">
+            
+            {/* NOVO: Opção "Todas" */}
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors font-bold ${
+                isAllSelected
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              <span className={`inline-flex items-center justify-center h-4 w-4 rounded-full mr-3 ${isAllSelected ? 'bg-blue-600' : 'bg-gray-400'}`}>
+                {isAllSelected && <Check className="h-3 w-3 text-white" />}
+              </span>
+              <span className="flex-1 text-left">Todas</span>
+            </button>
+            
+            {/* Separador */}
+            <div className="h-px bg-slate-200 dark:bg-slate-700 my-1" />
+
             {options.map(option => {
               const isSelected = selectedKeys.includes(option.key);
               return (
