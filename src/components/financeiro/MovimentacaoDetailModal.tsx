@@ -54,7 +54,7 @@ const MovimentacaoDetailModal: React.FC<MovimentacaoDetailModalProps> = ({
   const movStatusConfig = {
     pendente: { label: 'Pendente', color: 'bg-amber-100 text-amber-800' },
     pago: { label: 'Pago', color: 'bg-emerald-100 text-emerald-800' },
-    cancelado: { label: 'Adiado', color: 'bg-red-100 text-red-800' },
+    cancelado: { label: 'Urgente', color: 'bg-red-100 text-red-800' },
   };
   
   if (!isOpen || !movimentacao) return null;

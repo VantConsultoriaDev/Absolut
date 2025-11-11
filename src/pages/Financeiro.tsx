@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
@@ -145,7 +145,7 @@ const Financeiro: React.FC = () => {
   const statusConfig = {
     pendente: { label: 'Pendente', color: 'bg-amber-600 text-white', icon: Clock },
     pago: { label: 'Pago', color: 'bg-emerald-600 text-white', icon: CheckCircle },
-    cancelado: { label: 'Adiado', color: 'bg-red-600 text-white', icon: AlertTriangle }
+    cancelado: { label: 'Urgente', color: 'bg-red-600 text-white', icon: AlertTriangle }
   }
   
   // Mapeamento de status para o modal e MultiSelect
@@ -157,7 +157,7 @@ const Financeiro: React.FC = () => {
       textColor: 'text-gray-500 dark:text-gray-400',
       color: cfg.color,
     }));
-  }, []);
+  }, [statusConfig]);
   
   // Opções de categoria filtradas pelo tipo de movimentação
   const filteredCategoryOptions = useMemo(() => {
@@ -599,7 +599,7 @@ const Financeiro: React.FC = () => {
       setPaymentDate(format(new Date(), 'yyyy-MM-dd'));
       setShowPaymentModal(true);
     } else {
-      // Se for Pendente -> Adiado ou Adiado -> Pendente (sem comprovante)
+      // Se for Pendente -> Urgente ou Urgente -> Pendente (sem comprovante)
       updateMovimentacao(statusTargetMov.id, { status: newStatus as 'pendente' | 'pago' | 'cancelado', dataPagamento: null, comprovanteUrl: undefined }); // Limpa comprovante se não for pago
     }
     setStatusTargetMov(null);
@@ -1095,7 +1095,7 @@ const Financeiro: React.FC = () => {
                 <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input-field" required>
                   <option value="pendente">Pendente</option>
                   <option value="pago">Pago</option>
-                  <option value="cancelado">Adiado</option>
+                  <option value="cancelado">Urgente</option>
                 </select>
               </div>
               
