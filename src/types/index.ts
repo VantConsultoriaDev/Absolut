@@ -152,6 +152,14 @@ export interface MovimentacaoFinanceira {
   observacoes?: string
   comprovanteUrl?: string
   trajetoIndex?: number // NOVO: Para vincular a um trajeto específico
+  
+  // NOVO: Recurrence fields
+  isRecurring?: boolean;
+  recurrencePeriod?: 'monthly' | 'quarterly' | 'yearly'; // Monthly, Quarterly, Yearly
+  recurrenceEndDate?: Date | null; // Null if indeterminate
+  recurrenceGroupId?: string; // UUID to link all instances of a recurring movement
+  recurrenceIndex?: number; // Index of the movement in the series (e.g., 1, 2, 3...)
+  
   createdAt: Date
   updatedAt: Date
 }
@@ -370,7 +378,8 @@ export interface DatabaseContextType {
   createMovimentacao: (movimentacao: CreateType<MovimentacaoFinanceira>) => MovimentacaoFinanceira
   // CORRIGIDO: updateMovimentacao agora é assíncrona e retorna Promise
   updateMovimentacao: (id: string, movimentacao: Partial<MovimentacaoFinanceira>) => Promise<MovimentacaoFinanceira | null>
-  deleteMovimentacao: (id: string) => boolean
+  // ALTERADO: deleteMovimentacao agora aceita um segundo parâmetro opcional para exclusão em grupo
+  deleteMovimentacao: (id: string, deleteGroup?: boolean) => boolean
   
   // Carga operations
   createCarga: (carga: CreateType<Carga>) => Carga

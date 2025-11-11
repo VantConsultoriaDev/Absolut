@@ -29,7 +29,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
   };
 
   // Função auxiliar para formatar Date para string YYYY-MM-DD (para colunas DATE)
-  const formatDateToSupabase = (date: Date | undefined): string | null => {
+  const formatDateToSupabase = (date: Date | undefined | null): string | null => {
       if (!date || isNaN(date.getTime())) return null;
       // Supabase espera o formato YYYY-MM-DD para colunas DATE
       return date.toISOString().split('T')[0];
@@ -138,6 +138,13 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         observacoes: cleanedItem.observacoes,
         comprovante_url: cleanedItem.comprovanteUrl,
         trajeto_index: cleanedItem.trajetoIndex,
+        
+        // NOVO: Recurrence fields
+        is_recurring: cleanedItem.isRecurring,
+        recurrence_period: cleanedItem.recurrencePeriod,
+        recurrence_end_date: formatDateToSupabase(cleanedItem.recurrenceEndDate),
+        recurrence_group_id: cleanedItem.recurrenceGroupId,
+        recurrence_index: cleanedItem.recurrenceIndex,
       };
     case 'contratos_frete':
       return {
@@ -162,7 +169,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         prioridade: cleanedItem.prioridade,
         status: cleanedItem.status,
         data_vencimento: cleanedItem.dataVencimento?.toISOString().split('T')[0], // ALTERADO
-        vincular_ao_calendario: cleanedItem.vincularAoCalendario, // ALTERADO
+        vincular_ao_calendario: cleanedItem.vincular_ao_calendario, // ALTERADO
       };
     default:
       return base;
@@ -279,6 +286,13 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         observacoes: item.observacoes,
         comprovanteUrl: item.comprovante_url ?? item.comprovanteUrl,
         trajetoIndex: item.trajeto_index,
+        
+        // NOVO: Recurrence fields
+        isRecurring: item.is_recurring,
+        recurrencePeriod: item.recurrence_period,
+        recurrenceEndDate: item.recurrence_end_date ? new Date(item.recurrence_end_date) : null,
+        recurrenceGroupId: item.recurrence_group_id,
+        recurrenceIndex: item.recurrence_index,
       } as MovimentacaoFinanceira;
     case 'contratos_frete':
       return {

@@ -15,6 +15,7 @@ import {
   uploadAvatar, deleteAvatar, deleteComprovante, uploadComprovante 
 } from '../services/supabaseStorage'
 import { syncActionToSupabase, pullSupabaseData as pullSupabaseDataService } from '../services/supabaseSync'
+import { addMonths, addYears } from 'date-fns'; // NOVO: Importando addMonths e addYears
 
 const DatabaseContext = createContext<DatabaseContextType | undefined>(undefined)
 
@@ -43,6 +44,14 @@ const saveToLocalStorage = (key: string, data: any[]) => {
   }
 };
 
+// Helper function to calculate the next date based on the period
+const calculateNextDate = (currentDate: Date, period: MovimentacaoFinanceira['recurrencePeriod']): Date => {
+    if (period === 'monthly') return addMonths(currentDate, 1);
+    if (period === 'quarterly') return addMonths(currentDate, 3);
+    if (period === 'yearly') return addYears(currentDate, 1);
+    return currentDate;
+};
+
 // Função para inicializar dados de demonstração
 export const initializeDemoData = () => {
   // Tenta carregar do localStorage, se não houver, usa array vazio
@@ -68,6 +77,9 @@ export const initializeDemoData = () => {
         complemento: d.complemento || undefined,
         // Permisso (se existir)
         permisso: d.permisso ? { ...d.permisso, dataConsulta: new Date(d.permisso.dataConsulta) } : undefined,
+        
+        // NOVO: Recorrência
+        recurrenceEndDate: d.recurrenceEndDate ? new Date(d.recurrenceEndDate) : null,
       })) : [];
     } catch (e) {
       console.error(`Failed to load ${key} from localStorage`, e);
@@ -791,25 +803,94 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   // --- MOVIMENTACAO OPERATIONS ---
   const createMovimentacao = (movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'>): MovimentacaoFinanceira => {
     try {
-      const newMovimentacao: MovimentacaoFinanceira = {
-        ...movimentacaoData,
-        id: generateId(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      setMovimentacoes(prev => [...prev, newMovimentacao])
       
-      undoService.addUndoAction({
-          type: 'create_movimentacoes_financeiras',
-          description: `Movimentação "${newMovimentacao.descricao}" criada`,
-          data: { newRecord: newMovimentacao },
-          undoFunction: async () => {
-              setMovimentacoes(prev => prev.filter(m => m.id !== newMovimentacao.id));
+      if (movimentacaoData.isRecurring) {
+          // Handle recurrence
+          const { isRecurring, recurrencePeriod, recurrenceEndDate, ...baseData } = movimentacaoData;
+          
+          if (!recurrencePeriod) {
+              throw new Error('Período de recorrência é obrigatório.');
           }
-      });
-      handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: newMovimentacao } } as UndoAction);
-      // showSuccess(`Movimentação "${newMovimentacao.descricao}" criada com sucesso.`); // REMOVIDO
-      return newMovimentacao
+          
+          const groupId = generateId();
+          const createdMovs: MovimentacaoFinanceira[] = [];
+          let currentDate = new Date(baseData.data);
+          let index = 1;
+          
+          // Loop to create movements
+          while (true) {
+              // Check end date condition
+              if (recurrenceEndDate && currentDate > recurrenceEndDate) {
+                  break;
+              }
+              
+              const newMov: MovimentacaoFinanceira = {
+                  ...baseData,
+                  id: generateId(),
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  data: currentDate, // Use the calculated date
+                  isRecurring: true,
+                  recurrencePeriod,
+                  recurrenceEndDate,
+                  recurrenceGroupId: groupId,
+                  recurrenceIndex: index,
+              };
+              
+              createdMovs.push(newMov);
+              
+              // Calculate next date
+              currentDate = calculateNextDate(currentDate, recurrencePeriod);
+              index++;
+              
+              // Safety break for indeterminate recurrence (limit to 12 instances for now)
+              if (!recurrenceEndDate && index > 12) break;
+          }
+          
+          // Update state with all recurring movements
+          setMovimentacoes(prev => [...prev, ...createdMovs]);
+          
+          // Register undo action for the group
+          const createdIds = createdMovs.map(m => m.id);
+          undoService.addUndoAction({
+              type: 'create_movimentacoes_financeiras_group',
+              description: `Grupo de ${createdMovs.length} movimentações recorrentes criado`,
+              data: { createdIds, groupId },
+              undoFunction: async () => {
+                  setMovimentacoes(prev => prev.filter(m => m.recurrenceGroupId !== groupId));
+              }
+          });
+          
+          // Sync all created movements
+          createdMovs.forEach(mov => {
+              handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: mov } } as UndoAction);
+          });
+          
+          // showSuccess(`Grupo de ${createdMovs.length} movimentações recorrentes criado com sucesso.`); // REMOVIDO
+          return createdMovs[0]; // Return the first one
+          
+      } else {
+          // Existing logic for single movement
+          const newMov: MovimentacaoFinanceira = {
+              ...movimentacaoData,
+              id: generateId(),
+              createdAt: new Date(),
+              updatedAt: new Date()
+          }
+          setMovimentacoes(prev => [...prev, newMov])
+          
+          undoService.addUndoAction({
+              type: 'create_movimentacoes_financeiras',
+              description: `Movimentação "${newMov.descricao}" criada`,
+              data: { newRecord: newMov },
+              undoFunction: async () => {
+                  setMovimentacoes(prev => prev.filter(m => m.id !== newMov.id));
+              }
+          });
+          handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: newMov } } as UndoAction);
+          // showSuccess(`Movimentação "${newMov.descricao}" criada com sucesso.`); // REMOVIDO
+          return newMov
+      }
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao criar movimentação.');
       throw e;
@@ -873,26 +954,45 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     }
   }
 
-  const deleteMovimentacao = (id: string): boolean => {
+  const deleteMovimentacao = (id: string, deleteGroup: boolean = false): boolean => {
     try {
       const deletedMovimentacao = movimentacoes.find(m => m.id === id);
-      setMovimentacoes(prev => prev.filter(movimentacao => movimentacao.id !== id))
+      if (!deletedMovimentacao) return false;
       
-      if (deletedMovimentacao) {
-          if (deletedMovimentacao.comprovanteUrl) {
-              storageDeleteComprovante(deletedMovimentacao.comprovanteUrl);
-          }
-          
+      let movsToDelete: MovimentacaoFinanceira[] = [];
+      
+      if (deleteGroup && deletedMovimentacao.isRecurring && deletedMovimentacao.recurrenceGroupId) {
+          // Delete the entire group
+          movsToDelete = movimentacoes.filter(m => m.recurrenceGroupId === deletedMovimentacao.recurrenceGroupId);
+          setMovimentacoes(prev => prev.filter(m => m.recurrenceGroupId !== deletedMovimentacao.recurrenceGroupId));
+      } else {
+          // Delete single movement
+          movsToDelete = [deletedMovimentacao];
+          setMovimentacoes(prev => prev.filter(movimentacao => movimentacao.id !== id));
+      }
+      
+      // Delete comprovantes
+      movsToDelete.filter(m => m.comprovanteUrl).forEach(m => storageDeleteComprovante(m.comprovanteUrl!));
+      
+      if (movsToDelete.length > 0) {
+          const description = deleteGroup 
+              ? `Grupo recorrente de ${movsToDelete.length} movs (ID: ${deletedMovimentacao.recurrenceGroupId}) excluído`
+              : `Movimentação "${deletedMovimentacao.descricao}" excluída`;
+              
           undoService.addUndoAction({
-              type: 'delete_movimentacoes_financeiras',
-              description: `Movimentação "${deletedMovimentacao.descricao}" excluída`,
-              data: { deletedData: deletedMovimentacao },
+              type: deleteGroup ? 'delete_movimentacoes_financeiras_group' : 'delete_movimentacoes_financeiras',
+              description: description,
+              data: { deletedData: movsToDelete },
               undoFunction: async () => {
-                  setMovimentacoes(prev => [...prev, deletedMovimentacao]);
+                  setMovimentacoes(prev => [...prev, ...movsToDelete]);
               }
           });
-          handleSyncAction({ type: 'delete_movimentacoes_financeiras', description: '', data: { deletedData: deletedMovimentacao } } as UndoAction);
-          // showSuccess(`Movimentação "${deletedMovimentacao.descricao}" excluída com sucesso.`); // REMOVIDO
+          
+          // Sync deletion for all movements
+          movsToDelete.forEach(mov => {
+              handleSyncAction({ type: 'delete_movimentacoes_financeiras', description: '', data: { deletedData: mov } } as UndoAction);
+          });
+          // showSuccess(description + ' com sucesso.'); // REMOVIDO
       }
       return true
     } catch (e) {

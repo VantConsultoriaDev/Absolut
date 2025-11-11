@@ -32,6 +32,7 @@ import RangeCalendar from '../components/RangeCalendar'
 import MultiSelectStatus from '../components/MultiSelectStatus'
 import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetailModal'
 import ConfirmationModal from '../components/ConfirmationModal'
+import StandardCheckbox from '../components/StandardCheckbox' // NOVO
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -76,16 +77,7 @@ const Financeiro: React.FC = () => {
     onClose: () => {
       setShowForm(false)
       setEditingMovimentacao(null)
-      // setFormAnchor(null) // Removido, pois o modal agora é centralizado
-      setFormData({
-        descricao: '',
-        valor: '',
-        tipo: 'despesa',
-        categoria: '',
-        data: format(new Date(), 'yyyy-MM-dd'),
-        status: 'pendente',
-        observacoes: ''
-      })
+      resetForm()
     }
   })
   
@@ -116,8 +108,6 @@ const Financeiro: React.FC = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusTargetMov, setStatusTargetMov] = useState<MovimentacaoFinanceira | null>(null);
   
-  // const [formAnchor, setFormAnchor] = useState<{ top: number, left: number } | null>(null) // Removido
-
   const [formData, setFormData] = useState({
     descricao: '',
     valor: '',
@@ -125,7 +115,12 @@ const Financeiro: React.FC = () => {
     categoria: '',
     data: format(new Date(), 'yyyy-MM-dd'),
     status: 'pendente',
-    observacoes: ''
+    observacoes: '',
+    
+    // NOVO: Recorrência
+    isRecurring: false,
+    recurrencePeriod: 'monthly' as MovimentacaoFinanceira['recurrencePeriod'],
+    recurrenceEndDateStr: '' as string, // String for input type="date"
   })
   // Categorias dinâmicas com persistência em localStorage
   const [categories, setCategories] = useState<{ receita: string[]; despesa: string[] }>(() => {
@@ -227,21 +222,12 @@ const Financeiro: React.FC = () => {
       setShowPayCalendar(false)
       setShowStatusModal(false)
       setStatusTargetMov(null)
-      // setFormAnchor(null) // Removido
       
       // Resetar ordenação
       setSortConfig({ key: 'data', direction: 'asc' });
 
       // Resetar formulário
-      setFormData({
-        descricao: '',
-        valor: '',
-        tipo: 'despesa',
-        categoria: '',
-        data: format(new Date(), 'yyyy-MM-dd'),
-        status: 'pendente',
-        observacoes: ''
-      })
+      resetForm()
     }
   }, [location.state])
   
@@ -385,6 +371,18 @@ const Financeiro: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Validação para recorrência
+    if (formData.isRecurring && !formData.recurrencePeriod) {
+        alert('Selecione o período de recorrência.');
+        return;
+    }
+    
+    // Não é possível editar movimentações recorrentes individualmente
+    if (editingMovimentacao && editingMovimentacao.isRecurring) {
+        alert('Não é possível editar movimentações recorrentes individualmente. Altere o status ou exclua.');
+        return;
+    }
+    
     const movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'> = {
       descricao: formData.descricao,
       valor: parseCurrency(formData.valor),
@@ -393,6 +391,13 @@ const Financeiro: React.FC = () => {
       data: createLocalDate(formData.data),
       status: formData.status as 'pendente' | 'pago' | 'cancelado',
       observacoes: formData.observacoes,
+      
+      // NOVO: Recorrência
+      isRecurring: formData.isRecurring,
+      recurrencePeriod: formData.isRecurring ? formData.recurrencePeriod : undefined,
+      recurrenceEndDate: formData.isRecurring && formData.recurrenceEndDateStr 
+          ? createLocalDate(formData.recurrenceEndDateStr) 
+          : null,
     }
 
     if (editingMovimentacao) {
@@ -412,14 +417,24 @@ const Financeiro: React.FC = () => {
       categoria: '',
       data: format(new Date(), 'yyyy-MM-dd'),
       status: 'pendente',
-      observacoes: ''
+      observacoes: '',
+      
+      // NOVO: Recorrência
+      isRecurring: false,
+      recurrencePeriod: 'monthly',
+      recurrenceEndDateStr: '',
     })
     setEditingMovimentacao(null)
     setShowForm(false)
-    // setFormAnchor(null) // Removido
   }
 
   const handleEdit = (movimentacao: any) => {
+    // Não é possível editar movimentações recorrentes individualmente
+    if (movimentacao.isRecurring) {
+        alert('Não é possível editar movimentações recorrentes individualmente. Altere o status ou exclua.');
+        return;
+    }
+    
     setFormData({
       descricao: movimentacao.descricao,
       valor: formatCurrency(movimentacao.valor.toString()),
@@ -428,11 +443,14 @@ const Financeiro: React.FC = () => {
       // Usar format para garantir YYYY-MM-DD a partir do objeto Date
       data: format(new Date(movimentacao.data), 'yyyy-MM-dd'),
       status: movimentacao.status,
-      observacoes: movimentacao.observacoes || ''
+      observacoes: movimentacao.observacoes || '',
+      
+      // NOVO: Recorrência (set to false/empty for editing single movements)
+      isRecurring: false,
+      recurrencePeriod: 'monthly',
+      recurrenceEndDateStr: '',
     })
     setEditingMovimentacao(movimentacao)
-    // Centraliza sempre o modal de edição
-    // setFormAnchor(null) // Removido
     setShowForm(true)
   }
   
@@ -453,25 +471,13 @@ const Financeiro: React.FC = () => {
     }
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = (deleteGroup: boolean = false) => {
     if (deleteTarget) {
-      // Salvar dados para desfazer
-      const deletedMovimentacao = movimentacoes.find(m => m.id === deleteTarget.id);
+      const targetMov = movimentacoes.find(m => m.id === deleteTarget.id);
+      if (!targetMov) return;
       
-      if (deletedMovimentacao) {
-        // Executar exclusão
-        deleteMovimentacao(deleteTarget.id);
-
-        // Adicionar ação de desfazer
-        undoService.addUndoAction({
-          type: 'delete_financial',
-          description: `Movimentação "${deleteTarget.descricao}" excluída`,
-          data: deletedMovimentacao,
-          undoFunction: async () => {
-            createMovimentacao(deletedMovimentacao);
-          }
-        });
-      }
+      // Passa a flag para o contexto
+      deleteMovimentacao(deleteTarget.id, deleteGroup);
 
       setShowDeleteConfirm(false);
       setDeleteTarget(null);
@@ -588,7 +594,6 @@ const Financeiro: React.FC = () => {
           </button>
           <button
             onClick={() => {
-              // setFormAnchor(null) // Removido
               setEditingMovimentacao(null)
               setFormData(prev => ({ ...prev, tipo: 'despesa' }))
               setShowForm(true)
@@ -882,6 +887,9 @@ const Financeiro: React.FC = () => {
                   >
                     <td className="table-cell text-sm">
                       {format(new Date(movimentacao.data), 'dd/MM/yyyy', { locale: ptBR })}
+                      {movimentacao.isRecurring && (
+                          <span className="ml-2 badge badge-info">Rec.</span>
+                      )}
                     </td>
                     <td className="table-cell font-medium text-slate-900 dark:text-white">
                       {movimentacao.descricao}
@@ -920,6 +928,7 @@ const Financeiro: React.FC = () => {
                           }}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                           title="Editar"
+                          disabled={movimentacao.isRecurring}
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -1064,6 +1073,50 @@ const Financeiro: React.FC = () => {
                   <option value="cancelado">Adiado</option>
                 </select>
               </div>
+              
+              {/* Recorrência */}
+              <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3">
+                <StandardCheckbox
+                  label="Movimentação Recorrente"
+                  checked={formData.isRecurring}
+                  onChange={(checked) => setFormData(prev => ({ 
+                      ...prev, 
+                      isRecurring: checked, 
+                      recurrenceEndDateStr: checked ? prev.recurrenceEndDateStr : '' 
+                  }))}
+                  className="bg-white dark:bg-gray-800 p-0"
+                />
+                
+                {formData.isRecurring && (
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Período de Recorrência *</label>
+                      <select 
+                        value={formData.recurrencePeriod} 
+                        onChange={(e) => setFormData({ ...formData, recurrencePeriod: e.target.value as MovimentacaoFinanceira['recurrencePeriod'] })} 
+                        className="input-field" 
+                        required
+                      >
+                        <option value="monthly">Mensal</option>
+                        <option value="quarterly">Trimestral</option>
+                        <option value="yearly">Anual</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data Final (Opcional)</label>
+                      <input 
+                        type="date" 
+                        value={formData.recurrenceEndDateStr} 
+                        onChange={(e) => setFormData({ ...formData, recurrenceEndDateStr: e.target.value })} 
+                        className="input-field" 
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Deixe em branco para recorrência indeterminada (limite de 12 instâncias).</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observações</label>
                 <textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} className="input-field" rows={3} />
@@ -1079,40 +1132,73 @@ const Financeiro: React.FC = () => {
 
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirm && deleteTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Confirmar Exclusão
-              </h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setDeleteTarget(null);
+          }}
+          onConfirm={() => confirmDelete(false)} // Default: delete single
+          title="Confirmar Exclusão"
+          message={
+            <>
               Tem certeza que deseja excluir a movimentação{' '}
               <span className="font-semibold">{deleteTarget.descricao}</span>?
-              <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                Esta ação não pode ser desfeita.
-              </span>
-            </p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteTarget(null);
-                }}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
+              
+              {/* NOVO: Opções de exclusão recorrente */}
+              {movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring ? (
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                      Esta é uma movimentação recorrente. O que você deseja excluir?
+                  </p>
+              ) : (
+                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
+                    Esta ação não pode ser desfeita.
+                  </span>
+              )}
+            </>
+          }
+          confirmText="Excluir"
+          variant="danger"
+        >
+            {/* Renderiza botões customizados se for recorrente */}
+            {movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring ? (
+                <div className="flex flex-col space-y-3">
+                    <button
+                        type="button"
+                        onClick={() => confirmDelete(false)}
+                        className="btn-secondary justify-center"
+                    >
+                        Excluir SOMENTE esta transação
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => confirmDelete(true)}
+                        className="btn-danger justify-center"
+                    >
+                        Excluir TODAS as transações recorrentes
+                    </button>
+                </div>
+            ) : (
+                // Botões padrão para transação única
+                <div className="flex space-x-3">
+                    <button
+                        onClick={() => {
+                            setShowDeleteConfirm(false);
+                            setDeleteTarget(null);
+                        }}
+                        className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => confirmDelete(false)}
+                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                        Excluir
+                    </button>
+                </div>
+            )}
+        </ConfirmationModal>
       )}
 
       {/* Modal de Categorias */}
