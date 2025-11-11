@@ -80,7 +80,8 @@ const CargaDetailModal: React.FC<CargaDetailModalProps> = ({
     if (!ids || ids.length === 0) return 'N/A';
     return ids.map(id => {
       const v = veiculos.find(v => v.id === id);
-      return v ? (v.placaCarreta || v.placa || 'Placa Desconhecida') : 'ID Inválido';
+      // Prioriza placaCarreta, depois placa
+      return v ? (formatPlaca(v.placaCarreta || v.placa || 'Placa Desconhecida')) : 'ID Inválido';
     }).join(', ');
   };
 
@@ -172,6 +173,7 @@ const CargaDetailModal: React.FC<CargaDetailModalProps> = ({
             <p className="text-sm font-medium text-slate-900 dark:text-white">
               {veiculo ? `${veiculo.tipo} - ${formatPlaca(veiculo.placa || veiculo.placaCavalo || '')}` : 'Não Vinculado'}
             </p>
+            {/* NOVO: Exibe carretas vinculadas */}
             {veiculo?.tipo === 'Cavalo' && trajeto.carretasSelecionadas && trajeto.carretasSelecionadas.length > 0 && (
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
                 Carretas: {getCarretaPlacas(trajeto.carretasSelecionadas)}

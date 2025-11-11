@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, Search, Calendar, FileBadge } from 'lucide-react';
+import { X, Edit, Trash2, Briefcase, User, Truck, Mail, Phone, MapPin, CreditCard, FileText, AlertTriangle, Building2, Search, Calendar, FileBadge, Link as LinkIcon } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista, Veiculo, PermissoInternacional } from '../../types';
 import { formatDocument, formatContact, formatPlaca, formatPixKey } from '../../utils/formatters';
@@ -123,6 +123,15 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
   }, [veiculos, parceiro.id, veiculoSearchTerm, veiculoFilterType]);
   
   const hasPixInfo = parceiro.pixKey && parceiro.pixKeyType;
+  
+  // Função auxiliar para obter as placas das carretas vinculadas
+  const getCarretaPlacas = (carretaIds: string[] | undefined) => {
+      if (!carretaIds || carretaIds.length === 0) return null;
+      
+      const linkedCarretas = veiculos.filter(v => carretaIds.includes(v.id));
+      
+      return linkedCarretas.map(v => formatPlaca(v.placaCarreta || v.placa || 'N/A')).join(', ');
+  };
 
   const renderDetalhes = () => (
     <div className="space-y-6">
@@ -328,6 +337,9 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
             const permisso = getPermissoByVeiculoId(v.id);
             const isCavaloOuTruck = v.tipo === 'Cavalo' || v.tipo === 'Truck';
             
+            // NOVO: Placas das carretas vinculadas (apenas para Cavalo)
+            const carretasVinculadas = v.tipo === 'Cavalo' ? getCarretaPlacas(v.carretasSelecionadas) : null;
+            
             return (
               <div key={v.id} className="card p-4 flex justify-between items-start hover:bg-slate-50 dark:hover:bg-slate-700/50">
                 <div className="flex items-center gap-4">
@@ -337,6 +349,14 @@ const ParceiroDetailModal: React.FC<ParceiroDetailModalProps> = ({
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">{placaDisplay} ({v.tipo})</p>
                     {v.chassis && (
                         <p className="text-xs text-gray-500 dark:text-gray-400">Chassis: {v.chassis}</p>
+                    )}
+                    
+                    {/* Carretas Vinculadas (NOVO) */}
+                    {carretasVinculadas && (
+                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                            <LinkIcon className="h-3 w-3 text-blue-500" />
+                            Carretas: {carretasVinculadas}
+                        </div>
                     )}
                     
                     {/* Status Permisso */}

@@ -97,7 +97,8 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
 
   // 3. Opções de Veículo (Truck ou Cavalo, Filtrado por Parceiro ou Todos)
   const filteredVeiculos: SelectOption[] = useMemo(() => {
-    const base = veiculos.filter(v => v.tipo !== 'Carreta');
+    // Filtra para mostrar apenas Cavalo e Truck
+    const base = veiculos.filter(v => v.tipo === 'Cavalo' || v.tipo === 'Truck');
     
     let list = selectedParceiro 
       ? base.filter(v => v.parceiroId === selectedParceiro) 
@@ -112,17 +113,30 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
   }, [selectedParceiro, veiculos]);
   
   // 4. Carretas (Apenas para Cavalo selecionado)
-  const isSelectedVehicleCavalo = useMemo(() => {
-    if (!selectedVeiculo) return false;
-    const veiculo = veiculos.find(v => v.id === selectedVeiculo);
-    return veiculo?.tipo === 'Cavalo';
+  const selectedVehicleInfo = useMemo(() => {
+    return veiculos.find(v => v.id === selectedVeiculo);
   }, [selectedVeiculo, veiculos]);
+  
+  const isSelectedVehicleCavalo = selectedVehicleInfo?.tipo === 'Cavalo';
 
-  const filteredCarretas = useMemo(() => {
+  // Carretas disponíveis para o parceiro (todas as carretas do parceiro)
+  const parceiroCarretas = useMemo(() => {
     return selectedParceiro 
       ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta') 
       : [];
   }, [selectedParceiro, veiculos]);
+  
+  // Efeito para carregar carretas vinculadas ao Cavalo automaticamente
+  useEffect(() => {
+      if (isSelectedVehicleCavalo && selectedVehicleInfo?.carretasSelecionadas) {
+          // Se for Cavalo, carrega as carretas vinculadas a ele
+          setSelectedCarretas(selectedVehicleInfo.carretasSelecionadas);
+      } else if (!isSelectedVehicleCavalo) {
+          // Se não for Cavalo, limpa a seleção de carretas
+          setSelectedCarretas([]);
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVeiculo, isSelectedVehicleCavalo, selectedVehicleInfo?.carretasSelecionadas]);
   
   // --- HANDLERS DE SELEÇÃO ---
   
@@ -202,16 +216,16 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
           />
 
           {/* Seleção de Carretas quando o veículo for Cavalo */}
-          {isSelectedVehicleCavalo && filteredCarretas.length > 0 && (
+          {isSelectedVehicleCavalo && parceiroCarretas.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Carretas do Parceiro (selecione uma ou mais)
+                Carretas Vinculadas ao Cavalo (Máx. 2)
               </label>
               <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2">
-                {filteredCarretas.map(carreta => (
+                {parceiroCarretas.map(carreta => (
                   <label key={carreta.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                     <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {carreta.placaCarreta || carreta.placa || 'Carreta sem placa'}
+                      {formatPlaca(carreta.placaCarreta || carreta.placa || 'Carreta sem placa')} ({carreta.fabricante} {carreta.modelo})
                     </span>
                     <input
                       type="checkbox"
@@ -223,14 +237,21 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
                         );
                       }}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      // Desabilita se já houver 2 carretas selecionadas E esta não for uma delas
+                      disabled={!selectedCarretas.includes(carreta.id) && selectedCarretas.length >= 2}
                     />
                   </label>
                 ))}
               </div>
+              {selectedCarretas.length > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {selectedCarretas.length} carretas selecionadas para este trajeto.
+                  </p>
+              )}
             </div>
           )}
           
-          {isSelectedVehicleCavalo && filteredCarretas.length === 0 && (
+          {isSelectedVehicleCavalo && parceiroCarretas.length === 0 && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
               <p className="text-sm text-yellow-700 dark:text-yellow-400">

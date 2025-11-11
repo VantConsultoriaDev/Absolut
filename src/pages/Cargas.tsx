@@ -80,8 +80,8 @@ const Cargas: React.FC = () => {
   const initialFormData: CargaFormData = {
     crt: '',
     clienteId: '',
-    dataColeta: '', // ALTERADO: Vazio
-    dataEntrega: '', // ALTERADO: Vazio
+    dataColeta: '', // Global dates are kept for compatibility but not used in logic
+    dataEntrega: '', // Global dates are kept for compatibility but not used in logic
     peso: '',
     observacoes: '',
     status: 'a_coletar',
@@ -773,6 +773,7 @@ const Cargas: React.FC = () => {
       try {
         const veiculoSelecionado = veiculos.find(v => v.id === selectedVeiculo);
         const isCavalo = veiculoSelecionado?.tipo === 'Cavalo';
+        // NOVO: Se for Cavalo, usa as carretas selecionadas no modal. Se for Truck, usa undefined.
         const carretasParaSalvar = isCavalo ? selectedCarretas : undefined;
         
         const updatedTrajetos = (linkingCarga.trajetos || []).map(t => {
