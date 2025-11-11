@@ -122,6 +122,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         crt: cleanedItem.crt, observacoes: cleanedItem.observacoes,
         transbordo: cleanedItem.transbordo,
         trajetos: cleanedItem.trajetos,
+        tipo_operacao: cleanedItem.tipoOperacao, // CORREÇÃO: Adicionado mapeamento
       };
     case 'movimentacoes_financeiras':
       return {
@@ -176,7 +177,7 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         prioridade: cleanedItem.prioridade,
         status: cleanedItem.status,
         data_vencimento: cleanedItem.dataVencimento?.toISOString().split('T')[0], // ALTERADO
-        vincular_ao_calendario: cleanedItem.vincular_ao_calendario, // ALTERADO
+        vincular_ao_calendario: cleanedItem.vincularAoCalendario, // ALTERADO
       };
     default:
       return base;
@@ -270,12 +271,17 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         trajetos: (item.trajetos || []).map((t: any) => ({
             ...t,
             valor: Number(t.valor) || 0,
+            // Mapeamento explícito para UF Origem e Cidade Origem (bug fix)
+            ufOrigem: t.ufOrigem || t.uf_origem,
+            cidadeOrigem: t.cidadeOrigem || t.cidade_origem,
+            ufDestino: t.ufDestino || t.uf_destino,
+            cidadeDestino: t.cidadeDestino || t.cidade_destino,
             // Garante que IDs de vínculo sejam strings ou undefined
             parceiroId: t.parceiroId || t.parceiro_id,
             motoristaId: t.motoristaId || t.motorista_id,
             veiculoId: t.veiculoId || t.veiculo_id,
         })) || [], 
-        tipoOperacao: item.tipo_operacao,
+        tipoOperacao: item.tipo_operacao, // CORREÇÃO: Mapeado de volta
       } as Carga;
     case 'movimentacoes_financeiras':
       return {
