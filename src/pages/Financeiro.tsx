@@ -83,6 +83,8 @@ const Financeiro: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState<string[]>([])
+  // NOVO: Estado para filtro de categorias
+  const [filterCategories, setFilterCategories] = useState<string[]>([])
   
   const [filterVencStartDate, setFilterVencStartDate] = useState('')
   const [filterVencEndDate, setFilterVencEndDate] = useState('')
@@ -166,6 +168,18 @@ const Financeiro: React.FC = () => {
       color: cfg.color,
     }));
   }, []);
+  
+  // NOVO: Opções de categoria para o MultiSelect
+  const allCategoryOptions = useMemo(() => {
+    const all = [...categories.receita, ...categories.despesa];
+    // Garante unicidade e mapeia para o formato MultiSelectStatus
+    return Array.from(new Set(all)).map(cat => ({
+        key: cat,
+        label: cat,
+        // Cor genérica para o filtro
+        color: 'bg-gray-600' 
+    }));
+  }, [categories]);
 
   // Modal de gerenciamento de categorias
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
@@ -213,6 +227,7 @@ const Financeiro: React.FC = () => {
       setSearchTerm('')
       setFilterType('')
       setFilterStatus([])
+      setFilterCategories([]) // NOVO: Reset do filtro de categorias
       
       // Resetar filtros de data para VAZIO
       setFilterVencStartDate('')
@@ -282,8 +297,11 @@ const Financeiro: React.FC = () => {
       
       const matchType = !filterType || movimentacao.tipo === filterType
       
-      // ALTERADO: Lógica de filtro de status
+      // Lógica de filtro de status
       const matchStatus = filterStatus.length === 0 || filterStatus.includes(movimentacao.status || 'pendente')
+      
+      // NOVO: Lógica de filtro de categoria
+      const matchCategory = filterCategories.length === 0 || (movimentacao.categoria && filterCategories.includes(movimentacao.categoria));
       
       // Filtro por Vencimento (movimentacao.data)
       let matchesVencimentoRange = true
@@ -317,7 +335,7 @@ const Financeiro: React.FC = () => {
         }
       }
       
-      return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange
+      return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange && matchCategory
     });
     
     // 2. Ordenação (NOVO)
@@ -354,7 +372,7 @@ const Financeiro: React.FC = () => {
     }
 
     return sortedMovs;
-  }, [rawMovimentacoes, searchTerm, filterType, filterStatus, filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate, sortConfig])
+  }, [rawMovimentacoes, searchTerm, filterType, filterStatus, filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate, sortConfig, filterCategories])
 
   // Stats calculation deve usar as movimentações filtradas pelo mês corrente
   const stats = useMemo(() => {
@@ -827,8 +845,11 @@ const Financeiro: React.FC = () => {
       {/* Filters */}
       <div className="card p-6 space-y-4">
         <h3 className="font-semibold text-slate-900 dark:text-slate-50">Filtros</h3>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-          <div className="relative">
+        {/* ALTERADO: Grid para 3 colunas em md e 6 em lg */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+          
+          {/* Busca (md: 3 colunas, lg: 2 colunas) */}
+          <div className="relative md:col-span-3 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <input
               type="text"
@@ -839,6 +860,7 @@ const Financeiro: React.FC = () => {
             />
           </div>
 
+          {/* Tipo (1 coluna) */}
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
@@ -849,7 +871,15 @@ const Financeiro: React.FC = () => {
             <option value="despesa">Despesas</option>
           </select>
 
-          {/* ALTERADO: Usando MultiSelectStatus */}
+          {/* NOVO: Filtro de Categoria (1 coluna) */}
+          <MultiSelectStatus
+            label="Categorias"
+            options={allCategoryOptions}
+            selectedKeys={filterCategories}
+            onChange={setFilterCategories}
+          />
+
+          {/* Status (1 coluna) */}
           <MultiSelectStatus
             label="Status"
             options={movStatusOptions.map(o => ({
@@ -862,6 +892,7 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
+          {/* Vencimento (1 coluna) */}
           <div className="no-uppercase">
             <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento</label>
             <button
@@ -891,6 +922,7 @@ const Financeiro: React.FC = () => {
             </button>
           </div>
 
+          {/* Pagamento (1 coluna) */}
           <div className="no-uppercase">
             <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento</label>
             <button
