@@ -493,7 +493,7 @@ const Cargas: React.FC = () => {
       
       if (originalFormData) {
         const hasChanges = JSON.stringify(newFormData) !== JSON.stringify(originalFormData);
-        setHasUnsavedChanges(hasUnsavedChanges);
+        setHasUnsavedChanges(hasChanges);
       }
       
       return newFormData;
