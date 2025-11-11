@@ -4,7 +4,7 @@ import { useDatabase } from '../contexts/DatabaseContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters';
-import { undoService, UndoAction } from '../services/undoService';
+import { undoService } from '../services/undoService';
 import { Carga, MovimentacaoFinanceira, Trajeto, IntegrateData, initialIntegrateData } from '../types';
 import {
   Plus,
@@ -62,7 +62,7 @@ const Cargas: React.FC = () => {
     motoristas
   } = useDatabase();
   
-  // Garante que cargas seja sempre um array
+  // Garantindo que cargas seja sempre um array
   const cargas = rawCargas || [];
 
   // Definições iniciais movidas para dentro do componente ou inicializadas de forma simples
@@ -493,7 +493,7 @@ const Cargas: React.FC = () => {
       
       if (originalFormData) {
         const hasChanges = JSON.stringify(newFormData) !== JSON.stringify(originalFormData);
-        setHasUnsavedChanges(hasChanges);
+        setHasUnsavedChanges(hasUnsavedChanges);
       }
       
       return newFormData;
