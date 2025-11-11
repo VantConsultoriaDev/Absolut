@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, Search, ChevronDown } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 
 export interface SelectOption {
     id: string;

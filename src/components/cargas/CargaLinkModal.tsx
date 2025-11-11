@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useDatabase } from '../../contexts/DatabaseContext';
-import { Motorista, Carga, Parceiro, Veiculo } from '../../types';
+import { Motorista, Carga } from '../../types';
 import { AlertTriangle, X, User, Truck, Briefcase } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { formatPlaca } from '../../utils/formatters';
