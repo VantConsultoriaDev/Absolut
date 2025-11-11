@@ -117,10 +117,15 @@ const Financeiro: React.FC = () => {
     status: 'pendente',
     observacoes: '',
     
-    // NOVO: Recorrência
+    // Recorrência
     isRecurring: false,
     recurrencePeriod: 'monthly' as MovimentacaoFinanceira['recurrencePeriod'],
     recurrenceEndDateStr: '' as string, // String for input type="date"
+    
+    // NOVO: Parcelamento
+    isInstallment: false,
+    installmentCount: 2, // Quantidade de parcelas
+    installmentValueOption: 'total' as 'total' | 'parcela', // 'total' ou 'parcela'
   })
   // Categorias dinâmicas com persistência em localStorage
   const [categories, setCategories] = useState<{ receita: string[]; despesa: string[] }>(() => {
@@ -377,27 +382,68 @@ const Financeiro: React.FC = () => {
         return;
     }
     
-    // Não é possível editar movimentações recorrentes individualmente
-    if (editingMovimentacao && editingMovimentacao.isRecurring) {
-        alert('Não é possível editar movimentações recorrentes individualmente. Altere o status ou exclua.');
+    // Validação para parcelamento
+    if (formData.isInstallment) {
+        if (formData.installmentCount < 2) {
+            alert('A quantidade de parcelas deve ser no mínimo 2.');
+            return;
+        }
+        if (parseCurrency(formData.valor) <= 0) {
+            alert('O valor deve ser maior que zero.');
+            return;
+        }
+    }
+    
+    // Não é possível editar movimentações recorrentes ou parceladas individualmente
+    if (editingMovimentacao && (editingMovimentacao.isRecurring || editingMovimentacao.isInstallment)) {
+        alert('Não é possível editar movimentações recorrentes ou parceladas individualmente. Altere o status ou exclua.');
         return;
     }
     
+    // Não pode ser recorrente E parcelado
+    if (formData.isRecurring && formData.isInstallment) {
+        alert('Uma movimentação não pode ser recorrente e parcelada ao mesmo tempo.');
+        return;
+    }
+    
+    // Determina o valor base e a descrição
+    let baseValue = parseCurrency(formData.valor);
+    let baseDescription = formData.descricao;
+    let installmentValueForContext: number | undefined = undefined;
+    
+    if (formData.isInstallment) {
+        if (formData.installmentValueOption === 'parcela') {
+            // Se o usuário forneceu o valor da parcela, o valor total é calculado
+            installmentValueForContext = baseValue; // O valor digitado é o valor da parcela
+            baseValue = baseValue * formData.installmentCount; // O valor total é o valor da parcela * count
+            baseDescription = `${formData.descricao} (Total: ${formatCurrency(baseValue)})`;
+        } else if (formData.installmentValueOption === 'total') {
+            // Se o usuário forneceu o valor total, o valor da parcela será calculado no contexto
+            baseDescription = `${formData.descricao} (Total: ${formatCurrency(baseValue)})`;
+        }
+    }
+    
     const movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'> = {
-      descricao: formData.descricao,
-      valor: parseCurrency(formData.valor),
+      descricao: baseDescription,
+      valor: baseValue, // Valor total (se parcelado) ou valor único (se recorrente/único)
       tipo: formData.tipo as 'receita' | 'despesa',
       categoria: formData.categoria,
       data: createLocalDate(formData.data),
       status: formData.status as 'pendente' | 'pago' | 'cancelado',
       observacoes: formData.observacoes,
       
-      // NOVO: Recorrência
+      // Recorrência
       isRecurring: formData.isRecurring,
       recurrencePeriod: formData.isRecurring ? formData.recurrencePeriod : undefined,
       recurrenceEndDate: formData.isRecurring && formData.recurrenceEndDateStr 
           ? createLocalDate(formData.recurrenceEndDateStr) 
           : null,
+          
+      // NOVO: Parcelamento
+      isInstallment: formData.isInstallment,
+      installmentCount: formData.isInstallment ? formData.installmentCount : undefined,
+      // Passa o valor da parcela se o usuário o definiu (installmentValueForContext)
+      totalValueForInstallment: installmentValueForContext, 
     }
 
     if (editingMovimentacao) {
@@ -419,19 +465,24 @@ const Financeiro: React.FC = () => {
       status: 'pendente',
       observacoes: '',
       
-      // NOVO: Recorrência
+      // Recorrência
       isRecurring: false,
       recurrencePeriod: 'monthly',
       recurrenceEndDateStr: '',
+      
+      // NOVO: Parcelamento
+      isInstallment: false,
+      installmentCount: 2,
+      installmentValueOption: 'total',
     })
     setEditingMovimentacao(null)
     setShowForm(false)
   }
 
   const handleEdit = (movimentacao: any) => {
-    // Não é possível editar movimentações recorrentes individualmente
-    if (movimentacao.isRecurring) {
-        alert('Não é possível editar movimentações recorrentes individualmente. Altere o status ou exclua.');
+    // Não é possível editar movimentações recorrentes ou parceladas individualmente
+    if (movimentacao.isRecurring || movimentacao.isInstallment) {
+        alert('Não é possível editar movimentações recorrentes ou parceladas individualmente. Altere o status ou exclua.');
         return;
     }
     
@@ -445,10 +496,15 @@ const Financeiro: React.FC = () => {
       status: movimentacao.status,
       observacoes: movimentacao.observacoes || '',
       
-      // NOVO: Recorrência (set to false/empty for editing single movements)
+      // Recorrência (set to false/empty for editing single movements)
       isRecurring: false,
       recurrencePeriod: 'monthly',
       recurrenceEndDateStr: '',
+      
+      // NOVO: Parcelamento (set to false/empty for editing single movements)
+      isInstallment: false,
+      installmentCount: 2,
+      installmentValueOption: 'total',
     })
     setEditingMovimentacao(movimentacao)
     setShowForm(true)
@@ -576,6 +632,108 @@ const Financeiro: React.FC = () => {
       setPaymentFile(null);
     }
   };
+  
+  // Componente de renderização da linha da tabela
+  const renderTableRow = (movimentacao: MovimentacaoFinanceira) => (
+    <tr 
+      key={movimentacao.id} 
+      className="table-card-row cursor-pointer"
+      onClick={() => handleOpenDetailModal(movimentacao)}
+    >
+      <td className="table-cell text-sm">
+        {format(new Date(movimentacao.data), 'dd/MM/yyyy', { locale: ptBR })}
+        {movimentacao.isRecurring && (
+            <span className="ml-2 badge badge-info">Rec.</span>
+        )}
+        {/* NOVO: Indicador de Parcelamento */}
+        {movimentacao.isInstallment && movimentacao.installmentIndex && movimentacao.installmentCount && (
+            <span className="ml-2 badge badge-info">
+                {movimentacao.installmentIndex}/{movimentacao.installmentCount}
+            </span>
+        )}
+      </td>
+      <td className="table-cell font-medium text-slate-900 dark:text-white">
+        {movimentacao.descricao}
+      </td>
+      <td className="table-cell text-slate-700 dark:text-slate-300 text-sm">
+        {movimentacao.categoria}
+      </td>
+      <td className="table-cell">
+        <span className={`badge ${movimentacao.tipo === 'receita' ? 'badge-success' : 'badge-danger'}`}>
+          {movimentacao.tipo === 'receita' ? 'Receita' : 'Despesa'}
+        </span>
+      </td>
+      <td className={`table-cell font-semibold ${movimentacao.tipo === 'receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+        {movimentacao.tipo === 'receita' ? '+' : '-'} {formatCurrency(movimentacao.valor || 0)}
+      </td>
+      <td className="table-cell">
+        <span className={`badge ${statusConfig[movimentacao.status as keyof typeof statusConfig].color}`}>
+          {statusConfig[movimentacao.status as keyof typeof statusConfig].label}
+        </span>
+      </td>
+      <td className="table-cell text-sm">
+        {movimentacao.dataPagamento ? (
+          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+            {format(new Date(movimentacao.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}
+          </span>
+        ) : (
+          <span className="text-slate-400 dark:text-slate-500">-</span>
+        )}
+      </td>
+      <td className="table-cell">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(movimentacao);
+            }}
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            title="Editar"
+            disabled={movimentacao.isRecurring || movimentacao.isInstallment}
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          
+          {/* Botão de Status */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenStatusModal(movimentacao);
+            }}
+            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+            title="Alterar status"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          
+          {/* Botão de Comprovante */}
+          {movimentacao.comprovanteUrl && (
+            <a
+              href={movimentacao.comprovanteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+              title="Ver/Baixar Comprovante"
+            >
+              <FileText className="h-4 w-4" />
+            </a>
+          )}
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(movimentacao.id);
+            }}
+            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="Excluir"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -879,100 +1037,7 @@ const Financeiro: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredMovimentacoes.map((movimentacao) => (
-                  <tr 
-                    key={movimentacao.id} 
-                    className="table-card-row cursor-pointer"
-                    onClick={() => handleOpenDetailModal(movimentacao)}
-                  >
-                    <td className="table-cell text-sm">
-                      {format(new Date(movimentacao.data), 'dd/MM/yyyy', { locale: ptBR })}
-                      {movimentacao.isRecurring && (
-                          <span className="ml-2 badge badge-info">Rec.</span>
-                      )}
-                    </td>
-                    <td className="table-cell font-medium text-slate-900 dark:text-white">
-                      {movimentacao.descricao}
-                    </td>
-                    <td className="table-cell text-slate-700 dark:text-slate-300 text-sm">
-                      {movimentacao.categoria}
-                    </td>
-                    <td className="table-cell">
-                      <span className={`badge ${movimentacao.tipo === 'receita' ? 'badge-success' : 'badge-danger'}`}>
-                        {movimentacao.tipo === 'receita' ? 'Receita' : 'Despesa'}
-                      </span>
-                    </td>
-                    <td className={`table-cell font-semibold ${movimentacao.tipo === 'receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {movimentacao.tipo === 'receita' ? '+' : '-'} {formatCurrency(movimentacao.valor || 0)}
-                    </td>
-                    <td className="table-cell">
-                      <span className={`badge ${statusConfig[movimentacao.status as keyof typeof statusConfig].color}`}>
-                        {statusConfig[movimentacao.status as keyof typeof statusConfig].label}
-                      </span>
-                    </td>
-                    <td className="table-cell text-sm">
-                      {movimentacao.dataPagamento ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                          {format(new Date(movimentacao.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500">-</span>
-                      )}
-                    </td>
-                    <td className="table-cell">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(movimentacao);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                          title="Editar"
-                          disabled={movimentacao.isRecurring}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        
-                        {/* Botão de Status */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenStatusModal(movimentacao);
-                          }}
-                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                          title="Alterar status"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </button>
-                        
-                        {/* Botão de Comprovante */}
-                        {movimentacao.comprovanteUrl && (
-                          <a
-                            href={movimentacao.comprovanteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                            title="Ver/Baixar Comprovante"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </a>
-                        )}
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(movimentacao.id);
-                          }}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredMovimentacoes.map(renderTableRow)
               )}
             </tbody>
           </table>
@@ -1041,10 +1106,32 @@ const Financeiro: React.FC = () => {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
                 <input type="text" value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} className="input-field" required />
               </div>
+              
+              {/* Valor (Condicionalmente) */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor</label>
-                <input type="text" value={formData.valor} onChange={(e) => setFormData({ ...formData, valor: formatCurrency(e.target.value) })} className="input-field" placeholder="R$ 0,00" required />
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    {formData.isInstallment && formData.installmentValueOption === 'parcela' ? 'Valor da Parcela' : 'Valor Total'}
+                </label>
+                <input 
+                    type="text" 
+                    value={formData.valor} 
+                    onChange={(e) => setFormData({ ...formData, valor: formatCurrency(e.target.value) })} 
+                    className="input-field" 
+                    placeholder="R$ 0,00" 
+                    required 
+                />
+                {formData.isInstallment && formData.installmentValueOption === 'total' && formData.installmentCount > 0 && parseCurrency(formData.valor) > 0 && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Valor da Parcela: {formatCurrency(parseCurrency(formData.valor) / formData.installmentCount)}
+                    </p>
+                )}
+                {formData.isInstallment && formData.installmentValueOption === 'parcela' && formData.installmentCount > 0 && parseCurrency(formData.valor) > 0 && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Valor Total: {formatCurrency(parseCurrency(formData.valor) * formData.installmentCount)}
+                    </p>
+                )}
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
                 <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })} className="input-field" required>
@@ -1075,14 +1162,15 @@ const Financeiro: React.FC = () => {
               </div>
               
               {/* Recorrência */}
-              <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3">
+              <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3" style={{ opacity: formData.isInstallment ? 0.5 : 1, pointerEvents: formData.isInstallment ? 'none' : 'auto' }}>
                 <StandardCheckbox
                   label="Movimentação Recorrente"
                   checked={formData.isRecurring}
                   onChange={(checked) => setFormData(prev => ({ 
                       ...prev, 
                       isRecurring: checked, 
-                      recurrenceEndDateStr: checked ? prev.recurrenceEndDateStr : '' 
+                      recurrenceEndDateStr: checked ? prev.recurrenceEndDateStr : '',
+                      isInstallment: false, // Desabilita parcelamento
                   }))}
                   className="bg-white dark:bg-gray-800 p-0"
                 />
@@ -1117,6 +1205,51 @@ const Financeiro: React.FC = () => {
                 )}
               </div>
               
+              {/* NOVO: Parcelamento */}
+              <div className="border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3" style={{ opacity: formData.isRecurring ? 0.5 : 1, pointerEvents: formData.isRecurring ? 'none' : 'auto' }}>
+                <StandardCheckbox
+                  label="Movimentação Parcelada"
+                  checked={formData.isInstallment}
+                  onChange={(checked) => setFormData(prev => ({ 
+                      ...prev, 
+                      isInstallment: checked, 
+                      isRecurring: false, // Desabilita recorrência
+                  }))}
+                  className="bg-white dark:bg-gray-800 p-0"
+                />
+                
+                {formData.isInstallment && (
+                  <div className="space-y-4 pt-2">
+                    {/* Opção de Valor */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor a ser preenchido *</label>
+                      <select 
+                        value={formData.installmentValueOption} 
+                        onChange={(e) => setFormData({ ...formData, installmentValueOption: e.target.value as 'total' | 'parcela' })} 
+                        className="input-field" 
+                        required
+                      >
+                        <option value="total">Valor Total da Compra</option>
+                        <option value="parcela">Valor da Parcela</option>
+                      </select>
+                    </div>
+                    
+                    {/* Quantidade de Parcelas */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quantidade de Parcelas *</label>
+                      <input 
+                        type="number" 
+                        min="2"
+                        value={formData.installmentCount} 
+                        onChange={(e) => setFormData({ ...formData, installmentCount: parseInt(e.target.value) || 2 })} 
+                        className="input-field" 
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observações</label>
                 <textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} className="input-field" rows={3} />
@@ -1145,10 +1278,10 @@ const Financeiro: React.FC = () => {
               Tem certeza que deseja excluir a movimentação{' '}
               <span className="font-semibold">{deleteTarget.descricao}</span>?
               
-              {/* NOVO: Opções de exclusão recorrente */}
-              {movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring ? (
+              {/* NOVO: Opções de exclusão recorrente/parcelada */}
+              {(movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring || movimentacoes.find(m => m.id === deleteTarget.id)?.isInstallment) ? (
                   <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                      Esta é uma movimentação recorrente. O que você deseja excluir?
+                      Esta é uma movimentação recorrente/parcelada. O que você deseja excluir?
                   </p>
               ) : (
                   <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
@@ -1160,8 +1293,8 @@ const Financeiro: React.FC = () => {
           confirmText="Excluir"
           variant="danger"
         >
-            {/* Renderiza botões customizados se for recorrente */}
-            {movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring ? (
+            {/* Renderiza botões customizados se for recorrente/parcelado */}
+            {(movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring || movimentacoes.find(m => m.id === deleteTarget.id)?.isInstallment) ? (
                 <div className="flex flex-col space-y-3">
                     <button
                         type="button"
@@ -1175,7 +1308,7 @@ const Financeiro: React.FC = () => {
                         onClick={() => confirmDelete(true)}
                         className="btn-danger justify-center"
                     >
-                        Excluir TODAS as transações recorrentes
+                        Excluir TODAS as transações do grupo
                     </button>
                 </div>
             ) : (

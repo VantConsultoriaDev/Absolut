@@ -160,6 +160,12 @@ export interface MovimentacaoFinanceira {
   recurrenceGroupId?: string; // UUID to link all instances of a recurring movement
   recurrenceIndex?: number; // Index of the movement in the series (e.g., 1, 2, 3...)
   
+  // NOVO: Installment fields
+  isInstallment?: boolean; // É parte de um parcelamento?
+  installmentCount?: number; // Total de parcelas
+  installmentIndex?: number; // Número da parcela (ex: 1, 2, 3...)
+  installmentGroupId?: string; // UUID para ligar todas as parcelas
+  
   createdAt: Date
   updatedAt: Date
 }

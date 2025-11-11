@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { DatabaseContextType, User, Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Compromisso, Tarefa } from '../types'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext'
-import { parseDocument } from '../utils/formatters'
+import { parseDocument, formatCurrency } from '../utils/formatters'
 import { undoService, UndoAction } from '../services/undoService'
 import { showError } from '../utils/toast' // Removido showSuccess
 import { 
@@ -804,6 +804,76 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
   const createMovimentacao = (movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'>): MovimentacaoFinanceira => {
     try {
       
+      // Não pode ser recorrente E parcelado (já validado no front, mas garantimos)
+      if (movimentacaoData.isRecurring && movimentacaoData.isInstallment) {
+          throw new Error('Movimentação não pode ser recorrente e parcelada ao mesmo tempo.');
+      }
+      
+      // --- Lógica de Parcelamento ---
+      if (movimentacaoData.isInstallment && movimentacaoData.installmentCount && movimentacaoData.installmentCount >= 2) {
+          // totalValueForInstallment é o valor da parcela se o usuário escolheu 'parcela', ou undefined se escolheu 'total'
+          const { isInstallment, installmentCount, totalValueForInstallment, ...baseData } = movimentacaoData;
+          
+          const totalValue = baseData.valor;
+          // Calcula o valor da parcela: se totalValueForInstallment existe, usa ele. Senão, divide o valor total.
+          const installmentValue = totalValueForInstallment || (totalValue / installmentCount);
+          
+          if (installmentValue <= 0) {
+              throw new Error('Valor da parcela deve ser maior que zero.');
+          }
+          
+          const groupId = generateId();
+          const createdMovs: MovimentacaoFinanceira[] = [];
+          
+          for (let i = 1; i <= installmentCount; i++) {
+              // Calcula a data de vencimento (primeira parcela na data informada, as demais nos meses seguintes)
+              let installmentDate = new Date(baseData.data);
+              if (i > 1) {
+                  installmentDate = addMonths(installmentDate, i - 1);
+              }
+              
+              const newMov: MovimentacaoFinanceira = {
+                  ...baseData,
+                  id: generateId(),
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  
+                  // Dados da parcela
+                  descricao: `${baseData.descricao} (${i}/${installmentCount})`,
+                  valor: installmentValue,
+                  data: installmentDate,
+                  isInstallment: true,
+                  installmentCount: installmentCount,
+                  installmentIndex: i,
+                  installmentGroupId: groupId,
+              };
+              
+              createdMovs.push(newMov);
+          }
+          
+          // Update state with all installment movements
+          setMovimentacoes(prev => [...prev, ...createdMovs]);
+          
+          // Register undo action for the group
+          const createdIds = createdMovs.map(m => m.id);
+          undoService.addUndoAction({
+              type: 'create_movimentacoes_financeiras_group',
+              description: `Grupo de ${createdMovs.length} parcelas criado (Total: ${formatCurrency(totalValue)})`,
+              data: { createdIds, groupId },
+              undoFunction: async () => {
+                  setMovimentacoes(prev => prev.filter(m => m.installmentGroupId !== groupId));
+              }
+          });
+          
+          // Sync all created movements
+          createdMovs.forEach(mov => {
+              handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: mov } } as UndoAction);
+          });
+          
+          return createdMovs[0]; // Return the first one
+      }
+      
+      // --- Lógica de Recorrência (Existente) ---
       if (movimentacaoData.isRecurring) {
           // Handle recurrence
           const { isRecurring, recurrencePeriod, recurrenceEndDate, ...baseData } = movimentacaoData;
@@ -866,7 +936,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
               handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: mov } } as UndoAction);
           });
           
-          // showSuccess(`Grupo de ${createdMovs.length} movimentações recorrentes criado com sucesso.`); // REMOVIDO
           return createdMovs[0]; // Return the first one
           
       } else {
@@ -888,7 +957,6 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
               }
           });
           handleSyncAction({ type: 'create_movimentacoes_financeiras', description: '', data: { newRecord: newMov } } as UndoAction);
-          // showSuccess(`Movimentação "${newMov.descricao}" criada com sucesso.`); // REMOVIDO
           return newMov
       }
     } catch (e) {
@@ -962,9 +1030,13 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       let movsToDelete: MovimentacaoFinanceira[] = [];
       
       if (deleteGroup && deletedMovimentacao.isRecurring && deletedMovimentacao.recurrenceGroupId) {
-          // Delete the entire group
+          // Delete the entire recurrence group
           movsToDelete = movimentacoes.filter(m => m.recurrenceGroupId === deletedMovimentacao.recurrenceGroupId);
           setMovimentacoes(prev => prev.filter(m => m.recurrenceGroupId !== deletedMovimentacao.recurrenceGroupId));
+      } else if (deleteGroup && deletedMovimentacao.isInstallment && deletedMovimentacao.installmentGroupId) {
+          // Delete the entire installment group
+          movsToDelete = movimentacoes.filter(m => m.installmentGroupId === deletedMovimentacao.installmentGroupId);
+          setMovimentacoes(prev => prev.filter(m => m.installmentGroupId !== deletedMovimentacao.installmentGroupId));
       } else {
           // Delete single movement
           movsToDelete = [deletedMovimentacao];
@@ -976,7 +1048,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
       
       if (movsToDelete.length > 0) {
           const description = deleteGroup 
-              ? `Grupo recorrente de ${movsToDelete.length} movs (ID: ${deletedMovimentacao.recurrenceGroupId}) excluído`
+              ? `Grupo de ${movsToDelete.length} movs excluído`
               : `Movimentação "${deletedMovimentacao.descricao}" excluída`;
               
           undoService.addUndoAction({

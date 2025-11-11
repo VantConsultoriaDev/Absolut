@@ -145,6 +145,12 @@ export const mapToSupabase = (tableName: string, item: any, userId: string | und
         recurrence_end_date: formatDateToSupabase(cleanedItem.recurrenceEndDate),
         recurrence_group_id: cleanedItem.recurrenceGroupId,
         recurrence_index: cleanedItem.recurrenceIndex,
+        
+        // NOVO: Installment fields
+        is_installment: cleanedItem.isInstallment,
+        installment_count: cleanedItem.installmentCount,
+        installment_index: cleanedItem.installmentIndex,
+        installment_group_id: cleanedItem.installmentGroupId,
       };
     case 'contratos_frete':
       return {
@@ -293,6 +299,12 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         recurrenceEndDate: item.recurrence_end_date ? new Date(item.recurrence_end_date) : null,
         recurrenceGroupId: item.recurrence_group_id,
         recurrenceIndex: item.recurrence_index,
+        
+        // NOVO: Installment fields
+        isInstallment: item.is_installment,
+        installmentCount: item.installment_count,
+        installmentIndex: item.installment_index,
+        installmentGroupId: item.installment_group_id,
       } as MovimentacaoFinanceira;
     case 'contratos_frete':
       return {
