@@ -59,7 +59,7 @@ const initialVeiculoFormData: VeiculoFormData = {
   carroceria: '',
   tipo: 'Cavalo', // ALTERADO: Padrão para Cavalo
   motoristaVinculado: '',
-  carretasSelecionadas: [], // GARANTIDO
+  carretasSelecionadas: [],
   isActive: true,
   userId: '',
   
@@ -87,17 +87,19 @@ const initialParceiroFormData: Parceiro = {
   pixKey: '',
   pixTitular: '',
   
-  // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
+  // Novos campos de identificação para PF
   dataNascimento: undefined,
   rg: undefined,
   orgaoEmissor: undefined,
   
+  // Campos de endereço (já são opcionais, mas garantimos que sejam tratados como tal)
   endereco: '',
   numero: '', // NOVO CAMPO
   complemento: '', // NOVO CAMPO
   cidade: '',
   uf: '', // RENOMEADO
   cep: '',
+  
   observacoes: '',
   isMotorista: false,
   isActive: true,
@@ -182,11 +184,10 @@ const Parceiros: React.FC = () => {
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   
-  // NOVO: Lista de carretas do parceiro (para o modal de veículo)
-  const parceiroCarretas = useMemo(() => {
-      if (!veiculoFormData.parceiroId) return [];
-      return veiculos.filter(v => v.parceiroId === veiculoFormData.parceiroId && v.tipo === 'Carreta');
-  }, [veiculos, veiculoFormData.parceiroId]);
+  // NOVO: Função para obter carretas do parceiro
+  const getParceiroCarretas = useCallback((parceiroId: string): Veiculo[] => {
+    return veiculos.filter(v => v.parceiroId === parceiroId && v.tipo === 'Carreta');
+  }, [veiculos]);
 
   // Reset para tela inicial quando navegado via menu lateral
   useEffect(() => {
@@ -542,7 +543,7 @@ const Parceiros: React.FC = () => {
       carroceria: veiculo.carroceria || '',
       tipo: veiculo.tipo,
       motoristaVinculado: veiculo.motoristaVinculado || '',
-      carretasSelecionadas: veiculo.carretasSelecionadas || [], // GARANTIDO
+      carretasSelecionadas: veiculo.carretasSelecionadas || [],
       isActive: veiculo.isActive ?? true,
       userId: veiculo.userId || '',
       
@@ -935,7 +936,6 @@ const Parceiros: React.FC = () => {
       setDeleteTarget(null);
       // Tenta reabrir o modal de detalhes se a exclusão foi de um sub-item
       if (deleteTarget.type !== 'parceiro' && detailTargetParceiro) {
-          setDetailTargetParceiro(parceiros.find(p => p.id === detailTargetParceiro.id) || null);
           setShowDetailModal(true);
       }
     }
@@ -1522,8 +1522,8 @@ const Parceiros: React.FC = () => {
           permissoError={permissoError}
           handlePermissoConsultation={handlePermissoConsultation}
           
-          // NOVO: Carretas do Parceiro
-          parceiroCarretas={parceiroCarretas}
+          // NOVO: Lista de carretas do parceiro
+          parceiroCarretas={getParceiroCarretas(veiculoFormData.parceiroId)}
         />
       )}
       
