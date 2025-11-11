@@ -1450,13 +1450,32 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return parceiro?.nome || 'N/A';
   };
   
-  // ATUALIZADO: Adicionando trajetoIndex
+  // ATUALIZADO: buildMovimentacaoDescription
   const buildMovimentacaoDescription = (carga: Carga, prefix: 'Adto' | 'Saldo' | 'Frete' | 'Diárias' | 'Despesas Adicionais', trajetoIndex?: number) => {
-    // Verifica se a carga tem mais de um trajeto OU se o trajetoIndex é explicitamente maior que 1
-    const shouldShowTrajetoIndex = (carga.trajetos || []).length > 1 && trajetoIndex !== undefined;
+    const crt = carga.crt || '';
     
-    const trajetoSuffix = shouldShowTrajetoIndex ? ` (Trajeto ${trajetoIndex})` : '';
-    return `${prefix} - ${carga.crt || carga.descricao}${trajetoSuffix}`;
+    // 1. CRT Simplificado: 2 primeiras letras + 4 últimos dígitos
+    const crtPrefix = crt.substring(0, 2).toUpperCase();
+    const crtSuffix = crt.replace(/\D/g, '').slice(-4);
+    const crtSimplificado = `${crtPrefix}${crtSuffix}`;
+    
+    // 2. Busca o parceiro vinculado ao trajeto
+    let parceiroNome = 'Parceiro Desconhecido';
+    
+    if (trajetoIndex !== undefined) {
+        const trajeto = (carga.trajetos || []).find(t => t.index === trajetoIndex);
+        if (trajeto?.parceiroId) {
+            const parceiro = parceiros.find(p => p.id === trajeto.parceiroId);
+            parceiroNome = parceiro?.nome || 'Parceiro Vinculado';
+        }
+    } else if (carga.trajetos && carga.trajetos.length > 0 && carga.trajetos[0].parceiroId) {
+        // Fallback para o primeiro trajeto se o índice não for fornecido
+        const parceiro = parceiros.find(p => p.id === carga.trajetos[0].parceiroId);
+        parceiroNome = parceiro?.nome || 'Parceiro Vinculado';
+    }
+    
+    // 3. Constrói a descrição final
+    return `${prefix} - ${crtSimplificado} - ${parceiroNome}`;
   };
   
   const syncMovimentacoesForCarga = (cargaId: string) => {
