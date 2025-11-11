@@ -103,14 +103,6 @@ const Cargas: React.FC = () => {
   const [filterEntregaStartDate, setFilterEntregaStartDate] = useState('');
   const [filterEntregaEndDate, setFilterEntregaEndDate] = useState('');
   
-  // NOVO: Estado para o calendário unificado
-  const [showUnifiedCalendar, setShowUnifiedCalendar] = useState(false);
-  const [calendarType, setCalendarType] = useState<DateFilterType>('coleta');
-  const [calendarPosition, setCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
-  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-  const [tempStart, setTempStart] = useState<Date | null>(null);
-  const [tempEnd, setTempEnd] = useState<Date | null>(null);
-  
   // Estado para o modal de status centralizado
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusTargetCarga, setStatusTargetCarga] = useState<Carga | null>(null);
@@ -222,7 +214,6 @@ const Cargas: React.FC = () => {
       setFilterColetaEndDate('');
       setFilterEntregaStartDate('');
       setFilterEntregaEndDate('');
-      setShowUnifiedCalendar(false); // NOVO
       // ALTERADO: Resetar ordenação para dataColeta crescente
       setSortConfig({ key: 'dataColeta', direction: 'asc' }); 
     }
@@ -367,7 +358,6 @@ const Cargas: React.FC = () => {
       // Se o trajeto removido era o último, e o penúltimo agora é o último,
       // precisamos garantir que o destino do novo último trajeto seja o destino final da carga.
       if (newTrajetos.length > 0 && index === prev.trajetos.length - 1) {
-          // const newLastTrajeto = newTrajetos[newTrajetos.length - 1]; // REMOVIDO TS6133
           // Se o destino final da carga original era o destino do trajeto removido,
           // precisamos restaurar o destino final no novo último trajeto.
           // Como a lógica de remoção não limpa o destino do penúltimo, isso deve funcionar.
@@ -974,167 +964,6 @@ const Cargas: React.FC = () => {
     setSortConfig({ key, direction });
   };
   
-  // Lógica de Ordenação e Filtragem
-  const filteredCargas = useMemo(() => {
-    let sortedCargas = [...cargas];
-    
-    // 1. Filtragem (mantida)
-    sortedCargas = sortedCargas.filter(carga => {
-      const matchSearch = carga.crt?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         carga.origem?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         carga.destino?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Lógica de filtro de status
-      const matchStatus = filterStatus.length === 0 || filterStatus.includes(carga.status);
-      
-      // Lógica de filtro de Origem (NOVO)
-      let matchesOrigem = true;
-      if (filterOrigem) {
-        const firstTrajeto = (carga.trajetos || [])[0];
-        const ufOrigem = firstTrajeto?.ufOrigem || '';
-        
-        if (filterOrigem === 'BR') {
-          // Filtra por UFs brasileiras (excluindo AR, CL, UY)
-          matchesOrigem = !['AR', 'CL', 'UY'].includes(ufOrigem);
-        } else {
-          // Filtra por UF/País específico (AR, CL, UY)
-          matchesOrigem = ufOrigem === filterOrigem;
-        }
-      }
-      
-      let matchesColetaRange = true;
-      if (filterColetaStartDate) {
-        const startDate = createLocalDate(filterColetaStartDate);
-        // ALTERADO: Verifica se a data existe antes de formatar
-        const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // CORREÇÃO TS: Garante que a comparação solo ocorra se d não for null
-        matchesColetaRange = matchesColetaRange && (d ? d >= startDate : false);
-      }
-      if (filterColetaEndDate) {
-        const endDate = createLocalDate(filterColetaEndDate);
-        // ALTERADO: Verifica se a data existe antes de formatar
-        const d = carga.dataColeta ? createLocalDate(format(carga.dataColeta, 'yyyy-MM-dd')) : null;
-        // CORREÇÃO TS: Garante que a comparação solo ocorra se d não for null
-        matchesColetaRange = matchesColetaRange && (d ? d <= endDate : false);
-      }
-
-      let matchesEntregaRange = true;
-      if (filterEntregaStartDate || filterEntregaEndDate) {
-        if (!carga.dataEntrega) {
-          matchesEntregaRange = false;
-        } else {
-          const de = createLocalDate(format(carga.dataEntrega, 'yyyy-MM-dd'));
-          if (filterEntregaStartDate) {
-            const es = createLocalDate(filterEntregaStartDate);
-            matchesEntregaRange = matchesEntregaRange && de >= es;
-          }
-          if (filterEntregaEndDate) {
-            const ee = createLocalDate(filterEntregaEndDate);
-            matchesEntregaRange = matchesEntregaRange && de <= ee;
-          }
-        }
-      }
-      
-      return matchSearch && matchStatus && matchesColetaRange && matchesEntregaRange && matchesOrigem;
-    });
-    
-    // 2. Ordenação (NOVO)
-    if (sortConfig.key) {
-      sortedCargas.sort((a, b) => {
-        let comparison = 0;
-        
-        // CRITÉRIO 1: Status (sempre ASC, seguindo STATUS_ORDER)
-        const orderA = STATUS_ORDER[a.status as Carga['status']] || 99;
-        const orderB = STATUS_ORDER[b.status as Carga['status']] || 99;
-        
-        comparison = orderA - orderB;
-        if (comparison !== 0) return comparison;
-        
-        // CRITÉRIO 2: Coluna selecionada (se for diferente de status)
-        if (sortConfig.key !== 'status') {
-            const aValue = a[sortConfig.key];
-            const bValue = b[sortConfig.key];
-            
-            let secondaryComparison = 0;
-            
-            if (sortConfig.key === 'dataColeta') {
-              // ALTERADO: Trata undefined/null como 0 para ordenação
-              const aTime = aValue ? new Date(aValue as Date).getTime() : 0;
-              const bTime = bValue ? new Date(bValue as Date).getTime() : 0;
-              secondaryComparison = aTime - bTime;
-            } else if (sortConfig.key === 'valor') {
-              secondaryComparison = (aValue as number) - (bValue as number);
-            } else {
-              // Ordenação alfabética para strings (CRT, origem, destino)
-              const aStr = String(aValue || '').toLowerCase();
-              const bStr = String(bValue || '').toLowerCase();
-              if (aStr > bStr) secondaryComparison = 1;
-              if (aStr < bStr) secondaryComparison = -1;
-            }
-            
-            return sortConfig.direction === 'asc' ? secondaryComparison : -secondaryComparison;
-        }
-        
-        // CRITÉRIO 3: Data de Coleta (Padrão ASC, se a ordenação for por status)
-        const aTime = a.dataColeta ? new Date(a.dataColeta).getTime() : 0;
-        const bTime = b.dataColeta ? new Date(b.dataColeta).getTime() : 0;
-        return aTime - bTime;
-      });
-    } else {
-        // Se não houver ordenação explícita, aplica a ordenação padrão (Status + Data Coleta ASC)
-        sortedCargas.sort((a, b) => {
-            const orderA = STATUS_ORDER[a.status as Carga['status']] || 99;
-            const orderB = STATUS_ORDER[b.status as Carga['status']] || 99;
-            
-            let comparison = orderA - orderB;
-            if (comparison !== 0) return comparison;
-            
-            const aTime = a.dataColeta ? new Date(a.dataColeta).getTime() : 0;
-            const bTime = b.dataColeta ? new Date(b.dataColeta).getTime() : 0;
-            return aTime - bTime;
-        });
-    }
-
-    return sortedCargas;
-  }, [cargas, searchTerm, filterStatus, filterColetaStartDate, filterColetaEndDate, filterEntregaStartDate, filterEntregaEndDate, filterOrigem, sortConfig]);
-
-  // Stats calculation (mantida)
-  const stats = useMemo(() => {
-    const total = cargas.length;
-    const aColetar = cargas.filter(c => c.status === 'a_coletar').length;
-    const emTransito = cargas.filter(c => c.status === 'em_transito').length;
-    const armazenadas = cargas.filter(c => c.status === 'armazenada').length;
-    const entregues = cargas.filter(c => c.status === 'entregue').length;
-    const valorTotal = cargas.reduce((sum, c) => sum + (c.valor || 0), 0);
-    
-    return { total, aColetar, emTransito, armazenadas, entregues, valorTotal };
-  }, [cargas]);
-
-  // Função para obter a rota simplificada (Origem do 1º trajeto -> Destino do último trajeto)
-  const getSimplifiedRoute = (carga: Carga) => {
-    if (!carga.trajetos || carga.trajetos.length === 0) return 'N/A';
-    
-    // CORREÇÃO AQUI: Usar o valor bruto da origem/destino da CARGA, que é o valor consolidado
-    
-    const origemDisplay = getLocalDisplay(carga.origem);
-    const destinoDisplay = getLocalDisplay(carga.destino);
-        
-    return `${origemDisplay} → ${destinoDisplay}`;
-  };
-  
-  // Função para verificar se a carga está integrada financeiramente
-  const isCargaIntegrated = (carga: Carga) => {
-    // CORREÇÃO: Garante que carga.trajetos seja um array antes de chamar map
-    const trajetos = carga.trajetos || [];
-    if (trajetos.length === 0) return false;
-    
-    // Uma carga é considerada integrada se todos os seus trajetos tiverem pelo menos uma movimentação de FRETE
-    const trajetosIntegrados = trajetos.map(trajeto => {
-        return movimentacoes.some(m => m.cargaId === carga.id && m.trajetoIndex === trajeto.index && m.categoria === 'FRETE');
-    });
-    return trajetosIntegrados.every(isIntegrated => isIntegrated);
-  };
-  
   // Componente auxiliar para o cabeçalho da tabela com ordenação
   const SortableHeader: React.FC<{ columnKey: SortKey, label: string }> = ({ columnKey, label }) => {
     const isSorted = sortConfig.key === columnKey;
@@ -1158,48 +987,6 @@ const Cargas: React.FC = () => {
         </div>
       </th>
     );
-  };
-  
-  // --- Handlers do Calendário Unificado ---
-  const handleSelectDate = (d: Date) => {
-    if (!tempStart || (tempStart && tempEnd)) {
-      setTempStart(d);
-      setTempEnd(null);
-    } else {
-      if (d < tempStart) {
-        setTempEnd(tempStart);
-        setTempStart(d);
-      } else {
-        setTempEnd(d);
-      }
-    }
-  };
-  
-  const handleApplyCalendar = () => {
-    const startStr = tempStart ? format(tempStart, 'yyyy-MM-dd') : '';
-    const endStr = tempEnd ? format(tempEnd, 'yyyy-MM-dd') : '';
-    
-    if (calendarType === 'coleta') {
-      setFilterColetaStartDate(startStr);
-      setFilterColetaEndDate(endStr);
-    } else {
-      setFilterEntregaStartDate(startStr);
-      setFilterEntregaEndDate(endStr);
-    }
-    setShowUnifiedCalendar(false);
-  };
-  
-  const handleClearCalendar = () => {
-    if (calendarType === 'coleta') {
-      setFilterColetaStartDate('');
-      setFilterColetaEndDate('');
-    } else {
-      setFilterEntregaStartDate('');
-      setFilterEntregaEndDate('');
-    }
-    setTempStart(null);
-    setTempEnd(null);
-    setShowUnifiedCalendar(false);
   };
   
   // --- Configuração do Filtro de Data Unificado ---
@@ -1300,29 +1087,6 @@ const Cargas: React.FC = () => {
         </div>
       </div>
 
-      {/* Calendário Unificado (overlay ancorado) */}
-      {showUnifiedCalendar && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowUnifiedCalendar(false)} />
-          <div
-            className="fixed z-50"
-            style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <RangeCalendar
-              month={calendarMonth}
-              start={tempStart}
-              end={tempEnd}
-              onPrev={() => setCalendarMonth(prev => subMonths(prev, 1))}
-              onNext={() => setCalendarMonth(prev => addMonths(prev, 1))}
-              onSelectDate={handleSelectDate}
-              onClear={handleClearCalendar}
-              onApply={handleApplyCalendar}
-            />
-          </div>
-        </>
-      )}
-
       {/* Tabela de Cargas */}
       <div className="table-container">
         <div className="overflow-x-auto">
@@ -1351,7 +1115,6 @@ const Cargas: React.FC = () => {
                   const integrated = isCargaIntegrated(carga);
                   
                   // Verifica se algum trajeto está pendente de vinculação
-                  // const hasUnlinkedTrajeto = (carga.trajetos || []).some(t => !isTrajetoLinked(t)); // REMOVIDO TS6133
                   
                   return (
                   <tr 
