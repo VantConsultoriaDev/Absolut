@@ -874,11 +874,11 @@ const Financeiro: React.FC = () => {
       {/* Filters */}
       <div className="card p-6 space-y-4">
         <h3 className="font-semibold text-slate-900 dark:text-slate-50">Filtros</h3>
-        {/* ALTERADO: Grid para 3 colunas em md e 6 em lg */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+        {/* ALTERADO: Grid para 2 colunas em md e 5 em lg */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           
-          {/* Busca (md: 3 colunas, lg: 2 colunas) */}
-          <div className="relative md:col-span-3 lg:col-span-2">
+          {/* Busca (md: 2 colunas, lg: 1 coluna) */}
+          <div className="relative md:col-span-2 lg:col-span-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <input
               type="text"
@@ -924,8 +924,8 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Data Unificado (2 colunas) */}
-          <div className="md:col-span-2 lg:col-span-2">
+          {/* Filtro de Data Unificado (1 coluna) */}
+          <div className="md:col-span-2 lg:col-span-1">
             <DateRangeFilter
               options={dateFilterOptions}
             />
