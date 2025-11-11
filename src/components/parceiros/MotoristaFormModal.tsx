@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, User, AlertTriangle, Truck } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Parceiro, Motorista, Veiculo } from '../../types';
-import { formatDocument, formatContact, parseDocument, isValidCPF } from '../../utils/formatters';
+import { formatDocument, formatContact, parseDocument, isValidCPF, formatPlaca } from '../../utils/formatters';
 import { CPFService, CPFData } from '../../services/cpfService';
 import { showError } from '../../utils/toast'; // Importando showError
 import SearchableSelect, { SelectOption } from '../SearchableSelect'; // NOVO: Importando SearchableSelect
