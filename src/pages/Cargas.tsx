@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useDatabase } from '../contexts/DatabaseContext';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters';
 import { undoService } from '../services/undoService';
@@ -20,7 +20,6 @@ import {
 import { showError } from '../utils/toast';
 
 // Importar componentes modulares e constantes
-import RangeCalendar from '../components/RangeCalendar';
 import CargasStats from '../components/cargas/CargasStats';
 import CargaFormModal, { CargaFormData, TrajetoForm } from '../components/cargas/CargaFormModal';
 import CargaLinkModal from '../components/cargas/CargaLinkModal';
@@ -37,22 +36,10 @@ import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade, getBaseCrt } from '../u
 type SortKey = 'crt' | 'origem' | 'destino' | 'dataColeta' | 'valor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-// Tipagem para o filtro de data unificado
-type DateFilterType = 'coleta' | 'entrega';
-
-// NOVO: Mapeamento de prioridade de status para ordenação
-const STATUS_ORDER: Record<Carga['status'], number> = {
-  a_coletar: 1,
-  em_transito: 2,
-  armazenada: 3,
-  entregue: 4,
-  cancelada: 5,
-};
-
 const Cargas: React.FC = () => {
   const location = useLocation();
   const { 
-    cargas, 
+    cargas: rawCargas, // Renomeado para evitar conflito
     createCarga, 
     updateCarga, 
     deleteCarga,
@@ -65,6 +52,9 @@ const Cargas: React.FC = () => {
     parceiros,
     motoristas
   } = useDatabase();
+  
+  // Garante que cargas seja sempre um array
+  const cargas = rawCargas || [];
 
   // Definições iniciais movidas para dentro do componente ou inicializadas de forma simples
   const initialTrajeto: TrajetoForm = {
@@ -147,6 +137,152 @@ const Cargas: React.FC = () => {
     key: 'dataColeta',
     direction: 'asc',
   });
+  
+  // --- FUNÇÕES AUSENTES ---
+  
+  // 1. Cálculo de Estatísticas (stats)
+  const stats = useMemo(() => {
+    const aColetar = cargas.filter(carga => carga.status === 'a_coletar').length
+    const emTransito = cargas.filter(carga => carga.status === 'em_transito').length
+    const armazenadas = cargas.filter(carga => carga.status === 'armazenada').length
+    const entregues = cargas.filter(carga => carga.status === 'entregue').length
+    
+    const total = cargas.length
+    const valorTotal = cargas.reduce((sum, carga) => sum + (carga.valor || 0), 0)
+    
+    return { 
+      aColetar, 
+      emTransito, 
+      armazenadas, 
+      entregues, 
+      total,
+      valorTotal
+    }
+  }, [cargas]);
+  
+  // 2. Lógica de Filtro e Ordenação (filteredCargas)
+  const filteredCargas = useMemo(() => {
+    let sortedMovs = cargas.filter(carga => {
+      const matchSearch = (carga.crt || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (carga.origem || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (carga.destino || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchStatus = filterStatus.length === 0 || filterStatus.includes(carga.status);
+      
+      // Filtro de Origem (UF/País)
+      const origemInfo = extrairUfECidade(carga.origem || '');
+      const matchOrigem = !filterOrigem || 
+                          (filterOrigem === 'BR' && UFS_ORDENADAS.some(u => u.value === origemInfo.uf && u.label.includes('Brasil'))) ||
+                          (filterOrigem !== 'BR' && origemInfo.uf === filterOrigem);
+      
+      // Filtro por Data de Coleta
+      let matchesColetaRange = true;
+      if (filterColetaStartDate && carga.dataColeta) {
+        const startDate = createLocalDate(filterColetaStartDate);
+        const d = createLocalDate(format(new Date(carga.dataColeta), 'yyyy-MM-dd'));
+        matchesColetaRange = matchesColetaRange && d >= startDate;
+      }
+      if (filterColetaEndDate && carga.dataColeta) {
+        const endDate = createLocalDate(filterColetaEndDate);
+        const d = createLocalDate(format(new Date(carga.dataColeta), 'yyyy-MM-dd'));
+        matchesColetaRange = matchesColetaRange && d <= endDate;
+      }
+
+      // Filtro por Data de Entrega
+      let matchesEntregaRange = true;
+      if (filterEntregaStartDate && carga.dataEntrega) {
+        const startDate = createLocalDate(filterEntregaStartDate);
+        const d = createLocalDate(format(new Date(carga.dataEntrega), 'yyyy-MM-dd'));
+        matchesEntregaRange = matchesEntregaRange && d >= startDate;
+      }
+      if (filterEntregaEndDate && carga.dataEntrega) {
+        const endDate = createLocalDate(filterEntregaEndDate);
+        const d = createLocalDate(format(new Date(carga.dataEntrega), 'yyyy-MM-dd'));
+        matchesEntregaRange = matchesEntregaRange && d <= endDate;
+      }
+      
+      return matchSearch && matchStatus && matchOrigem && matchesColetaRange && matchesEntregaRange;
+    });
+    
+    // 2. Ordenação
+    if (sortConfig.key) {
+      sortedMovs.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        let comparison = 0;
+        
+        if (sortConfig.key === 'dataColeta') {
+          const aTime = aValue ? new Date(aValue as Date).getTime() : 0;
+          const bTime = bValue ? new Date(bValue as Date).getTime() : 0;
+          comparison = aTime - bTime;
+        } else if (sortConfig.key === 'valor') {
+          comparison = (aValue as number) - (bValue as number);
+        } else if (sortConfig.key === 'status') {
+          comparison = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+        } else {
+          const aStr = String(aValue || '').toLowerCase();
+          const bStr = String(bValue || '').toLowerCase();
+          if (aStr > bStr) comparison = 1;
+          if (aStr < bStr) comparison = -1;
+        }
+        
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return sortedMovs;
+  }, [cargas, searchTerm, filterStatus, filterOrigem, filterColetaStartDate, filterColetaEndDate, filterEntregaStartDate, filterEntregaEndDate, sortConfig]);
+  
+  // 3. Função para verificar se a carga está integrada (isCargaIntegrated)
+  const isCargaIntegrated = useCallback((carga: Carga): boolean => {
+    // Uma carga é considerada integrada se TODOS os seus trajetos tiverem movimentações de FRETE associadas
+    if (!carga.trajetos || carga.trajetos.length === 0) return false;
+    
+    return carga.trajetos.every(trajeto => {
+        const relatedMovs = movimentacoes.filter(m => 
+            m.cargaId === carga.id && 
+            m.trajetoIndex === trajeto.index && 
+            m.categoria === 'FRETE'
+        );
+        
+        // Considera integrado se houver pelo menos um lançamento de Frete (Frete Único, Adto ou Saldo)
+        return relatedMovs.length > 0;
+    });
+  }, [movimentacoes]);
+  
+  // 4. Função para rota simplificada (getSimplifiedRoute)
+  const getSimplifiedRoute = useCallback((carga: Carga): string => {
+    if (!carga.trajetos || carga.trajetos.length === 0) {
+        return `${getLocalDisplay(carga.origem)} → ${getLocalDisplay(carga.destino)}`;
+    }
+    
+    const primeiro = carga.trajetos[0];
+    const ultimo = carga.trajetos[carga.trajetos.length - 1];
+    
+    const origemDisplay = primeiro.cidadeOrigem.trim() ? `${primeiro.cidadeOrigem} - ${primeiro.ufOrigem}` : primeiro.ufOrigem;
+    const destinoDisplay = ultimo.cidadeDestino.trim() ? `${ultimo.cidadeDestino} - ${ultimo.ufDestino}` : ultimo.ufDestino;
+    
+    if (carga.trajetos.length > 1) {
+        return `${origemDisplay} → ... → ${destinoDisplay}`;
+    }
+    
+    return `${origemDisplay} → ${destinoDisplay}`;
+  }, []);
+  
+  // 5. Função auxiliar para obter o nome da cidade/país para exibição na tabela (getLocalDisplay)
+  const getLocalDisplay = (localCompleto: string) => {
+    const info = extrairUfECidade(localCompleto);
+    if (['AR', 'CL', 'UY'].includes(info.uf) && info.cidade) {
+        return `${info.cidade} - ${info.uf}`;
+    }
+    if (info.uf && info.cidade) {
+        return `${info.cidade} - ${info.uf}`;
+    }
+    return localCompleto;
+  };
+  
+  // --- FIM FUNÇÕES AUSENTES ---
 
   // Mapeamento de status para o modal
   const cargaStatusOptions = useMemo(() => {
@@ -219,25 +355,6 @@ const Cargas: React.FC = () => {
     }
   }, [location.state]);
 
-  // Função auxiliar para obter o nome da cidade/país para exibição na tabela
-  const getLocalDisplay = (localCompleto: string) => {
-    const info = extrairUfECidade(localCompleto);
-    // Se a UF for um código de país (AR, CL, UY) e a cidade estiver preenchida, mostra a cidade.
-    if (['AR', 'CL', 'UY'].includes(info.uf) && info.cidade) {
-        return `${info.cidade} - ${info.uf}`;
-    }
-    // Se for um código de país sem cidade, mostra o código.
-    if (['AR', 'CL', 'UY'].includes(info.uf)) {
-        return info.uf;
-    }
-    // Se for um local completo (Cidade - UF), retorna o local completo.
-    if (info.uf && info.cidade) {
-        return `${info.cidade} - ${info.uf}`;
-    }
-    // Caso contrário, retorna o valor bruto (que pode ser o CRT se o mapeamento falhou)
-    return localCompleto;
-  };
-  
   // Handlers de Formulário (mantidos)
   const handleFormChange = (field: keyof CargaFormData, value: any) => {
     setFormData(prev => {
@@ -1111,7 +1228,7 @@ const Cargas: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredCargas.map((carga) => {
+                filteredCargas.map((carga: Carga) => {
                   const integrated = isCargaIntegrated(carga);
                   
                   // Verifica se algum trajeto está pendente de vinculação

@@ -31,6 +31,7 @@ import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetail
 import ConfirmationModal from '../components/ConfirmationModal'
 import StandardCheckbox from '../components/StandardCheckbox'
 import DateRangeFilter from '../components/DateRangeFilter' // NOVO: Importando o componente unificado
+import CategoriesModal from '../components/financeiro/CategoriesModal' // NOVO: Importando CategoriesModal
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -194,19 +195,20 @@ const Financeiro: React.FC = () => {
   const [catType, setCatType] = useState<'receita' | 'despesa'>('receita')
   const [newCategory, setNewCategory] = useState('')
 
-  const addCategory = () => {
-    const candidate = newCategory.trim()
+  // FUNÇÃO AUSENTE 1: addCategory
+  const addCategory = (type: 'receita' | 'despesa', category: string) => {
+    const candidate = category.trim()
     if (!candidate) return
     setCategories(prev => {
-      const list = prev[catType]
+      const list = prev[type]
       // Evita duplicatas ignorando caixa, preservando o texto como digitado
       if (list.some(c => c.toLowerCase() === candidate.toLowerCase())) return prev
-      const updated = { ...prev, [catType]: [...list, candidate] }
+      const updated = { ...prev, [type]: [...list, candidate] }
       return updated
     })
-    setNewCategory('')
   }
 
+  // FUNÇÃO AUSENTE 2: removeCategory
   const removeCategory = (type: 'receita' | 'despesa', cat: string) => {
     setCategories(prev => ({ ...prev, [type]: prev[type].filter(c => c !== cat) }))
   }
@@ -555,6 +557,7 @@ const Financeiro: React.FC = () => {
     }
   }
 
+  // FUNÇÃO AUSENTE 3: confirmDelete
   const confirmDelete = (deleteGroup: boolean = false) => {
     if (deleteTarget) {
       const targetMov = movimentacoes.find(m => m.id === deleteTarget.id);
@@ -1254,6 +1257,56 @@ const Financeiro: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Modal de Gerenciamento de Categorias */}
+      {showCategoriesModal && (
+        <CategoriesModal
+          isOpen={showCategoriesModal}
+          onClose={() => setShowCategoriesModal(false)}
+          categories={categories}
+          addCategory={addCategory}
+          removeCategory={removeCategory}
+        />
+      )}
+      
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirm && deleteTarget && (
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false);
+            setDeleteTarget(null);
+          }}
+          onConfirm={() => confirmDelete(true)}
+          title="Excluir Movimentação"
+          message={
+            <>
+              A movimentação "{deleteTarget.descricao}" faz parte de um grupo recorrente/parcelado.
+              <p className="mt-3">Deseja excluir apenas esta instância ou o grupo completo?</p>
+            </>
+          }
+          confirmText="Excluir Grupo Completo"
+          cancelText="Excluir Apenas Esta"
+          variant="danger"
+        >
+          <div className="flex space-x-3 mt-4">
+            <button
+              type="button"
+              onClick={() => confirmDelete(false)}
+              className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+            >
+              Excluir Apenas Esta
+            </button>
+            <button
+              type="button"
+              onClick={() => confirmDelete(true)}
+              className="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium bg-red-600 hover:bg-red-700"
+            >
+              Excluir Grupo Completo
+            </button>
+          </div>
+        </ConfirmationModal>
       )}
     </div>
   )
