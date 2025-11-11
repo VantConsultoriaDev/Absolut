@@ -1,13 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useDatabase } from '../../contexts/DatabaseContext';
-import { Motorista, Carga } from '../../types';
-import { AlertTriangle, X } from 'lucide-react';
-import { useModal } from '../../hooks/useModal'; // Importando useModal
+import { Motorista, Carga, Parceiro, Veiculo } from '../../types';
+import { AlertTriangle, X, Search, User, Truck, Briefcase } from 'lucide-react';
+import { useModal } from '../../hooks/useModal';
+import { formatPlaca } from '../../utils/formatters';
 
 interface CargaLinkModalProps {
   isOpen: boolean;
   linkingCarga: Carga | null;
-  linkingTrajetoIndex: number | undefined; // NOVO
+  linkingTrajetoIndex: number | undefined;
   onClose: () => void;
   onSave: () => void;
   selectedParceiro: string;
@@ -19,6 +20,195 @@ interface CargaLinkModalProps {
   selectedCarretas: string[];
   setSelectedCarretas: React.Dispatch<React.SetStateAction<string[]>>;
 }
+
+// Componente auxiliar para o Combobox de busca
+interface ComboboxInputProps {
+    label: string;
+    placeholder: string;
+    valueId: string;
+    options: { id: string; name: string; secondaryInfo?: string; icon: React.ElementType }[];
+    onSelect: (id: string) => void;
+    onClear: () => void;
+    disabled?: boolean;
+    icon: React.ElementType;
+}
+
+const ComboboxInput: React.FC<ComboboxInputProps> = ({
+    label,
+    placeholder,
+    valueId,
+    options,
+    onSelect,
+    onClear,
+    disabled = false,
+    icon: Icon,
+}) => {
+    const { parceiros, motoristas, veiculos } = useDatabase();
+    const [query, setQuery] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    
+    // Determina o nome atual para exibição no input
+    const currentName = useMemo(() => {
+        if (!valueId) return '';
+        
+        // Tenta encontrar o nome na lista de opções (Parceiro, Motorista, Veículo)
+        const selectedOption = options.find(o => o.id === valueId);
+        if (selectedOption) return selectedOption.name;
+        
+        // Fallback para buscar o nome no contexto (necessário se a opção não estiver na lista filtrada)
+        const parceiro = parceiros.find(p => p.id === valueId);
+        if (parceiro) return parceiro.nome || '';
+        const motorista = motoristas.find(m => m.id === valueId);
+        if (motorista) return motorista.nome || '';
+        const veiculo = veiculos.find(v => v.id === valueId);
+        if (veiculo) return `${v.tipo} - ${formatPlaca(v.placa || v.placaCavalo || v.placaCarreta || '')}`;
+        
+        return '';
+    }, [valueId, options, parceiros, motoristas, veiculos]);
+    
+    // Sincroniza a query com o nome atual quando o ID muda (ex: ao selecionar)
+    useEffect(() => {
+        setQuery(currentName);
+    }, [currentName]);
+
+    // Lógica de filtragem
+    const filteredOptions = useMemo(() => {
+        if (!query.trim()) return options;
+        const q = query.trim().toLowerCase();
+        
+        return options.filter(o => 
+            o.name.toLowerCase().includes(q) || 
+            (o.secondaryInfo || '').toLowerCase().includes(q)
+        );
+    }, [query, options]);
+
+    // Lógica para fechar o dropdown ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                dropdownRef.current && 
+                !dropdownRef.current.contains(event.target as Node) &&
+                inputRef.current &&
+                !inputRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+    
+    const handleSelect = (id: string, name: string) => {
+        onSelect(id);
+        setQuery(name);
+        setIsOpen(false);
+    };
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setQuery(e.target.value);
+        setIsOpen(true);
+        // Se o usuário está digitando, desvincula o ID atual
+        if (valueId && e.target.value !== currentName) {
+            onClear();
+        }
+    };
+    
+    const handleInputFocus = () => {
+        setIsOpen(true);
+        // Ao focar, se houver um valor selecionado, mostra todas as opções
+        if (valueId) {
+            setQuery('');
+        }
+    };
+    
+    const handleInputBlur = () => {
+        // Pequeno delay para permitir o clique no item do dropdown
+        setTimeout(() => {
+            if (!dropdownRef.current?.contains(document.activeElement)) {
+                setIsOpen(false);
+                // Se o usuário digitou algo e não selecionou, restaura o nome anterior ou limpa
+                if (valueId && query !== currentName) {
+                    setQuery(currentName);
+                } else if (!valueId && query.trim()) {
+                    setQuery('');
+                }
+            }
+        }, 100);
+    };
+    
+    const showDropdown = isOpen && (filteredOptions.length > 0 || query.trim());
+
+    return (
+        <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {label}
+            </label>
+            <div className="relative">
+                <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={handleInputChange}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    placeholder={placeholder}
+                    className="input-field pl-10 h-11 text-sm"
+                    disabled={disabled}
+                />
+                {valueId && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClear();
+                            setQuery('');
+                        }}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500"
+                        title="Limpar seleção"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
+
+            {showDropdown && (
+                <div 
+                    ref={dropdownRef}
+                    className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                    {filteredOptions.length === 0 && query.trim() ? (
+                        <div className="p-3 text-sm text-slate-500 dark:text-slate-400">
+                            Nenhum resultado encontrado.
+                        </div>
+                    ) : (
+                        filteredOptions.map(option => (
+                            <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => handleSelect(option.id, option.name)}
+                                className="w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-left"
+                            >
+                                <option.icon className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0" />
+                                <div className="flex flex-col flex-1 min-w-0">
+                                    <span className="truncate font-medium">{option.name}</span>
+                                    {option.secondaryInfo && (
+                                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{option.secondaryInfo}</span>
+                                    )}
+                                </div>
+                            </button>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
   isOpen,
@@ -35,87 +225,118 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
   selectedCarretas,
   setSelectedCarretas,
 }) => {
-  // HOOKS DEVEM SER CHAMADOS INCONDICIONALMENTE NO TOPO
   const { parceiros, motoristas, veiculos } = useDatabase();
   const { modalRef } = useModal({ isOpen, onClose }); 
 
-  // Assumimos que o componente pai (Cargas.tsx) garante que linkingCarga e linkingTrajetoIndex existam
-  // antes de renderizar este componente. Se não existirem, o componente pai não deve renderizar.
-  // Usamos fallback seguro para evitar erros de runtime.
   const trajeto = linkingCarga?.trajetos.find(t => t.index === linkingTrajetoIndex);
   
-  // Se o componente for renderizado sem dados essenciais (o que não deveria acontecer se o pai estiver correto),
-  // retornamos um fallback simples, mas mantemos os hooks chamados.
   if (!trajeto || !linkingCarga) return null; 
 
-  // Filtros de dados (useMemo)
+  // --- OPÇÕES PARA COMBOBOX ---
+  
+  // 1. Opções de Parceiro
+  const parceiroOptions = useMemo(() => {
+    return parceiros.map(p => ({
+      id: p.id,
+      name: p.nome || 'Parceiro sem nome',
+      secondaryInfo: p.tipo === 'PJ' ? (p.nomeFantasia || p.documento) : p.documento,
+      icon: p.tipo === 'PJ' ? Briefcase : User,
+    }));
+  }, [parceiros]);
+
+  // 2. Opções de Motorista (Filtrado por Parceiro ou Todos)
   const filteredMotoristas = useMemo(() => {
-    if (!selectedParceiro) {
-      // Retorna motoristas + parceiros PF que são motoristas
-      const parceiroMotoristas = parceiros
-        .filter(p => p.tipo === 'PF' && p.isMotorista)
-        .map(p => ({
-          id: p.id,
-          parceiroId: p.id,
-          nome: p.nome || '',
-          cpf: p.documento || '',
-          cnh: p.cnh || '',
-          categoriaCnh: '',
-          validadeCnh: new Date(),
-          telefone: p.telefone || '',
-          isActive: p.isActive,
-          createdAt: p.createdAt,
-          updatedAt: new Date()
-        } as Motorista));
-      return [...motoristas, ...parceiroMotoristas];
+    let list: Motorista[] = [];
+    
+    if (selectedParceiro) {
+        // Motoristas vinculados ao parceiro
+        list = motoristas.filter(m => m.parceiroId === selectedParceiro);
+        
+        // Verifica se o próprio parceiro é motorista (PF)
+        const parceiro = parceiros.find(p => p.id === selectedParceiro);
+        if (parceiro && parceiro.tipo === 'PF' && parceiro.isMotorista) {
+            list.push({
+                id: parceiro.id,
+                parceiroId: parceiro.id,
+                nome: parceiro.nome || '',
+                cpf: parceiro.documento || '',
+                cnh: parceiro.cnh || '',
+                categoriaCnh: '',
+                validadeCnh: new Date(),
+                telefone: parceiro.telefone || '',
+                isActive: parceiro.isActive,
+                createdAt: parceiro.createdAt,
+                updatedAt: new Date(),
+                nacionalidade: parceiro.nacionalidade || 'Brasileiro',
+            } as Motorista);
+        }
+    } else {
+        // Todos os motoristas cadastrados
+        list = motoristas;
     }
     
-    // Se um parceiro específico foi selecionado
-    const motoristasDoParceiro = motoristas.filter(m => m.parceiroId === selectedParceiro);
-    
-    // Verifica se o próprio parceiro é motorista
-    const parceiro = parceiros.find(p => p.id === selectedParceiro);
-    if (parceiro && parceiro.tipo === 'PF' && parceiro.isMotorista) {
-      const parceiroComoMotorista = {
-        id: parceiro.id,
-        parceiroId: parceiro.id,
-        nome: parceiro.nome || '',
-        cpf: parceiro.documento || '',
-        cnh: parceiro.cnh || '',
-        categoriaCnh: '',
-        validadeCnh: new Date(),
-        telefone: parceiro.telefone || '',
-        isActive: parceiro.isActive,
-        createdAt: parceiro.createdAt,
-        updatedAt: new Date()
-      } as Motorista;
-      return [...motoristasDoParceiro, parceiroComoMotorista];
-    }
-    
-    return motoristasDoParceiro;
+    return list.map(m => ({
+      id: m.id,
+      name: m.nome,
+      secondaryInfo: m.cpf,
+      icon: User,
+    }));
   }, [selectedParceiro, motoristas, parceiros]);
 
+  // 3. Opções de Veículo (Truck ou Cavalo, Filtrado por Parceiro ou Todos)
   const filteredVeiculos = useMemo(() => {
-    // Filtra apenas Truck e Cavalo para a seleção principal de veículo
-    const base = selectedParceiro 
-      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo !== 'Carreta') 
-      : veiculos.filter(v => v.tipo !== 'Carreta');
-    return base;
+    const base = veiculos.filter(v => v.tipo !== 'Carreta');
+    
+    let list = selectedParceiro 
+      ? base.filter(v => v.parceiroId === selectedParceiro) 
+      : base;
+      
+    return list.map(v => ({
+      id: v.id,
+      name: `${v.tipo} - ${formatPlaca(v.placa || v.placaCavalo || '')}`,
+      secondaryInfo: `${v.fabricante} ${v.modelo} (${v.ano})`,
+      icon: Truck,
+    }));
   }, [selectedParceiro, veiculos]);
-
-  const filteredCarretas = useMemo(() => {
-    // Filtra apenas Carretas para a seleção secundária
-    return selectedParceiro 
-      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta') 
-      : [];
-  }, [selectedParceiro, veiculos]);
-
-  // Verifica se o veículo selecionado é um Cavalo
+  
+  // 4. Carretas (Apenas para Cavalo selecionado)
   const isSelectedVehicleCavalo = useMemo(() => {
     if (!selectedVeiculo) return false;
     const veiculo = veiculos.find(v => v.id === selectedVeiculo);
     return veiculo?.tipo === 'Cavalo';
   }, [selectedVeiculo, veiculos]);
+
+  const filteredCarretas = useMemo(() => {
+    return selectedParceiro 
+      ? veiculos.filter(v => v.parceiroId === selectedParceiro && v.tipo === 'Carreta') 
+      : [];
+  }, [selectedParceiro, veiculos]);
+  
+  // --- HANDLERS DE SELEÇÃO ---
+  
+  const handleSelectParceiro = (id: string) => {
+    setSelectedParceiro(id);
+    // Limpa motorista e veículo ao mudar o parceiro
+    setSelectedMotorista('');
+    setSelectedVeiculo('');
+    setSelectedCarretas([]);
+  };
+  
+  const handleClearParceiro = () => {
+    setSelectedParceiro('');
+    setSelectedMotorista('');
+    setSelectedVeiculo('');
+    setSelectedCarretas([]);
+  };
+  
+  const handleClearMotorista = () => {
+    setSelectedMotorista('');
+  };
+  
+  const handleClearVeiculo = () => {
+    setSelectedVeiculo('');
+    setSelectedCarretas([]);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
@@ -132,69 +353,41 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
             Carga CRT: {linkingCarga.crt || linkingCarga.id} ({trajeto.ufOrigem} → {trajeto.ufDestino})
         </p>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Parceiro
-            </label>
-            <select
-              value={selectedParceiro}
-              onChange={(e) => {
-                setSelectedParceiro(e.target.value);
-                setSelectedMotorista('');
-                setSelectedVeiculo('');
-                setSelectedCarretas([]);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-            >
-              <option value="">Selecione um parceiro</option>
-              {parceiros.map(parceiro => (
-                <option key={parceiro.id} value={parceiro.id}>
-                  {parceiro.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          
+          {/* 1. Parceiro */}
+          <ComboboxInput
+            label="Parceiro"
+            placeholder="Buscar parceiro por nome ou documento"
+            valueId={selectedParceiro}
+            options={parceiroOptions}
+            onSelect={handleSelectParceiro}
+            onClear={handleClearParceiro}
+            icon={Briefcase}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Motorista
-            </label>
-            <select
-              value={selectedMotorista}
-              onChange={(e) => setSelectedMotorista(e.target.value)}
-              disabled={!selectedParceiro}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
-            >
-              <option value="">Selecione um motorista</option>
-              {filteredMotoristas.map(motorista => (
-                <option key={motorista.id} value={motorista.id}>
-                  {motorista.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 2. Motorista */}
+          <ComboboxInput
+            label="Motorista"
+            placeholder={selectedParceiro ? "Buscar motorista do parceiro" : "Selecione um parceiro primeiro"}
+            valueId={selectedMotorista}
+            options={filteredMotoristas}
+            onSelect={setSelectedMotorista}
+            onClear={handleClearMotorista}
+            disabled={!selectedParceiro}
+            icon={User}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Veículo (Truck ou Cavalo)
-            </label>
-            <select
-              value={selectedVeiculo}
-              onChange={(e) => {
-                setSelectedVeiculo(e.target.value);
-                setSelectedCarretas([]); // Limpa carretas ao mudar o veículo principal
-              }}
-              disabled={!selectedParceiro}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50"
-            >
-              <option value="">Selecione um veículo</option>
-              {filteredVeiculos.map(veiculo => (
-                <option key={veiculo.id} value={veiculo.id}>
-                  {veiculo.tipo === 'Truck' ? veiculo.placa : (veiculo.placaCavalo || veiculo.placa)} ({veiculo.tipo})
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 3. Veículo */}
+          <ComboboxInput
+            label="Veículo (Truck ou Cavalo)"
+            placeholder={selectedParceiro ? "Buscar veículo do parceiro" : "Selecione um parceiro primeiro"}
+            valueId={selectedVeiculo}
+            options={filteredVeiculos}
+            onSelect={setSelectedVeiculo}
+            onClear={handleClearVeiculo}
+            disabled={!selectedParceiro}
+            icon={Truck}
+          />
 
           {/* Seleção de Carretas quando o veículo for Cavalo */}
           {isSelectedVehicleCavalo && filteredCarretas.length > 0 && (
