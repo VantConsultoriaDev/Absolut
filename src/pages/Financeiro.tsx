@@ -31,7 +31,8 @@ import RangeCalendar from '../components/RangeCalendar'
 import MultiSelectStatus from '../components/MultiSelectStatus'
 import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetailModal'
 import ConfirmationModal from '../components/ConfirmationModal'
-import StandardCheckbox from '../components/StandardCheckbox' // NOVO
+import StandardCheckbox from '../components/StandardCheckbox'
+import DateRangeFilter from '../components/DateRangeFilter' // NOVO: Importando o componente unificado
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -86,24 +87,12 @@ const Financeiro: React.FC = () => {
   // NOVO: Estado para filtro de categorias
   const [filterCategories, setFilterCategories] = useState<string[]>([])
   
+  // Filtros de intervalo (mantidos)
   const [filterVencStartDate, setFilterVencStartDate] = useState('')
   const [filterVencEndDate, setFilterVencEndDate] = useState('')
   
   const [filterPayStartDate, setFilterPayStartDate] = useState('')
   const [filterPayEndDate, setFilterPayEndDate] = useState('')
-  
-  // Calendários de intervalo (Vencimento e Pagamento)
-  const [showVencCalendar, setShowVencCalendar] = useState(false)
-  const [vencCalendarPosition, setVencCalendarPosition] = useState({ top: 0, left: 0 })
-  const [vencMonth, setVencMonth] = useState<Date>(new Date())
-  const [tempVencStart, setTempVencStart] = useState<Date | null>(null)
-  const [tempVencEnd, setTempVencEnd] = useState<Date | null>(null)
-
-  const [showPayCalendar, setShowPayCalendar] = useState(false)
-  const [payCalendarPosition, setPayCalendarPosition] = useState({ top: 0, left: 0 })
-  const [payMonth, setPayMonth] = useState<Date>(new Date())
-  const [tempPayStart, setTempPayStart] = useState<Date | null>(null)
-  const [tempPayEnd, setTempPayEnd] = useState<Date | null>(null)
   
   // Estado para o modal de status centralizado
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -120,7 +109,7 @@ const Financeiro: React.FC = () => {
     
     // Recorrência
     isRecurring: false,
-    recurrencePeriod: 'monthly' as MovimentacaoFinanceira['recurrencePeriod'],
+    recurrencePeriod: 'monthly',
     recurrenceEndDateStr: '' as string, // String for input type="date"
     
     // NOVO: Parcelamento
@@ -237,8 +226,6 @@ const Financeiro: React.FC = () => {
       setFilterPayEndDate('')
 
       // Fechar calendários e dropdowns
-      setShowVencCalendar(false)
-      setShowPayCalendar(false)
       setShowStatusModal(false)
       setStatusTargetMov(null)
       
@@ -650,6 +637,26 @@ const Financeiro: React.FC = () => {
     }
   };
   
+  // --- Configuração do Filtro de Data Unificado ---
+  const dateFilterOptions = useMemo(() => [
+    {
+      key: 'vencimento',
+      label: 'Vencimento',
+      startState: filterVencStartDate,
+      endState: filterVencEndDate,
+      setStart: setFilterVencStartDate,
+      setEnd: setFilterVencEndDate,
+    },
+    {
+      key: 'pagamento',
+      label: 'Pagamento',
+      startState: filterPayStartDate,
+      endState: filterPayEndDate,
+      setStart: setFilterPayStartDate,
+      setEnd: setFilterPayEndDate,
+    },
+  ], [filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate]);
+  
   // Componente de renderização da linha da tabela
   const renderTableRow = (movimentacao: MovimentacaoFinanceira) => (
     <tr 
@@ -892,157 +899,14 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Vencimento (1 coluna) */}
-          <div className="no-uppercase">
-            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento</label>
-            <button
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-                setVencCalendarPosition({
-                  top: rect.bottom + 5,
-                  left: rect.left
-                })
-                const s = filterVencStartDate ? createLocalDate(filterVencStartDate) : null
-                const ed = filterVencEndDate ? createLocalDate(filterVencEndDate) : null
-                setTempVencStart(s)
-                setTempVencEnd(ed)
-                setVencMonth(s || new Date())
-                setShowVencCalendar(true)
-              }}
-              className="input-field flex items-center justify-between h-11 text-sm"
-            >
-              <span className="text-sm whitespace-nowrap">
-                {filterVencStartDate && filterVencEndDate
-                  ? `${format(createLocalDate(filterVencStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(filterVencEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                  : filterVencStartDate
-                    ? `De ${format(createLocalDate(filterVencStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                    : 'Selecionar período'}
-              </span>
-              <Calendar className="h-5 w-5 text-gray-400" />
-            </button>
-          </div>
-
-          {/* Pagamento (1 coluna) */}
-          <div className="no-uppercase">
-            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento</label>
-            <button
-              onClick={(e) => {
-                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
-                setPayCalendarPosition({
-                  top: rect.bottom + 5,
-                  left: rect.left
-                })
-                const s = filterPayStartDate ? createLocalDate(filterPayStartDate) : null
-                const ed = filterPayEndDate ? createLocalDate(filterPayEndDate) : null
-                setTempPayStart(s)
-                setTempPayEnd(ed)
-                setPayMonth(s || new Date())
-                setShowPayCalendar(true)
-              }}
-              className="input-field flex items-center justify-between h-11 text-sm"
-            >
-              <span className="text-sm whitespace-nowrap">
-                {filterPayStartDate && filterPayEndDate
-                  ? `${format(createLocalDate(filterPayStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(filterPayEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                  : filterPayStartDate
-                    ? `De ${format(createLocalDate(filterPayStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                    : 'Selecionar período'}
-              </span>
-              <Calendar className="h-5 w-5 text-gray-400" />
-            </button>
+          {/* Filtro de Data Unificado (2 colunas) */}
+          <div className="md:col-span-2 lg:col-span-2">
+            <DateRangeFilter
+              options={dateFilterOptions}
+            />
           </div>
         </div>
       </div>
-
-      {/* Calendário de Vencimento (overlay ancorado) */}
-      {showVencCalendar && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowVencCalendar(false)} />
-          <div
-            className="fixed z-50"
-            style={{ top: `${vencCalendarPosition.top}px`, left: `${vencCalendarPosition.left}px` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <RangeCalendar
-              month={vencMonth}
-              start={tempVencStart}
-              end={tempVencEnd}
-              onPrev={() => setVencMonth(new Date(vencMonth.getFullYear(), vencMonth.getMonth() - 1, 1))}
-              onNext={() => setVencMonth(new Date(vencMonth.getFullYear(), vencMonth.getMonth() + 1, 1))}
-              onSelectDate={(d) => {
-                if (!tempVencStart || (tempVencStart && tempVencEnd)) {
-                  setTempVencStart(d)
-                  setTempVencEnd(null)
-                } else {
-                  if (d < tempVencStart) {
-                    setTempVencEnd(tempVencStart)
-                    setTempVencStart(d)
-                  } else {
-                    setTempVencEnd(d)
-                  }
-                }
-              }}
-              onClear={() => {
-                setTempVencStart(null)
-                setTempVencEnd(null)
-                setFilterVencStartDate('')
-                setFilterVencEndDate('')
-                setShowVencCalendar(false)
-              }}
-              onApply={() => {
-                setFilterVencStartDate(tempVencStart ? format(tempVencStart, 'yyyy-MM-dd') : '')
-                setFilterVencEndDate(tempVencEnd ? format(tempVencEnd, 'yyyy-MM-dd') : '')
-                setShowVencCalendar(false)
-              }}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Calendário de Pagamento (overlay ancorado) */}
-      {showPayCalendar && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowPayCalendar(false)} />
-          <div
-            className="fixed z-50"
-            style={{ top: `${payCalendarPosition.top}px`, left: `${payCalendarPosition.left}px` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <RangeCalendar
-              month={payMonth}
-              start={tempPayStart}
-              end={tempPayEnd}
-              onPrev={() => setPayMonth(new Date(payMonth.getFullYear(), payMonth.getMonth() - 1, 1))}
-              onNext={() => setPayMonth(new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 1))}
-              onSelectDate={(d) => {
-                if (!tempPayStart || (tempPayStart && tempPayEnd)) {
-                  setTempPayStart(d)
-                  setTempPayEnd(null)
-                } else {
-                  if (d < tempPayStart) {
-                    setTempPayEnd(tempPayStart)
-                    setTempPayStart(d)
-                  } else {
-                    setTempPayEnd(d)
-                  }
-                }
-              }}
-              onClear={() => {
-                setTempPayStart(null)
-                setTempPayEnd(null)
-                setFilterPayStartDate('')
-                setFilterPayEndDate('')
-                setShowPayCalendar(false)
-              }}
-              onApply={() => {
-                setFilterPayStartDate(tempPayStart ? format(tempPayStart, 'yyyy-MM-dd') : '')
-                setFilterPayEndDate(tempPayEnd ? format(tempPayEnd, 'yyyy-MM-dd') : '')
-                setShowPayCalendar(false)
-              }}
-            />
-          </div>
-        </>
-      )}
 
       {/* Table */}
       <div className="table-container">
@@ -1290,127 +1154,6 @@ const Financeiro: React.FC = () => {
                 <button type="submit" className="btn-primary flex-1">{editingMovimentacao ? 'Atualizar' : 'Criar'}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de confirmação de exclusão */}
-      {showDeleteConfirm && deleteTarget && (
-        <ConfirmationModal
-          isOpen={showDeleteConfirm}
-          onClose={() => {
-            setShowDeleteConfirm(false);
-            setDeleteTarget(null);
-          }}
-          onConfirm={() => confirmDelete(false)} // Default: delete single
-          title="Confirmar Exclusão"
-          message={
-            <>
-              Tem certeza que deseja excluir a movimentação{' '}
-              <span className="font-semibold">{deleteTarget.descricao}</span>?
-              
-              {/* NOVO: Opções de exclusão recorrente/parcelada */}
-              {(movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring || movimentacoes.find(m => m.id === deleteTarget.id)?.isInstallment) ? (
-                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                      Esta é uma movimentação recorrente/parcelada. O que você deseja excluir?
-                  </p>
-              ) : (
-                  <span className="block mt-2 text-sm text-red-600 dark:text-red-400">
-                    Esta ação não pode ser desfeita.
-                  </span>
-              )}
-            </>
-          }
-          confirmText="Excluir"
-          variant="danger"
-        >
-            {/* Renderiza botões customizados se for recorrente/parcelado */}
-            {(movimentacoes.find(m => m.id === deleteTarget.id)?.isRecurring || movimentacoes.find(m => m.id === deleteTarget.id)?.isInstallment) ? (
-                <div className="flex flex-col space-y-3">
-                    <button
-                        type="button"
-                        onClick={() => confirmDelete(false)}
-                        className="btn-secondary justify-center"
-                    >
-                        Excluir SOMENTE esta transação
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => confirmDelete(true)}
-                        className="btn-danger justify-center"
-                    >
-                        Excluir TODAS as transações do grupo
-                    </button>
-                </div>
-            ) : (
-                // Botões padrão para transação única
-                <div className="flex space-x-3">
-                    <button
-                        onClick={() => {
-                            setShowDeleteConfirm(false);
-                            setDeleteTarget(null);
-                        }}
-                        className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={() => confirmDelete(false)}
-                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                        Excluir
-                    </button>
-                </div>
-            )}
-        </ConfirmationModal>
-      )}
-
-      {/* Modal de Categorias */}
-      {showCategoriesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCategoriesModal(false)} />
-          <div className="card w-full max-w-lg z-50">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Gerenciar Categorias</h3>
-              <button onClick={() => setShowCategoriesModal(false)} className="btn-ghost p-2">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
-                <select value={catType} onChange={e => setCatType(e.target.value as 'receita' | 'despesa')} className="input-field">
-                  <option value="receita">Receita</option>
-                  <option value="despesa">Despesa</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria (digitação livre)</label>
-                <div className="flex gap-2">
-                <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} className="input-field flex-1" placeholder="Ex.: Serviços" />
-                  <button className="btn-primary" type="button" onClick={addCategory}>Adicionar</button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categorias de {catType === 'receita' ? 'Receita' : 'Despesa'}</label>
-                <div className="flex flex-wrap gap-2">
-                  {categories[catType].length === 0 && (
-                    <span className="text-slate-500 dark:text-slate-400 text-sm">Nenhuma categoria adicionada.</span>
-                  )}
-                  {categories[catType].map(cat => (
-                    <span key={cat} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-sm">
-                      {cat}
-                      <button className="p-1 hover:text-red-600" type="button" onClick={() => removeCategory(catType, cat)} title="Remover">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="pt-2 flex justify-end">
-                <button className="btn-secondary" type="button" onClick={() => setShowCategoriesModal(false)}>Fechar</button>
-              </div>
-            </div>
           </div>
         </div>
       )}

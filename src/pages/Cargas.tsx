@@ -37,6 +37,9 @@ import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade, getBaseCrt } from '../u
 type SortKey = 'crt' | 'origem' | 'destino' | 'dataColeta' | 'valor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
+// Tipagem para o filtro de data unificado
+type DateFilterType = 'coleta' | 'entrega';
+
 // NOVO: Mapeamento de prioridade de status para ordenação
 const STATUS_ORDER: Record<Carga['status'], number> = {
   a_coletar: 1,
@@ -94,23 +97,19 @@ const Cargas: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string[]>([]); // ALTERADO: Array de strings
   const [filterOrigem, setFilterOrigem] = useState(''); // NOVO: Filtro de Origem
   
-  // Filtros de intervalo
+  // Filtros de intervalo (mantidos)
   const [filterColetaStartDate, setFilterColetaStartDate] = useState('');
   const [filterColetaEndDate, setFilterColetaEndDate] = useState('');
   const [filterEntregaStartDate, setFilterEntregaStartDate] = useState('');
   const [filterEntregaEndDate, setFilterEntregaEndDate] = useState('');
   
-  // Calendários ancorados state (mantidos)
-  const [showColetaCalendar, setShowColetaCalendar] = useState(false);
-  const [coletaCalendarPosition, setColetaCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
-  const [coletaMonth, setColetaMonth] = useState<Date>(new Date());
-  const [tempColetaStart, setTempColetaStart] = useState<Date | null>(null);
-  const [tempColetaEnd, setTempColetaEnd] = useState<Date | null>(null);
-  const [showEntregaCalendar, setShowEntregaCalendar] = useState(false);
-  const [entregaCalendarPosition, setEntregaCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
-  const [entregaMonth, setEntregaMonth] = useState<Date>(new Date());
-  const [tempEntregaStart, setTempEntregaStart] = useState<Date | null>(null);
-  const [tempEntregaEnd, setTempEntregaEnd] = useState<Date | null>(null);
+  // NOVO: Estado para o calendário unificado
+  const [showUnifiedCalendar, setShowUnifiedCalendar] = useState(false);
+  const [calendarType, setCalendarType] = useState<DateFilterType>('coleta');
+  const [calendarPosition, setCalendarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [tempStart, setTempStart] = useState<Date | null>(null);
+  const [tempEnd, setTempEnd] = useState<Date | null>(null);
   
   // Estado para o modal de status centralizado
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -223,8 +222,7 @@ const Cargas: React.FC = () => {
       setFilterColetaEndDate('');
       setFilterEntregaStartDate('');
       setFilterEntregaEndDate('');
-      setShowColetaCalendar(false);
-      setShowEntregaCalendar(false);
+      setShowUnifiedCalendar(false); // NOVO
       // ALTERADO: Resetar ordenação para dataColeta crescente
       setSortConfig({ key: 'dataColeta', direction: 'asc' }); 
     }
@@ -1163,6 +1161,85 @@ const Cargas: React.FC = () => {
     );
   };
   
+  // --- Handlers do Calendário Unificado ---
+  const handleOpenUnifiedCalendar = (e: React.MouseEvent<HTMLButtonElement>, type: DateFilterType) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setCalendarPosition({
+      top: rect.bottom + 5,
+      left: rect.left
+    });
+    setCalendarType(type);
+    
+    const startStr = type === 'coleta' ? filterColetaStartDate : filterEntregaStartDate;
+    const endStr = type === 'coleta' ? filterColetaEndDate : filterEntregaEndDate;
+    
+    const s = startStr ? createLocalDate(startStr) : null;
+    const ed = endStr ? createLocalDate(endStr) : null;
+    
+    setTempStart(s);
+    setTempEnd(ed);
+    setCalendarMonth(s || new Date());
+    setShowUnifiedCalendar(true);
+  };
+  
+  const handleSelectDate = (d: Date) => {
+    if (!tempStart || (tempStart && tempEnd)) {
+      setTempStart(d);
+      setTempEnd(null);
+    } else {
+      if (d < tempStart) {
+        setTempEnd(tempStart);
+        setTempStart(d);
+      } else {
+        setTempEnd(d);
+      }
+    }
+  };
+  
+  const handleApplyCalendar = () => {
+    const startStr = tempStart ? format(tempStart, 'yyyy-MM-dd') : '';
+    const endStr = tempEnd ? format(tempEnd, 'yyyy-MM-dd') : '';
+    
+    if (calendarType === 'coleta') {
+      setFilterColetaStartDate(startStr);
+      setFilterColetaEndDate(endStr);
+    } else {
+      setFilterEntregaStartDate(startStr);
+      setFilterEntregaEndDate(endStr);
+    }
+    setShowUnifiedCalendar(false);
+  };
+  
+  const handleClearCalendar = () => {
+    if (calendarType === 'coleta') {
+      setFilterColetaStartDate('');
+      setFilterColetaEndDate('');
+    } else {
+      setFilterEntregaStartDate('');
+      setFilterEntregaEndDate('');
+    }
+    setTempStart(null);
+    setTempEnd(null);
+    setShowUnifiedCalendar(false);
+  };
+  
+  const getFilterDisplay = (type: DateFilterType) => {
+    const startStr = type === 'coleta' ? filterColetaStartDate : filterEntregaStartDate;
+    const endStr = type === 'coleta' ? filterColetaEndDate : filterEntregaEndDate;
+    
+    if (startStr && endStr) {
+      return `${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(endStr), 'dd/MM/yyyy', { locale: ptBR })}`;
+    }
+    if (startStr) {
+      return `De ${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })}`;
+    }
+    return 'Selecionar período';
+  };
+  
+  const getCalendarStart = () => calendarType === 'coleta' && filterColetaStartDate ? createLocalDate(filterColetaStartDate) : calendarType === 'entrega' && filterEntregaStartDate ? createLocalDate(filterEntregaStartDate) : null;
+  const getCalendarEnd = () => calendarType === 'coleta' && filterColetaEndDate ? createLocalDate(filterColetaEndDate) : calendarType === 'entrega' && filterEntregaEndDate ? createLocalDate(filterEntregaEndDate) : null;
+
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1231,155 +1308,59 @@ const Cargas: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro Coleta (intervalo) */}
-          <div className="no-uppercase">
-            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Coleta</label>
-            <button
-              type="button"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setColetaCalendarPosition({
-                  top: rect.bottom + 5, // CORRIGIDO: Removido window.scrollY
-                  left: rect.left
-                });
-                const s = filterColetaStartDate ? createLocalDate(filterColetaStartDate) : null;
-                const ed = filterColetaEndDate ? createLocalDate(filterColetaEndDate) : null;
-                setTempColetaStart(s);
-                setTempColetaEnd(ed);
-                setColetaMonth(s || new Date());
-                setShowColetaCalendar(true);
-              }}
-              className="input-field flex items-center justify-between h-11 text-sm"
-            >
-              <span className="text-sm whitespace-nowrap">
-                {filterColetaStartDate && filterColetaEndDate
-                  ? `${format(createLocalDate(filterColetaStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(filterColetaEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                  : filterColetaStartDate
-                    ? `De ${format(createLocalDate(filterColetaStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                    : 'Selecionar período'}
-              </span>
-              <Calendar className="h-5 w-5 text-gray-400" />
-            </button>
-          </div>
+          {/* Filtro de Data Unificado (2 colunas) */}
+          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+            {/* Coleta */}
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Coleta</label>
+              <button
+                type="button"
+                onClick={(e) => handleOpenUnifiedCalendar(e, 'coleta')}
+                className="input-field flex items-center justify-between h-11 text-sm"
+              >
+                <span className="text-sm whitespace-nowrap">
+                  {getFilterDisplay('coleta')}
+                </span>
+                <Calendar className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
 
-          {/* Filtro Entrega (intervalo) */}
-          <div className="no-uppercase">
-            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Entrega</label>
-            <button
-              type="button"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setEntregaCalendarPosition({
-                  top: rect.bottom + 5, // CORRIGIDO: Removido window.scrollY
-                  left: rect.left
-                });
-                const s = filterEntregaStartDate ? createLocalDate(filterEntregaStartDate) : null;
-                const ed = filterEntregaEndDate ? createLocalDate(filterEntregaEndDate) : null;
-                setTempEntregaStart(s);
-                setTempEntregaEnd(ed);
-                setEntregaMonth(s || new Date());
-                setShowEntregaCalendar(true);
-              }}
-              className="input-field flex items-center justify-between h-11 text-sm"
-            >
-              <span className="text-sm whitespace-nowrap">
-                {filterEntregaStartDate && filterEntregaEndDate
-                  ? `${format(createLocalDate(filterEntregaStartDate), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(filterEntregaEndDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                  : filterEntregaStartDate
-                    ? `De ${format(createLocalDate(filterEntregaStartDate), 'dd/MM/yyyy', { locale: ptBR })}`
-                    : 'Selecionar período'}
-              </span>
-              <Calendar className="h-5 w-5 text-gray-400" />
-            </button>
+            {/* Entrega */}
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Entrega</label>
+              <button
+                type="button"
+                onClick={(e) => handleOpenUnifiedCalendar(e, 'entrega')}
+                className="input-field flex items-center justify-between h-11 text-sm"
+              >
+                <span className="text-sm whitespace-nowrap">
+                  {getFilterDisplay('entrega')}
+                </span>
+                <Calendar className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Calendário de Coleta (overlay ancorado) */}
-      {showColetaCalendar && (
+      {/* Calendário Unificado (overlay ancorado) */}
+      {showUnifiedCalendar && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowColetaCalendar(false)} />
+          <div className="fixed inset-0 z-40" onClick={() => setShowUnifiedCalendar(false)} />
           <div
             className="fixed z-50"
-            style={{ top: `${coletaCalendarPosition.top}px`, left: `${coletaCalendarPosition.left}px` }}
+            style={{ top: `${calendarPosition.top}px`, left: `${calendarPosition.left}px` }}
             onClick={(e) => e.stopPropagation()}
           >
             <RangeCalendar
-              month={coletaMonth}
-              start={tempColetaStart}
-              end={tempColetaEnd}
-              onPrev={() => setColetaMonth(prev => subMonths(prev, 1))}
-              onNext={() => setColetaMonth(prev => addMonths(prev, 1))}
-              onSelectDate={(d) => {
-                if (!tempColetaStart || (tempColetaStart && tempColetaEnd)) {
-                  setTempColetaStart(d);
-                  setTempColetaEnd(null);
-                } else {
-                  if (d < tempColetaStart) {
-                    setTempColetaEnd(tempColetaStart);
-                    setTempColetaStart(d);
-                  } else {
-                    setTempColetaEnd(d);
-                  }
-                }
-              }}
-              onClear={() => {
-                setTempColetaStart(null);
-                setTempColetaEnd(null);
-                setFilterColetaStartDate('');
-                setFilterColetaEndDate('');
-                setShowColetaCalendar(false);
-              }}
-              onApply={() => {
-                setFilterColetaStartDate(tempColetaStart ? format(tempColetaStart, 'yyyy-MM-dd') : '');
-                setFilterColetaEndDate(tempColetaEnd ? format(tempColetaEnd, 'yyyy-MM-dd') : '');
-                setShowColetaCalendar(false);
-              }}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Calendário de Entrega (overlay ancorado) */}
-      {showEntregaCalendar && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowEntregaCalendar(false)} />
-          <div
-            className="fixed z-50"
-            style={{ top: `${entregaCalendarPosition.top}px`, left: `${entregaCalendarPosition.left}px` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <RangeCalendar
-              month={entregaMonth}
-              start={tempEntregaStart}
-              end={tempEntregaEnd}
-              onPrev={() => setEntregaMonth(prev => subMonths(prev, 1))}
-              onNext={() => setEntregaMonth(prev => addMonths(prev, 1))}
-              onSelectDate={(d) => {
-                if (!tempEntregaStart || (tempEntregaStart && tempEntregaEnd)) {
-                  setTempEntregaStart(d);
-                  setTempEntregaEnd(null);
-                } else {
-                  if (d < tempEntregaStart) {
-                    setTempEntregaEnd(tempEntregaStart);
-                    setTempEntregaStart(d);
-                  } else {
-                    setTempEntregaEnd(d);
-                  }
-                }
-              }}
-              onClear={() => {
-                setTempEntregaStart(null);
-                setTempEntregaEnd(null);
-                setFilterEntregaStartDate('');
-                setFilterEntregaEndDate('');
-                setShowEntregaCalendar(false);
-              }}
-              onApply={() => {
-                setFilterEntregaStartDate(tempEntregaStart ? format(tempEntregaStart, 'yyyy-MM-dd') : '');
-                setFilterEntregaEndDate(tempEntregaEnd ? format(tempEntregaEnd, 'yyyy-MM-dd') : '');
-                setShowEntregaCalendar(false);
-              }}
+              month={calendarMonth}
+              start={tempStart}
+              end={tempEnd}
+              onPrev={() => setCalendarMonth(prev => subMonths(prev, 1))}
+              onNext={() => setCalendarMonth(prev => addMonths(prev, 1))}
+              onSelectDate={handleSelectDate}
+              onClear={handleClearCalendar}
+              onApply={handleApplyCalendar}
             />
           </div>
         </>
