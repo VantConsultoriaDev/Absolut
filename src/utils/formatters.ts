@@ -4,8 +4,8 @@ import { isValid } from 'date-fns';
 
 // Função para criar um objeto Date a partir de uma string YYYY-MM-DD,
 // garantindo que o fuso horário local não desvie a data para o dia anterior.
-export const createLocalDate = (dateString: string): Date => {
-  if (!dateString) return new Date();
+export const createLocalDate = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined;
   // Adiciona 'T00:00:00' para forçar a interpretação como data local à meia-noite
   const date = new Date(dateString + 'T00:00:00');
   if (isValid(date)) return date;
@@ -14,10 +14,15 @@ export const createLocalDate = (dateString: string): Date => {
   const parts = dateString.split('-');
   if (parts.length === 3) {
     // Cria a data usando componentes (Ano, Mês-1, Dia) para forçar o fuso horário local
-    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const fallbackDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    if (isValid(fallbackDate)) return fallbackDate;
   }
   
-  return new Date(dateString);
+  // Se tudo falhar, tenta o parsing direto e verifica a validade
+  const directParse = new Date(dateString);
+  if (isValid(directParse)) return directParse;
+  
+  return undefined; // Retorna undefined se a data for inválida
 };
 
 // Formatação de CPF: 000.000.000-00
