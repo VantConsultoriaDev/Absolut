@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { useDatabase } from '../../contexts/DatabaseContext';
 import { Motorista, Carga, Parceiro, Veiculo } from '../../types';
-import { AlertTriangle, X, Search, User, Truck, Briefcase } from 'lucide-react';
+import { AlertTriangle, X, User, Truck, Briefcase } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { formatPlaca } from '../../utils/formatters';
 import SearchableSelect, { SelectOption } from '../SearchableSelect'; // Importando o novo componente
@@ -74,12 +74,14 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
                 cpf: parceiro.documento || '',
                 cnh: parceiro.cnh || '',
                 categoriaCnh: '',
-                validadeCnh: new Date(),
+                validadeCnh: undefined, // Deve ser undefined ou Date
                 telefone: parceiro.telefone || '',
                 isActive: parceiro.isActive,
                 createdAt: parceiro.createdAt,
                 updatedAt: new Date(),
-                nacionalidade: parceiro.nacionalidade || 'Brasileiro',
+                // CORREÇÃO TS2339: Parceiro não tem 'nacionalidade', mas Motorista tem.
+                // Assumimos 'Brasileiro' para o parceiro PF que é motorista.
+                nacionalidade: 'Brasileiro', 
             } as Motorista);
         }
     } else {
@@ -263,16 +265,16 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
 
         <div className="flex space-x-3 mt-6">
           <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
             onClick={onSave}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Salvar
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancelar
           </button>
         </div>
       </div>

@@ -120,6 +120,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   // Handler para seleção de carretas
   const handleCarretaToggle = (carretaId: string) => {
       setFormData(prev => {
+          // CORREÇÃO: Garante que carretasSelecionadas seja um array
           const current = prev.carretasSelecionadas || [];
           if (current.includes(carretaId)) {
               return { ...prev, carretasSelecionadas: current.filter(id => id !== carretaId) };
@@ -320,18 +321,18 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                                       </span>
                                       <input
                                           type="checkbox"
-                                          checked={formData.carretasSelecionadas.includes(carreta.id)}
+                                          checked={(formData.carretasSelecionadas || []).includes(carreta.id)}
                                           onChange={() => handleCarretaToggle(carreta.id)}
                                           className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                          disabled={!formData.carretasSelecionadas.includes(carreta.id) && formData.carretasSelecionadas.length >= 2}
+                                          disabled={!(formData.carretasSelecionadas || []).includes(carreta.id) && (formData.carretasSelecionadas || []).length >= 2}
                                       />
                                   </label>
                               ))}
                           </div>
                       )}
-                      {formData.carretasSelecionadas.length > 0 && (
+                      {(formData.carretasSelecionadas || []).length > 0 && (
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Carretas selecionadas: {formData.carretasSelecionadas.length}
+                              Carretas selecionadas: {(formData.carretasSelecionadas || []).length}
                           </p>
                       )}
                   </div>
