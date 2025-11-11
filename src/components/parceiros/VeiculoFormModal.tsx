@@ -40,6 +40,9 @@ interface VeiculoFormModalProps {
   consultandoPermisso: boolean;
   permissoError: string;
   handlePermissoConsultation: (placa: string) => void;
+  
+  // NOVO: Lista de carretas do parceiro
+  parceiroCarretas: Veiculo[];
 }
 
 const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
@@ -60,6 +63,9 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   consultandoPermisso,
   permissoError,
   handlePermissoConsultation,
+  
+  // NOVO: Carretas do Parceiro
+  parceiroCarretas,
 }) => {
   const { modalRef } = useModal({ isOpen, onClose });
   
@@ -107,6 +113,22 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
   
   // Determina se a seção Permisso deve ser exibida (Cavalo ou Truck)
   const showPermissoSection = formData.tipo === 'Cavalo' || formData.tipo === 'Truck';
+  
+  // Determina se a seção de carretas deve ser exibida
+  const showCarretasSection = formData.tipo === 'Cavalo';
+  
+  // Handler para seleção de carretas
+  const handleCarretaToggle = (carretaId: string) => {
+      setFormData(prev => {
+          const current = prev.carretasSelecionadas || [];
+          if (current.includes(carretaId)) {
+              return { ...prev, carretasSelecionadas: current.filter(id => id !== carretaId) };
+          } else if (current.length < 2) { // Limite de 2 carretas
+              return { ...prev, carretasSelecionadas: [...current, carretaId] };
+          }
+          return prev;
+      });
+  };
   
   // Handler para mudança nos campos do Permisso
   const handlePermissoChange = (field: keyof VeiculoFormData, value: any) => {
@@ -167,6 +189,7 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                           placaCavalo: '', 
                           placaCarreta: '', 
                           chassis: '',
+                          carretasSelecionadas: [], // Limpa carretas ao mudar o tipo
                           // Limpa Permisso ao mudar o tipo
                           permissoRazaoSocial: '',
                           permissoNomeFantasia: '',
@@ -277,6 +300,42 @@ const VeiculoFormModal: React.FC<VeiculoFormModalProps> = ({
                   )}
                 </div>
               </div>
+              
+              {/* NOVO: Carretas Vinculadas (apenas para Cavalo) */}
+              {showCarretasSection && (
+                  <div className="md:col-span-3 border border-gray-200 dark:border-gray-700 p-4 rounded-lg space-y-3">
+                      <h4 className="text-md font-semibold text-gray-900 dark:text-white">Carretas Vinculadas (Máx. 2)</h4>
+                      
+                      {parceiroCarretas.length === 0 ? (
+                          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
+                              <AlertTriangle className="h-4 w-4 inline mr-2" />
+                              Nenhuma carreta cadastrada para este parceiro.
+                          </div>
+                      ) : (
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {parceiroCarretas.map(carreta => (
+                                  <label key={carreta.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                                          {carreta.placaCarreta || carreta.placa} ({carreta.fabricante} {carreta.modelo})
+                                      </span>
+                                      <input
+                                          type="checkbox"
+                                          checked={formData.carretasSelecionadas.includes(carreta.id)}
+                                          onChange={() => handleCarretaToggle(carreta.id)}
+                                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          disabled={!formData.carretasSelecionadas.includes(carreta.id) && formData.carretasSelecionadas.length >= 2}
+                                      />
+                                  </label>
+                              ))}
+                          </div>
+                      )}
+                      {formData.carretasSelecionadas.length > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Carretas selecionadas: {formData.carretasSelecionadas.length}
+                          </p>
+                      )}
+                  </div>
+              )}
               
               {/* Seção 2: Permisso Internacional (Cavalo ou Truck) */}
               {showPermissoSection && (
