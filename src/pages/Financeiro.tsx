@@ -158,17 +158,39 @@ const Financeiro: React.FC = () => {
     }));
   }, []);
   
-  // NOVO: Opções de categoria para o MultiSelect
-  const allCategoryOptions = useMemo(() => {
-    const all = [...categories.receita, ...categories.despesa];
+  // Opções de categoria filtradas pelo tipo de movimentação
+  const filteredCategoryOptions = useMemo(() => {
+    let list: string[] = [];
+    
+    if (filterType === 'receita') {
+        list = categories.receita;
+    } else if (filterType === 'despesa') {
+        list = categories.despesa;
+    } else {
+        // Se não houver filtro de tipo, mostra todas as categorias únicas
+        list = [...categories.receita, ...categories.despesa];
+    }
+    
     // Garante unicidade e mapeia para o formato MultiSelectStatus
-    return Array.from(new Set(all)).map(cat => ({
+    return Array.from(new Set(list)).map(cat => ({
         key: cat,
         label: cat,
-        // Cor genérica para o filtro
         color: 'bg-gray-600' 
     }));
-  }, [categories]);
+  }, [categories, filterType]);
+  
+  // Efeito para limpar categorias inválidas quando o tipo de movimentação muda
+  useEffect(() => {
+    if (filterCategories.length > 0) {
+        const validKeys = filteredCategoryOptions.map(o => o.key);
+        const categoriesToKeep = filterCategories.filter(cat => validKeys.includes(cat));
+        
+        if (categoriesToKeep.length !== filterCategories.length) {
+            setFilterCategories(categoriesToKeep);
+        }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredCategoryOptions]); // Depende da lista filtrada de opções
 
   // Modal de gerenciamento de categorias
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
@@ -870,7 +892,10 @@ const Financeiro: React.FC = () => {
           {/* Tipo (1 coluna) */}
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(e) => {
+                setFilterType(e.target.value);
+                // Não limpamos filterCategories aqui, o useEffect fará isso se necessário
+            }}
             className="input-field h-11 text-sm"
           >
             <option value="">Tipos</option>
@@ -881,7 +906,7 @@ const Financeiro: React.FC = () => {
           {/* NOVO: Filtro de Categoria (1 coluna) */}
           <MultiSelectStatus
             label="Categorias"
-            options={allCategoryOptions}
+            options={filteredCategoryOptions}
             selectedKeys={filterCategories}
             onChange={setFilterCategories}
           />
@@ -1029,14 +1054,24 @@ const Financeiro: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
-                <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })} className="input-field" required>
+                <select 
+                    value={formData.tipo} 
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'receita' | 'despesa', categoria: '' })} 
+                    className="input-field" 
+                    required
+                >
                   <option value="receita">Receita</option>
                   <option value="despesa">Despesa</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
-                <select value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} className="input-field" required>
+                <select 
+                    value={formData.categoria} 
+                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
+                    className="input-field" 
+                    required
+                >
                   <option value="">Selecione uma categoria</option>
                   {categories[formData.tipo as keyof typeof categories].map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
