@@ -5,6 +5,7 @@ import { AlertTriangle, X, User, Truck, Briefcase } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { formatPlaca } from '../../utils/formatters';
 import SearchableSelect, { SelectOption } from '../SearchableSelect'; // Importando o novo componente
+import { showError } from '../../utils/toast'; // Importando showError
 
 interface CargaLinkModalProps {
   isOpen: boolean;
@@ -44,6 +45,49 @@ const CargaLinkModal: React.FC<CargaLinkModalProps> = ({
   
   if (!trajeto || !linkingCarga) return null; 
 
+  // Find the selected motorista object (Motorista record is the source of truth for veiculoVinculado)
+  const selectedDriver = useMemo(() => {
+    if (!selectedMotorista) return undefined;
+    
+    // Check if it's a dedicated Motorista record
+    const driver = motoristas.find(m => m.id === selectedMotorista);
+    if (driver) return driver;
+    
+    // If the selected ID is a partner ID (for PF/isMotorista), we assume no veiculoVinculado is stored there, 
+    // as veiculoVinculado is only defined on the Motorista interface.
+    return undefined;
+  }, [selectedMotorista, motoristas]);
+
+  // Effect to auto-select vehicle when motorista changes
+  useEffect(() => {
+    if (selectedDriver?.veiculoVinculado) {
+      const linkedVehicleId = selectedDriver.veiculoVinculado;
+      const linkedVehicle = veiculos.find(v => v.id === linkedVehicleId);
+      
+      if (linkedVehicle && linkedVehicle.parceiroId === selectedParceiro) {
+        // 1. Auto-select the vehicle
+        setSelectedVeiculo(linkedVehicleId);
+        
+        // 2. Auto-select the carretas linked to that vehicle (if it's a Cavalo)
+        if (linkedVehicle.tipo === 'Cavalo' && linkedVehicle.carretasSelecionadas) {
+          setSelectedCarretas(linkedVehicle.carretasSelecionadas);
+        } else {
+          setSelectedCarretas([]);
+        }
+      } else if (linkedVehicle && linkedVehicle.parceiroId !== selectedParceiro) {
+          // If the linked vehicle belongs to a different partner, clear selection and warn.
+          setSelectedVeiculo('');
+          setSelectedCarretas([]);
+          showError('O veículo vinculado a este motorista pertence a outro parceiro. Selecione um veículo manualmente.');
+      }
+    } else if (selectedMotorista) {
+        // If a driver is selected but has no linked vehicle, ensure vehicle/carretas are cleared.
+        setSelectedVeiculo('');
+        setSelectedCarretas([]);
+    }
+  // Dependency array includes selectedDriver (which depends on selectedMotorista), veiculos, selectedParceiro
+  }, [selectedDriver, veiculos, selectedParceiro, setSelectedVeiculo, setSelectedCarretas, selectedMotorista]); 
+  
   // --- OPÇÕES PARA COMBOBOX ---
   
   // 1. Opções de Parceiro

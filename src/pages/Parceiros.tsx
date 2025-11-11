@@ -44,6 +44,7 @@ const initialMotoristaFormData: MotoristaFormData = {
   validadeCnh: '',
   telefone: '',
   isActive: true,
+  veiculoVinculado: '', // NOVO: Adicionado veiculoVinculado
 };
 
 const initialVeiculoFormData: VeiculoFormData = {
@@ -187,6 +188,11 @@ const Parceiros: React.FC = () => {
   // NOVO: Função para obter carretas do parceiro
   const getParceiroCarretas = useCallback((parceiroId: string): Veiculo[] => {
     return veiculos.filter(v => v.parceiroId === parceiroId && v.tipo === 'Carreta');
+  }, [veiculos]);
+  
+  // NOVO: Função para obter Cavalos/Trucks do parceiro
+  const getParceiroCavalosTrucks = useCallback((parceiroId: string): Veiculo[] => {
+    return veiculos.filter(v => v.parceiroId === parceiroId && (v.tipo === 'Cavalo' || v.tipo === 'Truck'));
   }, [veiculos]);
 
   // Reset para tela inicial quando navegado via menu lateral
@@ -435,6 +441,9 @@ const Parceiros: React.FC = () => {
       telefone: formatContact(motorista.telefone || ''),
       isActive: motorista.isActive ?? true,
       
+      // NOVO: Veículo Vinculado
+      veiculoVinculado: motorista.veiculoVinculado || '',
+      
       // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
       dataNascimentoStr: motorista.dataNascimento && isValid(motorista.dataNascimento) 
           ? format(motorista.dataNascimento, 'yyyy-MM-dd') 
@@ -482,6 +491,9 @@ const Parceiros: React.FC = () => {
       telefone: cleanTelefone,
       validadeCnh: motoristaFormData.validadeCnh ? createLocalDate(motoristaFormData.validadeCnh) : undefined,
       isActive: true, // Força como ativo (não há controle de status na UI)
+      
+      // NOVO: Veículo Vinculado
+      veiculoVinculado: motoristaFormData.veiculoVinculado || undefined,
       
       // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
       dataNascimento: dataNascimentoDate,
@@ -840,7 +852,7 @@ const Parceiros: React.FC = () => {
     
     // 1. Validação de Dígitos
     if (!CNPJService.validarCNPJ(cleanCnpj)) {
-        setPixCnpjError('CNPJ inválido. Verifique os dígitos.');
+        setPixCnpjError('CNPJ da chave PIX inválido.');
         return;
     }
     
@@ -1493,6 +1505,7 @@ const Parceiros: React.FC = () => {
             if (detailTargetParceiro) setShowDetailModal(true);
           }}
           onSubmit={handleSubmitMotorista}
+          parceiroVeiculos={getParceiroCavalosTrucks(motoristaFormData.parceiroId)} // ADICIONADO
         />
       )}
 

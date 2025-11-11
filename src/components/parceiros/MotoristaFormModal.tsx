@@ -1,16 +1,18 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { X, User, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, User, AlertTriangle, Truck } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
-import { Parceiro, Motorista } from '../../types';
+import { Parceiro, Motorista, Veiculo } from '../../types';
 import { formatDocument, formatContact, parseDocument, isValidCPF } from '../../utils/formatters';
 import { CPFService, CPFData } from '../../services/cpfService';
 import { showError } from '../../utils/toast'; // Importando showError
+import SearchableSelect, { SelectOption } from '../SearchableSelect'; // NOVO: Importando SearchableSelect
 
 // Tipagem para o formulário (string para validadeCnh)
 export interface MotoristaFormData extends Omit<Motorista, 'id' | 'createdAt' | 'updatedAt' | 'parceiroId' | 'validadeCnh' | 'dataNascimento'> {
   parceiroId: string;
   validadeCnh: string; // String format YYYY-MM-DD
   dataNascimentoStr?: string; // String format YYYY-MM-DD
+  veiculoVinculado: string; // NOVO: ID do veículo vinculado
 }
 
 interface MotoristaFormModalProps {
@@ -22,6 +24,7 @@ interface MotoristaFormModalProps {
   editingId: string | null;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
+  parceiroVeiculos: Veiculo[]; // NOVO: Lista de veículos Cavalo/Truck do parceiro
 }
 
 const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
@@ -33,6 +36,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
   editingId,
   onClose,
   onSubmit,
+  parceiroVeiculos, // NOVO
 }) => {
   const { modalRef } = useModal({ isOpen, onClose });
   
@@ -43,6 +47,16 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
   const [cpfConsultado, setCpfConsultado] = useState(false);
   const [cpfError, setCpfError] = useState('');
   const [lastConsultedCpf, setLastConsultedCpf] = useState('');
+  
+  // Opções de Veículo para o SearchableSelect
+  const veiculoOptions: SelectOption[] = useMemo(() => {
+    return parceiroVeiculos.map(v => ({
+      id: v.id,
+      name: `${v.tipo} - ${formatPlaca(v.placa || v.placaCavalo || '')}`,
+      secondaryInfo: `${v.fabricante} ${v.modelo} (${v.ano})`,
+      icon: Truck,
+    }));
+  }, [parceiroVeiculos]);
 
   // Efeito para resetar estados de consulta ao abrir/fechar
   useEffect(() => {
@@ -147,6 +161,7 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
         telefone: parseDocument(prev.telefone || ''),
         validadeCnh: prev.validadeCnh, // Mantido como string para o submit do pai
         dataNascimentoStr: prev.dataNascimentoStr, // Mantido como string para o submit do pai
+        veiculoVinculado: prev.veiculoVinculado, // NOVO: Mantido o ID do veículo
     }));
     
     // O componente pai (Parceiros.tsx) fará a conversão final para o objeto Motorista
@@ -351,6 +366,22 @@ const MotoristaFormModal: React.FC<MotoristaFormModalProps> = ({
                   placeholder="Ex: (11) 98765-4321"
                 />
               </div>
+            </div>
+            
+            {/* NOVO: Vínculo de Veículo */}
+            <div>
+                <SearchableSelect
+                    label="Veículo Vinculado (Cavalo/Truck)"
+                    placeholder="Opcional: Vincular motorista a um veículo"
+                    valueId={formData.veiculoVinculado}
+                    options={veiculoOptions}
+                    onSelect={(id) => setFormData(prev => ({ ...prev, veiculoVinculado: id }))}
+                    onClear={() => setFormData(prev => ({ ...prev, veiculoVinculado: '' }))}
+                    icon={Truck}
+                />
+                {formData.veiculoVinculado && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">Este veículo será sugerido automaticamente ao vincular o motorista a uma carga.</p>
+                )}
             </div>
             
             <div className="flex space-x-4 pt-4">
