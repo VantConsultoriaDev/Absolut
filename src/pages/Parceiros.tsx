@@ -617,7 +617,8 @@ const Parceiros: React.FC = () => {
       // Campos numéricos e de texto
       ano: parseInt(veiculoFormData.ano) || undefined,
       capacidade: parseFloat(veiculoFormData.capacidade) || undefined,
-      chassis: veiculoFormData.permissoChassiAtualizado || forceUpperCase(veiculoFormData.chassis || ''), // Prioriza o chassi da consulta Permisso
+      // CORREÇÃO: O chassi deve ser o valor do formulário, que foi atualizado pela consulta Permisso
+      chassis: forceUpperCase(veiculoFormData.chassis || ''), 
       carroceria: veiculoFormData.carroceria,
       isActive: true,
       
@@ -683,9 +684,10 @@ const Parceiros: React.FC = () => {
                 permissoEnderecoCompleto: permissoData?.enderecoCompleto || prev.permissoEnderecoCompleto,
                 permissoSimulado: permissoData?.simulado || false,
                 permissoDataConsulta: new Date(),
-                permissoChassiAtualizado: newChassis, // Atualiza o chassi do veículo
+                permissoChassiAtualizado: newChassis, // Atualiza o chassi auxiliar
                 
-                // Não altera outros campos do veículo (fabricante, modelo, ano)
+                // ATUALIZAÇÃO CRÍTICA: Atualiza o campo CHASSIS do formulário
+                chassis: newChassis ? forceUpperCase(newChassis) : prev.chassis,
             };
         });
         
