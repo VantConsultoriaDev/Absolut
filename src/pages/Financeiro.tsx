@@ -22,7 +22,8 @@ import {
   ArrowDownRight,
   FileText,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  List, // NOVO: Ícone para categoria
 } from 'lucide-react'
 import { MovimentacaoFinanceira } from '../types'
 import StatusChangeModal from '../components/StatusChangeModal'
@@ -32,6 +33,7 @@ import ConfirmationModal from '../components/ConfirmationModal'
 import StandardCheckbox from '../components/StandardCheckbox'
 import DateRangeFilter from '../components/DateRangeFilter' // NOVO: Importando o componente unificado
 import CategoriesModal from '../components/financeiro/CategoriesModal' // NOVO: Importando CategoriesModal
+import SearchableSelect, { SelectOption } from '../components/SearchableSelect' // NOVO: Importando SearchableSelect
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -179,6 +181,16 @@ const Financeiro: React.FC = () => {
         color: 'bg-gray-600' 
     }));
   }, [categories, filterType]);
+  
+  // Opções de categoria para o SearchableSelect (Formulário)
+  const formCategoryOptions: SelectOption[] = useMemo(() => {
+    const list = categories[formData.tipo as keyof typeof categories];
+    return list.map(cat => ({
+        id: cat,
+        name: cat,
+        icon: List,
+    }));
+  }, [categories, formData.tipo]);
   
   // Efeito para limpar categorias inválidas quando o tipo de movimentação muda
   useEffect(() => {
@@ -1072,20 +1084,21 @@ const Financeiro: React.FC = () => {
                   <option value="despesa">Despesa</option>
                 </select>
               </div>
+              
+              {/* Categoria (AGORA SEARCHABLE SELECT) */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
-                <select 
-                    value={formData.categoria} 
-                    onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} 
-                    className="input-field" 
+                <SearchableSelect
+                    label="Categoria"
+                    placeholder="Buscar ou selecionar categoria"
+                    valueId={formData.categoria}
+                    options={formCategoryOptions}
+                    onSelect={(id) => setFormData({ ...formData, categoria: id })}
+                    onClear={() => setFormData({ ...formData, categoria: '' })}
+                    icon={List}
                     required
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories[formData.tipo as keyof typeof categories].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data</label>
                 <input type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} className="input-field" required />

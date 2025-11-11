@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, AlertTriangle, Plus, Minus } from 'lucide-react';
+import { X, AlertTriangle, Plus, Minus, Building2, User, Globe } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { formatCurrency, parseCurrency } from '../../utils/formatters';
 import { Cliente, Trajeto } from '../../types';
@@ -7,6 +7,7 @@ import StandardCheckbox from '../StandardCheckbox';
 import { UFS_BRASIL, UFS_ESTRANGEIRAS } from '../../utils/cargasConstants';
 import CityAutocompleteInput from '../CityAutocompleteInput';
 import { showError } from '../../utils/toast'; // Importando showError
+import SearchableSelect, { SelectOption } from '../SearchableSelect'; // NOVO: Importando SearchableSelect
 
 // Define a form-specific Trajeto type where valor is a string and dates are required strings
 export interface TrajetoForm extends Omit<Trajeto, 'valor' | 'dataColeta' | 'dataEntrega'> {
@@ -360,6 +361,16 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
     // 6. Chama o submit original
     onSubmit(e);
   };
+  
+  // Opções de Cliente para SearchableSelect
+  const clienteOptions: SelectOption[] = useMemo(() => {
+      return clientes.map(c => ({
+          id: c.id,
+          name: c.tipo === 'PJ' && c.nomeFantasia ? c.nomeFantasia : c.nome,
+          secondaryInfo: c.documento,
+          icon: c.tipo === 'PJ' ? Building2 : c.tipo === 'PF' ? User : Globe,
+      }));
+  }, [clientes]);
 
 
   return (
@@ -403,23 +414,17 @@ const CargaFormModal: React.FC<CargaFormModalProps> = ({
                   </select>
                 </div>
                 
-                {/* Cliente */}
+                {/* Cliente (AGORA SEARCHABLE SELECT) */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Cliente
-                  </label>
-                  <select
-                    value={formData.clienteId || ''}
-                    onChange={(e) => onFormChange('clienteId', e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.tipo === 'PJ' && c.nomeFantasia ? c.nomeFantasia : c.nome}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    label="Cliente"
+                    placeholder="Buscar cliente por nome ou documento"
+                    valueId={formData.clienteId || ''}
+                    options={clienteOptions}
+                    onSelect={(id) => onFormChange('clienteId', id)}
+                    onClear={() => onFormChange('clienteId', undefined)}
+                    icon={User}
+                  />
                 </div>
                 
                 {/* Status */}
