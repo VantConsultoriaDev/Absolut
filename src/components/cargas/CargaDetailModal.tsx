@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { X, User, Truck, Link as LinkIcon, Calendar, DollarSign, Briefcase, ArrowRight, Package, UserCircle, MapPin } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { Carga, Trajeto, Parceiro, Motorista, Veiculo, Cliente, MovimentacaoFinanceira } from '../../types';
-import { formatCurrency, formatPlaca } from '../../utils/formatters';
+import { formatCurrency, formatPlaca, createLocalDate } from '../../utils/formatters';
 import { format } from 'date-fns';
 import { STATUS_CONFIG } from '../../utils/cargasConstants';
 
@@ -134,10 +134,10 @@ const CargaDetailModal: React.FC<CargaDetailModalProps> = ({
               <Calendar className="h-3 w-3" /> Datas
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              Coleta: <span className="font-medium">{trajeto.dataColeta ? format(new Date(trajeto.dataColeta), 'dd/MM/yyyy') : 'N/A'}</span>
+              Coleta: <span className="font-medium">{trajeto.dataColeta ? format(createLocalDate(trajeto.dataColeta), 'dd/MM/yyyy') : 'N/A'}</span>
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              Entrega: <span className="font-medium">{trajeto.dataEntrega ? format(new Date(trajeto.dataEntrega), 'dd/MM/yyyy') : 'N/A'}</span>
+              Entrega: <span className="font-medium">{trajeto.dataEntrega ? format(createLocalDate(trajeto.dataEntrega), 'dd/MM/yyyy') : 'N/A'}</span>
             </p>
           </div>
           

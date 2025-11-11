@@ -1,4 +1,5 @@
 import { Cliente, Parceiro, Motorista, Veiculo, MovimentacaoFinanceira, Carga, ContratoFrete, PermissoInternacional, Compromisso, Tarefa } from '../types';
+import { createLocalDate } from '../utils/formatters'; // Import createLocalDate
 
 // Função auxiliar para remover chaves com valor undefined ou null, E converter strings vazias em null
 const cleanObject = (obj: any) => {
@@ -198,7 +199,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         tipo: item.tipo, nome: item.nome, nomeFantasia: item.nome_fantasia, documento: item.documento, email: item.email, telefone: item.telefone, responsavel: item.responsavel, endereco: item.endereco, numero: item.numero, complemento: item.complemento, cidade: item.cidade, uf: item.uf, cep: item.cep, observacoes: item.observacoes, isActive: item.is_active, avatarUrl: item.avatar_url,
         
         // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
-        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        dataNascimento: item.data_nascimento ? createLocalDate(item.data_nascimento) : undefined, // FIX
         rg: item.rg,
         orgaoEmissor: item.orgao_emissor,
       } as Cliente;
@@ -211,7 +212,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         pixTitular: item.pix_titular, // NOVO
         
         // Novos campos de identificação
-        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        dataNascimento: item.data_nascimento ? createLocalDate(item.data_nascimento) : undefined, // FIX
         rg: item.rg,
         orgaoEmissor: item.orgao_emissor,
         
@@ -220,10 +221,10 @@ export const mapFromSupabase = (tableName: string, item: any) => {
     case 'motoristas':
       return {
         ...base,
-        parceiroId: item.parceiro_id, nome: item.nome, cpf: item.cpf, cnh: item.cnh, nacionalidade: item.nacionalidade, categoriaCnh: item.categoria_cnh, validadeCnh: item.validade_cnh ? new Date(item.validade_cnh) : undefined, telefone: item.telefone, isActive: item.is_active,
+        parceiroId: item.parceiro_id, nome: item.nome, cpf: item.cpf, cnh: item.cnh, nacionalidade: item.nacionalidade, categoriaCnh: item.categoria_cnh, validadeCnh: item.validade_cnh ? createLocalDate(item.validade_cnh) : undefined, telefone: item.telefone, isActive: item.is_active, // FIX
         
         // NOVOS CAMPOS DE IDENTIFICAÇÃO PESSOAL
-        dataNascimento: item.data_nascimento ? new Date(item.data_nascimento) : undefined,
+        dataNascimento: item.data_nascimento ? createLocalDate(item.data_nascimento) : undefined, // FIX
         rg: item.rg,
         orgaoEmissor: item.orgao_emissor,
       } as Motorista;
@@ -260,8 +261,8 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         // CORREÇÃO: Garante que peso e valor sejam números, mesmo que venham como string ou null
         peso: Number(item.peso) || 0, 
         valor: Number(item.valor) || 0, 
-        dataColeta: item.data_coleta ? new Date(item.data_coleta) : undefined, 
-        dataEntrega: item.data_entrega ? new Date(item.data_entrega) : undefined, 
+        dataColeta: item.data_coleta ? createLocalDate(item.data_coleta) : undefined, // FIX
+        dataEntrega: item.data_entrega ? createLocalDate(item.data_entrega) : undefined, // FIX
         status: item.status, clienteId: item.cliente_id, 
         crt: item.crt, observacoes: item.observacoes,
         transbordo: item.transbordo,
@@ -283,9 +284,9 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         valor: item.valor,
         descricao: item.descricao,
         categoria: item.categoria,
-        data: new Date(item.data),
+        data: createLocalDate(item.data), // FIX
         status: item.status,
-        dataPagamento: item.data_pagamento ? new Date(item.data_pagamento) : (item.dataPagamento ? new Date(item.dataPagamento) : null),
+        dataPagamento: item.data_pagamento ? createLocalDate(item.data_pagamento) : (item.dataPagamento ? createLocalDate(item.dataPagamento) : null), // FIX
         parceiroId: item.parceiro_id ?? item.parceiroId,
         cargaId: item.carga_id ?? item.cargaId,
         isPago: item.is_pago ?? item.isPago,
@@ -296,7 +297,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         // NOVO: Recurrence fields
         isRecurring: item.is_recurring,
         recurrencePeriod: item.recurrence_period,
-        recurrenceEndDate: item.recurrence_end_date ? new Date(item.recurrence_end_date) : null,
+        recurrenceEndDate: item.recurrence_end_date ? createLocalDate(item.recurrence_end_date) : null, // FIX
         recurrenceGroupId: item.recurrence_group_id,
         recurrenceIndex: item.recurrence_index,
         
@@ -317,7 +318,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         userId: item.user_id, // ALTERADO
         titulo: item.titulo,
         descricao: item.descricao,
-        dataHora: new Date(item.data_hora), // ALTERADO
+        dataHora: new Date(item.data_hora), // TIMESTAMP WITH TIME ZONE - OK
         duracaoMinutos: item.duracao_minutos, // ALTERADO
         local: item.local,
         notificacao: item.notificacao,
@@ -330,7 +331,7 @@ export const mapFromSupabase = (tableName: string, item: any) => {
         descricao: item.descricao,
         prioridade: item.prioridade,
         status: item.status,
-        dataVencimento: item.data_vencimento ? new Date(item.data_vencimento) : undefined, // ALTERADO
+        dataVencimento: item.data_vencimento ? createLocalDate(item.data_vencimento) : undefined, // FIX
         vincularAoCalendario: item.vincular_ao_calendario, // ALTERADO
       } as Tarefa;
     default:
