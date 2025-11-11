@@ -31,6 +31,7 @@ import StatusChangeModal from '../components/StatusChangeModal';
 import CargaDetailModal from '../components/cargas/CargaDetailModal';
 import MultiSelectStatus from '../components/MultiSelectStatus'; // NOVO: Importando MultiSelectStatus
 import ConfirmationModal from '../components/ConfirmationModal'; // Importando ConfirmationModal
+import DateRangeFilter from '../components/DateRangeFilter'; // NOVO: Importando o componente unificado
 import { UFS_ORDENADAS, STATUS_CONFIG, extrairUfECidade, getBaseCrt } from '../utils/cargasConstants'; // IMPORTANDO getBaseCrt
 
 // Tipagem para a configuração de ordenação
@@ -1238,6 +1239,26 @@ const Cargas: React.FC = () => {
   
   const getCalendarStart = () => calendarType === 'coleta' && filterColetaStartDate ? createLocalDate(filterColetaStartDate) : calendarType === 'entrega' && filterEntregaStartDate ? createLocalDate(filterEntregaStartDate) : null;
   const getCalendarEnd = () => calendarType === 'coleta' && filterColetaEndDate ? createLocalDate(filterColetaEndDate) : calendarType === 'entrega' && filterEntregaEndDate ? createLocalDate(filterEntregaEndDate) : null;
+  
+  // --- Configuração do Filtro de Data Unificado ---
+  const dateFilterOptions = useMemo(() => [
+    {
+      key: 'coleta',
+      label: 'Data Coleta',
+      startState: filterColetaStartDate,
+      endState: filterColetaEndDate,
+      setStart: setFilterColetaStartDate,
+      setEnd: setFilterColetaEndDate,
+    },
+    {
+      key: 'entrega',
+      label: 'Data Entrega',
+      startState: filterEntregaStartDate,
+      endState: filterEntregaEndDate,
+      setStart: setFilterEntregaStartDate,
+      setEnd: setFilterEntregaEndDate,
+    },
+  ], [filterColetaStartDate, filterColetaEndDate, filterEntregaStartDate, filterEntregaEndDate]);
 
 
   return (
@@ -1309,36 +1330,10 @@ const Cargas: React.FC = () => {
           />
 
           {/* Filtro de Data Unificado (2 colunas) */}
-          <div className="md:col-span-2 grid grid-cols-2 gap-4">
-            {/* Coleta */}
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Coleta</label>
-              <button
-                type="button"
-                onClick={(e) => handleOpenUnifiedCalendar(e, 'coleta')}
-                className="input-field flex items-center justify-between h-11 text-sm"
-              >
-                <span className="text-sm whitespace-nowrap">
-                  {getFilterDisplay('coleta')}
-                </span>
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-
-            {/* Entrega */}
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Entrega</label>
-              <button
-                type="button"
-                onClick={(e) => handleOpenUnifiedCalendar(e, 'entrega')}
-                className="input-field flex items-center justify-between h-11 text-sm"
-              >
-                <span className="text-sm whitespace-nowrap">
-                  {getFilterDisplay('entrega')}
-                </span>
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
+          <div className="md:col-span-2">
+            <DateRangeFilter
+              options={dateFilterOptions}
+            />
           </div>
         </div>
       </div>
