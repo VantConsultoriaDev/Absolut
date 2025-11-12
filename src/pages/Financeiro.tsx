@@ -88,7 +88,8 @@ const Financeiro: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
-  const [filterStatus, setFilterStatus] = useState<string[]>([])
+  // ALTERADO: Padrão para filtrar 'pago'
+  const [filterStatus, setFilterStatus] = useState<string[]>(['pendente', 'cancelado'])
   // NOVO: Estado para filtro de categorias
   const [filterCategories, setFilterCategories] = useState<string[]>([])
   
@@ -255,7 +256,8 @@ const Financeiro: React.FC = () => {
       // Limpar filtros e busca
       setSearchTerm('')
       setFilterType('')
-      setFilterStatus([])
+      // ALTERADO: Resetar para o padrão (pendente e cancelado)
+      setFilterStatus(['pendente', 'cancelado']) 
       setFilterCategories([]) // NOVO: Reset do filtro de categorias
       
       // Resetar filtros de data para VAZIO
@@ -316,6 +318,12 @@ const Financeiro: React.FC = () => {
     );
   };
 
+  // Define status priority for sorting (Urgente/cancelado first)
+  const getStatusPriority = (status: string) => {
+      if (status === 'cancelado') return 1; // Urgente
+      if (status === 'pendente') return 2;
+      return 3; // Pago or others
+  };
   
   const filteredMovimentacoes = useMemo(() => {
     let sortedMovs = rawMovimentacoes.filter(movimentacao => {
@@ -375,11 +383,21 @@ const Financeiro: React.FC = () => {
       return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange && matchCategory
     });
     
-    // 2. Ordenação (NOVO)
+    // 2. Ordenação
     if (sortConfig.key) {
       sortedMovs.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
+        // 1. Prioridade por Status (Urgente no topo)
+        const priorityA = getStatusPriority(a.status || 'pendente');
+        const priorityB = getStatusPriority(b.status || 'pendente');
+
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB; // Prioriza 1 (Urgente)
+        }
+        
+        // 2. Se as prioridades são iguais, aplica a ordenação definida pelo usuário
+        
+        const aValue = (a as any)[sortConfig.key];
+        const bValue = (b as any)[sortConfig.key];
         
         let comparison = 0;
         
@@ -391,19 +409,17 @@ const Financeiro: React.FC = () => {
         } else if (sortConfig.key === 'valor') {
           comparison = (aValue as number) - (bValue as number);
         } else if (sortConfig.key === 'status') {
-          // Ordenação por status (alfabética)
-          const aStr = String(aValue || '').toLowerCase();
-          const bStr = String(bValue || '').toLowerCase();
-          if (aStr > bStr) comparison = 1;
-          if (aStr < bStr) comparison = -1;
+          // Se a chave for status, usamos a prioridade numérica para garantir consistência
+          comparison = priorityA - priorityB; 
         } else {
-          // Ordenação alfabética para strings (descricao, categoria, tipo)
+          // Ordenação alfabética para strings
           const aStr = String(aValue || '').toLowerCase();
           const bStr = String(bValue || '').toLowerCase();
           if (aStr > bStr) comparison = 1;
           if (aStr < bStr) comparison = -1;
         }
         
+        // Aplica a direção da ordenação
         return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
     }
