@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters'
 import { 
@@ -58,6 +58,12 @@ const Financeiro: React.FC = () => {
   // Garantindo que movimentacoes seja sempre um array
   const movimentacoes = rawMovimentacoes || [];
 
+  // Calculate default filter range (Start of time for pending items + End of current month)
+  const now = new Date();
+  const defaultVencEndDate = format(endOfMonth(now), 'yyyy-MM-dd');
+  // Use a fixed historical date for the start date to capture all past pending items.
+  const defaultVencStartDate = '2000-01-01'; 
+
   const [showForm, setShowForm] = useState(false)
   const [editingMovimentacao, setEditingMovimentacao] = useState<any>(null)
   const [deleteTarget, setDeleteTarget] = useState<{id: string, descricao: string} | null>(null)
@@ -94,8 +100,8 @@ const Financeiro: React.FC = () => {
   const [filterCategories, setFilterCategories] = useState<string[]>([])
   
   // Filtros de intervalo (mantidos)
-  const [filterVencStartDate, setFilterVencStartDate] = useState('')
-  const [filterVencEndDate, setFilterVencEndDate] = useState('')
+  const [filterVencStartDate, setFilterVencStartDate] = useState(defaultVencStartDate)
+  const [filterVencEndDate, setFilterVencEndDate] = useState(defaultVencEndDate)
   
   const [filterPayStartDate, setFilterPayStartDate] = useState('')
   const [filterPayEndDate, setFilterPayEndDate] = useState('')
@@ -182,9 +188,9 @@ const Financeiro: React.FC = () => {
     
     // Garante unicidade e mapeia para o formato MultiSelectStatus
     return Array.from(new Set(list)).map(cat => ({
-        key: cat,
-        label: cat,
-        color: 'bg-gray-600' 
+        id: cat,
+        name: cat,
+        icon: List,
     }));
   }, [categories, filterType]);
   
@@ -201,7 +207,7 @@ const Financeiro: React.FC = () => {
   // Efeito para limpar categorias inválidas quando o tipo de movimentação muda
   useEffect(() => {
     if (filterCategories.length > 0) {
-        const validKeys = filteredCategoryOptions.map(o => o.key);
+        const validKeys = filteredCategoryOptions.map(o => o.id);
         const categoriesToKeep = filterCategories.filter(cat => validKeys.includes(cat));
         
         if (categoriesToKeep.length !== filterCategories.length) {
@@ -260,9 +266,9 @@ const Financeiro: React.FC = () => {
       setFilterStatus(['pendente', 'cancelado']) 
       setFilterCategories([]) // NOVO: Reset do filtro de categorias
       
-      // Resetar filtros de data para VAZIO
-      setFilterVencStartDate('')
-      setFilterVencEndDate('')
+      // Resetar filtros de data para o PADRÃO
+      setFilterVencStartDate(defaultVencStartDate)
+      setFilterVencEndDate(defaultVencEndDate)
       
       setFilterPayStartDate('')
       setFilterPayEndDate('')
@@ -988,7 +994,11 @@ const Financeiro: React.FC = () => {
           {/* NOVO: Filtro de Categoria (1 coluna) */}
           <MultiSelectStatus
             label="Categorias"
-            options={filteredCategoryOptions}
+            options={filteredCategoryOptions.map(o => ({
+                key: o.id,
+                label: o.name,
+                color: 'bg-gray-600' 
+            }))}
             selectedKeys={filterCategories}
             onChange={setFilterCategories}
           />
