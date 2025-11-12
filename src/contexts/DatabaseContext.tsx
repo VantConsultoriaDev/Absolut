@@ -1478,9 +1478,63 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     return `${prefix} - ${crtSimplificado} - ${parceiroNome}`;
   };
   
-  const syncMovimentacoesForCarga = (cargaId: string) => {
-    console.log(`Simulating sync movs for ${cargaId}`);
-  };
+  // NOVO: Implementação de syncMovimentacoesForCarga
+  const syncMovimentacoesForCarga = useCallback((cargaId: string) => {
+    const carga = cargas.find(c => c.id === cargaId);
+    if (!carga) return;
+
+    setMovimentacoes(prevMovs => {
+        let changed = false;
+        const newMovs = prevMovs.map(mov => {
+            if (mov.cargaId === cargaId && mov.trajetoIndex !== undefined) {
+                // 1. Determina o prefixo da descrição
+                let prefix: 'Adto' | 'Saldo' | 'Frete' | 'Diárias' | 'Despesas Adicionais';
+                if (mov.descricao.startsWith('Adto -')) {
+                    prefix = 'Adto';
+                } else if (mov.descricao.startsWith('Saldo -')) {
+                    prefix = 'Saldo';
+                } else if (mov.descricao.startsWith('Frete -')) {
+                    prefix = 'Frete';
+                } else if (mov.categoria === 'DIARIA') {
+                    prefix = 'Diárias';
+                } else if (mov.categoria === 'OUTRAS DESPESAS') {
+                    prefix = 'Despesas Adicionais';
+                } else {
+                    return mov; // Não é uma movimentação de frete/extra vinculada
+                }
+                
+                // 2. Gera a nova descrição
+                const newDescription = buildMovimentacaoDescription(carga, prefix, mov.trajetoIndex);
+                
+                if (newDescription !== mov.descricao) {
+                    changed = true;
+                    const updatedMov = { 
+                        ...mov, 
+                        descricao: newDescription, 
+                        updatedAt: new Date() 
+                    };
+                    
+                    // Sincroniza a atualização da descrição
+                    handleSyncAction({ 
+                        type: 'update_movimentacoes_financeiras', 
+                        description: `Descrição da Movimentação ${mov.id} atualizada`, 
+                        data: { updatedData: updatedMov } 
+                    } as UndoAction);
+                    
+                    return updatedMov;
+                }
+            }
+            return mov;
+        });
+        
+        if (changed) {
+            console.log(`[SYNC] Descrições de movimentações para carga ${cargaId} atualizadas.`);
+            return newMovs;
+        }
+        return prevMovs;
+    });
+  }, [cargas, buildMovimentacaoDescription, handleSyncAction]);
+
 
   const value: DatabaseContextType = {
     users,
@@ -1555,7 +1609,7 @@ export const DatabaseProvider: React.FC<DatabaseProviderProps> = ({ children }) 
     // Utility functions for Cargas/Financeiro synchronization
     getMotoristaName,
     buildMovimentacaoDescription,
-    syncMovimentacoesForCarga,
+    syncMovimentacoesForCarga, // IMPLEMENTADO
     
     // Storage Utils
     uploadAvatar: storageUploadAvatar,

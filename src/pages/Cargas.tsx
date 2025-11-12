@@ -59,7 +59,8 @@ const Cargas: React.FC = () => {
     deleteMovimentacao,
     buildMovimentacaoDescription,
     parceiros,
-    motoristas
+    motoristas,
+    syncMovimentacoesForCarga, // NOVO: Importando a função de sincronização
   } = useDatabase();
   
   // Garantindo que cargas seja sempre um array
@@ -808,6 +809,10 @@ const Cargas: React.FC = () => {
         updateCarga(linkingCarga.id, {
           trajetos: updatedTrajetos
         });
+        
+        // NOVO: Sincroniza as movimentações financeiras para atualizar a descrição
+        syncMovimentacoesForCarga(linkingCarga.id);
+
         // showSuccess(`Vínculos do Trajeto ${linkingTrajetoIndex} da carga ${linkingCarga.crt || linkingCarga.id} salvos com sucesso.`); // REMOVIDO
         handleCloseLinkModal();
       } catch (e) {
