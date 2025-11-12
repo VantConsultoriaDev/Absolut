@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters'
 import { 
