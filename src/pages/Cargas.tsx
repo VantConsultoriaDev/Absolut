@@ -189,12 +189,20 @@ const Cargas: React.FC = () => {
       if (filterColetaStartDate && carga.dataColeta) {
         const startDate = createLocalDate(filterColetaStartDate);
         const d = createLocalDate(format(new Date(carga.dataColeta), 'yyyy-MM-dd'));
-        matchesColetaRange = matchesColetaRange && d >= startDate;
+        
+        // Verifica se as datas são válidas antes de comparar
+        if (startDate && d) {
+            matchesColetaRange = matchesColetaRange && d >= startDate;
+        }
       }
       if (filterColetaEndDate && carga.dataColeta) {
         const endDate = createLocalDate(filterColetaEndDate);
         const d = createLocalDate(format(new Date(carga.dataColeta), 'yyyy-MM-dd'));
-        matchesColetaRange = matchesColetaRange && d <= endDate;
+        
+        // Verifica se as datas são válidas antes de comparar
+        if (endDate && d) {
+            matchesColetaRange = matchesColetaRange && d <= endDate;
+        }
       }
 
       // Filtro por Data de Entrega
@@ -202,12 +210,20 @@ const Cargas: React.FC = () => {
       if (filterEntregaStartDate && carga.dataEntrega) {
         const startDate = createLocalDate(filterEntregaStartDate);
         const d = createLocalDate(format(new Date(carga.dataEntrega), 'yyyy-MM-dd'));
-        matchesEntregaRange = matchesEntregaRange && d >= startDate;
+        
+        // Verifica se as datas são válidas antes de comparar
+        if (startDate && d) {
+            matchesEntregaRange = matchesEntregaRange && d >= startDate;
+        }
       }
       if (filterEntregaEndDate && carga.dataEntrega) {
         const endDate = createLocalDate(filterEntregaEndDate);
         const d = createLocalDate(format(new Date(carga.dataEntrega), 'yyyy-MM-dd'));
-        matchesEntregaRange = matchesEntregaRange && d <= endDate;
+        
+        // Verifica se as datas são válidas antes de comparar
+        if (endDate && d) {
+            matchesEntregaRange = matchesEntregaRange && d <= endDate;
+        }
       }
       
       return matchSearch && matchStatus && matchOrigem && matchesColetaRange && matchesEntregaRange;
@@ -934,7 +950,7 @@ const Cargas: React.FC = () => {
               valor: valorFreteBase,
               descricao: buildMovimentacaoDescription(integratingCarga, 'Frete', trajeto.index),
               categoria: 'FRETE',
-              data: createLocalDate(integrateData.dataVencimentoDespesa || format(new Date(), 'yyyy-MM-dd')),
+              data: createLocalDate(integrateData.dataVencimentoDespesa || format(new Date(), 'yyyy-MM-dd')) || new Date(),
               status: 'pendente',
               cargaId: integratingCarga.id,
               trajetoIndex: trajeto.index,
@@ -947,7 +963,7 @@ const Cargas: React.FC = () => {
               valor: diarias,
               descricao: buildMovimentacaoDescription(integratingCarga, 'Diárias', trajeto.index),
               categoria: 'DIARIA',
-              data: createLocalDate(integrateData.dataVencimentoDiarias || format(new Date(), 'yyyy-MM-dd')),
+              data: createLocalDate(integrateData.dataVencimentoDiarias || format(new Date(), 'yyyy-MM-dd')) || new Date(),
               status: 'pendente',
               cargaId: integratingCarga.id,
               trajetoIndex: trajeto.index,
@@ -963,7 +979,7 @@ const Cargas: React.FC = () => {
               valor: valorFinal,
               descricao: buildMovimentacaoDescription(integratingCarga, 'Frete', trajeto.index),
               categoria: 'FRETE',
-              data: createLocalDate(integrateData.dataVencimentoDespesa || format(new Date(), 'yyyy-MM-dd')),
+              data: createLocalDate(integrateData.dataVencimentoDespesa || format(new Date(), 'yyyy-MM-dd')) || new Date(),
               status: 'pendente',
               cargaId: integratingCarga.id,
               trajetoIndex: trajeto.index,
@@ -997,7 +1013,7 @@ const Cargas: React.FC = () => {
         
         // 2.2. Lançar Adiantamento
         if (integrateData.splitOption === 'ambos' || integrateData.splitOption === 'adiantamento') {
-          const dataAdiant = integrateData.dataVencimentoAdiantamento ? createLocalDate(integrateData.dataVencimentoAdiantamento) : createLocalDate(format(new Date(), 'yyyy-MM-dd'));
+          const dataAdiant = createLocalDate(integrateData.dataVencimentoAdiantamento || format(new Date(), 'yyyy-MM-dd')) || new Date();
           createAndRegisterMov({
             tipo: 'despesa',
             valor: finalAdiantamento,
@@ -1013,7 +1029,7 @@ const Cargas: React.FC = () => {
         
         // 2.3. Lançar Saldo
         if (integrateData.splitOption === 'ambos' || integrateData.splitOption === 'saldo') {
-          const dataSaldo = integrateData.dataVencimentoSaldo ? createLocalDate(integrateData.dataVencimentoSaldo) : createLocalDate(format(new Date(), 'yyyy-MM-dd'));
+          const dataSaldo = createLocalDate(integrateData.dataVencimentoSaldo || format(new Date(), 'yyyy-MM-dd')) || new Date();
           createAndRegisterMov({
             tipo: 'despesa',
             valor: finalSaldo,
@@ -1029,7 +1045,7 @@ const Cargas: React.FC = () => {
         
         // 2.4. Lançar Despesas Adicionais Individualmente
         if (integrateData.despesasEnabled && integrateData.splitExtrasOption === 'individual' && despesasAdicionais > 0) {
-            const dataExtras = createLocalDate(integrateData.dataVencimentoExtras || format(new Date(), 'yyyy-MM-dd'));
+            const dataExtras = createLocalDate(integrateData.dataVencimentoExtras || format(new Date(), 'yyyy-MM-dd')) || new Date();
             createAndRegisterMov({
                 tipo: 'despesa',
                 valor: despesasAdicionais,
@@ -1045,7 +1061,7 @@ const Cargas: React.FC = () => {
         
         // 2.5. Lançar Diárias Individualmente
         if (integrateData.diariasEnabled && integrateData.splitDiariasOption === 'individual' && diarias > 0) {
-            const dataDiarias = createLocalDate(integrateData.dataVencimentoDiariasIndividual || format(new Date(), 'yyyy-MM-dd'));
+            const dataDiarias = createLocalDate(integrateData.dataVencimentoDiariasIndividual || format(new Date(), 'yyyy-MM-dd')) || new Date();
             createAndRegisterMov({
                 tipo: 'despesa',
                 valor: diarias,

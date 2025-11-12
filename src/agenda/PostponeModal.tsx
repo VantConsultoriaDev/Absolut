@@ -26,7 +26,7 @@ const PostponeModal: React.FC<PostponeModalProps> = ({ isOpen, currentDate, onCl
 
   const handleConfirm = () => {
     const newDate = createLocalDate(newDateStr);
-    if (isValid(newDate)) {
+    if (newDate && isValid(newDate)) {
       onConfirm(newDate);
     } else {
       alert('Data inválida.');

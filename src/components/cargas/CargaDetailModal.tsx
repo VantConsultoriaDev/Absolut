@@ -92,6 +92,9 @@ const CargaDetailModal: React.FC<CargaDetailModalProps> = ({
     const motorista = getMotoristaInfo(trajeto.motoristaId);
     const veiculo = getVeiculoInfo(trajeto.veiculoId);
     const isLinked = trajeto.parceiroId && trajeto.motoristaId && trajeto.veiculoId;
+    
+    const coletaDate = trajeto.dataColeta ? createLocalDate(trajeto.dataColeta) : undefined;
+    const entregaDate = trajeto.dataEntrega ? createLocalDate(trajeto.dataEntrega) : undefined;
 
     return (
       <div key={trajeto.index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3 bg-slate-50 dark:bg-slate-700/50">
@@ -135,10 +138,10 @@ const CargaDetailModal: React.FC<CargaDetailModalProps> = ({
               <Calendar className="h-3 w-3" /> Datas
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              Coleta: <span className="font-medium">{trajeto.dataColeta ? format(createLocalDate(trajeto.dataColeta), 'dd/MM/yyyy') : 'N/A'}</span>
+              Coleta: <span className="font-medium">{coletaDate ? format(coletaDate, 'dd/MM/yyyy') : 'N/A'}</span>
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              Entrega: <span className="font-medium">{trajeto.dataEntrega ? format(createLocalDate(trajeto.dataEntrega), 'dd/MM/yyyy') : 'N/A'}</span>
+              Entrega: <span className="font-medium">{entregaDate ? format(entregaDate, 'dd/MM/yyyy') : 'N/A'}</span>
             </p>
           </div>
           

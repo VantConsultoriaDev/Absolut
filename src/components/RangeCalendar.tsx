@@ -1,5 +1,5 @@
 import React from 'react';
-import { format, getDay, getDate, getMonth, getYear, isSameDay } from 'date-fns';
+import { format, getDay, getDate, getMonth, getYear, isSameDay, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { createLocalDate } from '../utils/formatters'; // Importando a função auxiliar
@@ -37,6 +37,9 @@ const RangeCalendar: React.FC<RangeCalendarProps> = ({ month, start, end, onPrev
     const s = start < end ? createLocalDate(format(start, 'yyyy-MM-dd')) : createLocalDate(format(end, 'yyyy-MM-dd'));
     const e = end > start ? createLocalDate(format(end, 'yyyy-MM-dd')) : createLocalDate(format(start, 'yyyy-MM-dd'));
     const dd = createLocalDate(format(d, 'yyyy-MM-dd'));
+    
+    // Verifica se todas as datas são válidas antes de comparar
+    if (!dd || !s || !e || !isValid(dd) || !isValid(s) || !isValid(e)) return false;
     
     return dd >= s && dd <= e;
   };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
@@ -331,12 +331,18 @@ const Financeiro: React.FC = () => {
         // Usar createLocalDate para garantir que a comparação seja feita no mesmo dia
         const startDate = createLocalDate(filterVencStartDate)
         const d = createLocalDate(format(new Date(movimentacao.data), 'yyyy-MM-dd'))
-        matchesVencimentoRange = matchesVencimentoRange && d >= startDate
+        
+        if (startDate && d) {
+            matchesVencimentoRange = matchesVencimentoRange && d >= startDate
+        }
       }
       if (filterVencEndDate) {
         const endDate = createLocalDate(filterVencEndDate)
         const d = createLocalDate(format(new Date(movimentacao.data), 'yyyy-MM-dd'))
-        matchesVencimentoRange = matchesVencimentoRange && d <= endDate
+        
+        if (endDate && d) {
+            matchesVencimentoRange = matchesVencimentoRange && d <= endDate
+        }
       }
 
       // Filtro por Pagamento (movimentacao.dataPagamento)
@@ -348,11 +354,15 @@ const Financeiro: React.FC = () => {
           const dp = createLocalDate(format(new Date(movimentacao.dataPagamento), 'yyyy-MM-dd'))
           if (filterPayStartDate) {
             const ps = createLocalDate(filterPayStartDate)
-            matchesPagamentoRange = matchesPagamentoRange && dp >= ps
+            if (dp && ps) {
+                matchesPagamentoRange = matchesPagamentoRange && dp >= ps
+            }
           }
           if (filterPayEndDate) {
             const pe = createLocalDate(filterPayEndDate)
-            matchesPagamentoRange = matchesPagamentoRange && dp <= pe
+            if (dp && pe) {
+                matchesPagamentoRange = matchesPagamentoRange && dp <= pe
+            }
           }
         }
       }
@@ -462,12 +472,15 @@ const Financeiro: React.FC = () => {
         }
     }
     
+    // Garante que a data seja um objeto Date válido, usando new Date() como fallback
+    const dataMovimentacao = createLocalDate(formData.data) || new Date();
+    
     const movimentacaoData: Omit<MovimentacaoFinanceira, 'id' | 'createdAt' | 'updatedAt'> = {
       descricao: baseDescription,
       valor: baseValue, // Valor total (se parcelado) ou valor único (se recorrente/único)
       tipo: formData.tipo as 'receita' | 'despesa',
       categoria: formData.categoria,
-      data: createLocalDate(formData.data),
+      data: dataMovimentacao,
       status: formData.status as 'pendente' | 'pago' | 'cancelado',
       observacoes: formData.observacoes,
       
@@ -665,7 +678,7 @@ const Financeiro: React.FC = () => {
       // 3. Atualizar a movimentação com o status e a URL do comprovante
       const updatedMov = await updateMovimentacao(paymentTarget.id, { 
         status: 'pago',
-        dataPagamento: createLocalDate(paymentDate),
+        dataPagamento: createLocalDate(paymentDate) || new Date(),
         ...(comprovanteUrl ? { comprovanteUrl } : { comprovanteUrl: undefined })
       });
       
@@ -1036,7 +1049,7 @@ const Financeiro: React.FC = () => {
       {/* Modal de Formulário (Centralizado) */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div ref={modalRef} className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{editingMovimentacao ? 'Editar Movimentação' : 'Nova Movimentação'}</h3>
               <button onClick={resetForm} className="btn-ghost p-2"><X className="h-5 w-5" /></button>

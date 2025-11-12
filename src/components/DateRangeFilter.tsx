@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar } from 'lucide-react';
-import { format, subMonths, addMonths } from 'date-fns';
+import { format, subMonths, addMonths, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import RangeCalendar from './RangeCalendar';
 import { createLocalDate } from '../utils/formatters';
@@ -46,9 +46,10 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ options, className = 
     const s = activeFilter.startState ? createLocalDate(activeFilter.startState) : null;
     const ed = activeFilter.endState ? createLocalDate(activeFilter.endState) : null;
     
-    setTempStart(s);
-    setTempEnd(ed);
-    setCalendarMonth(s || new Date());
+    // Garante que s e ed sejam Date | null
+    setTempStart(s && isValid(s) ? s : null);
+    setTempEnd(ed && isValid(ed) ? ed : null);
+    setCalendarMonth(s && isValid(s) ? s : new Date());
     setShowCalendar(true);
   };
   
@@ -84,11 +85,14 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ options, className = 
   };
   
   const getFilterDisplay = (startStr: string, endStr: string) => {
-    if (startStr && endStr) {
-      return `${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })} - ${format(createLocalDate(endStr), 'dd/MM/yyyy', { locale: ptBR })}`;
+    const startDate = createLocalDate(startStr);
+    const endDate = createLocalDate(endStr);
+    
+    if (startDate && endDate) {
+      return `${format(startDate, 'dd/MM/yyyy', { locale: ptBR })} - ${format(endDate, 'dd/MM/yyyy', { locale: ptBR })}`;
     }
-    if (startStr) {
-      return `De ${format(createLocalDate(startStr), 'dd/MM/yyyy', { locale: ptBR })}`;
+    if (startDate) {
+      return `De ${format(startDate, 'dd/MM/yyyy', { locale: ptBR })}`;
     }
     return 'Selecionar período';
   };
