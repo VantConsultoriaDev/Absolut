@@ -34,6 +34,7 @@ import StandardCheckbox from '../components/StandardCheckbox'
 import DateRangeFilter from '../components/DateRangeFilter' // NOVO: Importando o componente unificado
 import CategoriesModal from '../components/financeiro/CategoriesModal' // NOVO: Importando CategoriesModal
 import SearchableSelect, { SelectOption } from '../components/SearchableSelect' // NOVO: Importando SearchableSelect
+import { showSuccess } from '../utils/toast' // Import showSuccess
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -51,6 +52,7 @@ const Financeiro: React.FC = () => {
     parceiros,
     motoristas,
     veiculos,
+    syncMovimentacoesForCarga, // NOVO: Importado
   } = useDatabase()
   
   // Garantindo que movimentacoes seja sempre um array
@@ -137,6 +139,9 @@ const Financeiro: React.FC = () => {
     key: 'data',
     direction: 'asc',
   });
+  
+  // NOVO: Estado para o botão de sincronização de exibição
+  const [isSyncingDisplay, setIsSyncingDisplay] = useState(false);
 
   useEffect(() => {
     try {
@@ -743,7 +748,8 @@ const Financeiro: React.FC = () => {
         </span>
       </td>
       <td className={`table-cell font-semibold ${movimentacao.tipo === 'receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-        {movimentacao.tipo === 'receita' ? '+' : '-'} {formatCurrency(movimentacao.valor || 0)}
+        {movimentacao.tipo === 'receita' ? '+' : '-'}{' '}
+        {formatCurrency(movimentacao.valor || 0)}
       </td>
       <td className="table-cell">
         <span className={`badge ${statusConfig[movimentacao.status as keyof typeof statusConfig].color}`}>
@@ -813,6 +819,22 @@ const Financeiro: React.FC = () => {
       </td>
     </tr>
   );
+  
+  // --- NOVO: Handler para sincronização de exibição ---
+  const handleSyncDisplay = () => {
+    if (isSyncingDisplay) return;
+    setIsSyncingDisplay(true);
+    
+    // Itera sobre todas as cargas e dispara a sincronização das movimentações relacionadas
+    cargas.forEach(carga => {
+        syncMovimentacoesForCarga(carga.id);
+    });
+    
+    setTimeout(() => {
+        setIsSyncingDisplay(false);
+        showSuccess('Dados de exibição sincronizados.');
+    }, 500);
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -906,7 +928,18 @@ const Financeiro: React.FC = () => {
 
       {/* Filters */}
       <div className="card p-6 space-y-4">
-        <h3 className="font-semibold text-slate-900 dark:text-slate-50">Filtros</h3>
+        <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">Filtros</h3>
+            <button
+                type="button"
+                onClick={handleSyncDisplay}
+                disabled={isSyncingDisplay}
+                className="btn-ghost p-2 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
+                title="Sincronizar dados de exibição (Ex: Parceiro/Motorista)"
+            >
+                <RefreshCw className={`h-5 w-5 ${isSyncingDisplay ? 'animate-spin' : ''}`} />
+            </button>
+        </div>
         {/* ALTERADO: Grid para 2 colunas em md e 5 em lg */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           
