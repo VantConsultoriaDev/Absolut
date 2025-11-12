@@ -940,8 +940,8 @@ const Financeiro: React.FC = () => {
                 <RefreshCw className={`h-5 w-5 ${isSyncingDisplay ? 'animate-spin' : ''}`} />
             </button>
         </div>
-        {/* ALTERADO: Grid para 2 colunas em md e 5 em lg */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        {/* ALTERADO: Grid para 6 colunas em lg */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
           
           {/* Busca (md: 2 colunas, lg: 1 coluna) */}
           <div className="relative md:col-span-2 lg:col-span-1">
@@ -990,8 +990,8 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Data Unificado (1 coluna) */}
-          <div className="md:col-span-2 lg:col-span-1">
+          {/* Filtro de Data Unificado (2 colunas) */}
+          <div className="md:col-span-2 lg:col-span-2">
             <DateRangeFilter
               options={dateFilterOptions}
             />
