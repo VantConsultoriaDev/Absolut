@@ -144,7 +144,7 @@ const Cargas: React.FC = () => {
   
   // ALTERADO: Estado de Ordenação Padrão
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection }>({
-    key: 'dataColeta',
+    key: 'status', // Alterado para ordenar por status por padrão
     direction: 'asc',
   });
   
@@ -227,7 +227,7 @@ const Cargas: React.FC = () => {
         }
       }
       
-      return matchSearch && matchStatus && matchOrigem && matchesColetaRange && matchesEntregaRange;
+      return matchSearch && matchStatus && matchesColetaRange && matchesEntregaRange && matchOrigem;
     });
     
     // 2. Ordenação
@@ -376,8 +376,8 @@ const Cargas: React.FC = () => {
       setFilterColetaEndDate('');
       setFilterEntregaStartDate('');
       setFilterEntregaEndDate('');
-      // ALTERADO: Resetar ordenação para dataColeta crescente
-      setSortConfig({ key: 'dataColeta', direction: 'asc' }); 
+      // ALTERADO: Resetar ordenação para status crescente (a_coletar primeiro)
+      setSortConfig({ key: 'status', direction: 'asc' }); 
     }
   }, [location.state]);
 
