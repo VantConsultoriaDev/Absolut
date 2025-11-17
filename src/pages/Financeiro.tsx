@@ -93,8 +93,8 @@ const Financeiro: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
-  // ALTERADO: Padrão para filtrar 'pendente' e 'cancelado'
-  const [filterStatus, setFilterStatus] = useState<string[]>(['pendente', 'cancelado'])
+  // ALTERADO: Padrão para filtrar 'pendente', 'vencido' e 'cancelado'
+  const [filterStatus, setFilterStatus] = useState<string[]>(['pendente', 'vencido', 'cancelado'])
   // NOVO: Estado para filtro de categorias
   const [filterCategories, setFilterCategories] = useState<string[]>([])
   
@@ -165,9 +165,8 @@ const Financeiro: React.FC = () => {
     cancelado: { label: 'Urgente', color: 'bg-purple-600 text-white', icon: AlertTriangle } // ALTERADO: 'cancelado' para 'Urgente' e cor roxa
   }
   
-  // Mapeamento de status para o modal e MultiSelect
-  const movStatusOptions = useMemo(() => {
-    // O modal de alteração de status só deve permitir os status que podem ser SALVOS (pendente, pago, cancelado)
+  // Mapeamento de status para o modal (apenas savable statuses)
+  const savableStatusOptions = useMemo(() => {
     const savableStatuses = ['pendente', 'pago', 'cancelado'];
     
     return Object.entries(statusConfig)
@@ -179,6 +178,18 @@ const Financeiro: React.FC = () => {
             textColor: 'text-gray-500 dark:text-gray-400',
             color: cfg.color,
         }));
+  }, [statusConfig]);
+  
+  // Mapeamento de status para o MultiSelect (inclui Vencido)
+  const filterStatusOptions = useMemo(() => {
+      return Object.entries(statusConfig)
+          .map(([key, cfg]) => ({
+              key: key as string,
+              label: cfg.label,
+              icon: cfg.icon,
+              textColor: 'text-gray-500 dark:text-gray-400',
+              color: cfg.color,
+          }));
   }, [statusConfig]);
   
   // Opções de categoria filtradas pelo tipo de movimentação
@@ -270,8 +281,8 @@ const Financeiro: React.FC = () => {
       // Limpar filtros e busca
       setSearchTerm('')
       setFilterType('')
-      // ALTERADO: Resetar para o padrão (pendente e cancelado)
-      setFilterStatus(['pendente', 'cancelado']) 
+      // ALTERADO: Resetar para o padrão (pendente, vencido e cancelado)
+      setFilterStatus(['pendente', 'vencido', 'cancelado']) 
       setFilterCategories([]) // NOVO: Reset do filtro de categorias
       
       // Resetar filtros de data para o PADRÃO
@@ -646,7 +657,7 @@ const Financeiro: React.FC = () => {
       setShowPaymentModal(true);
     } else {
       // Se for Pendente -> Urgente ou Urgente -> Pendente (sem comprovante)
-      // O status 'vencido' nunca é salvo, ele reverte para 'pendente' ou 'cancelado'
+      // O status 'vencido' nunca é salvo, apenas 'pendente', 'pago' ou 'cancelado'
       updateMovimentacao(statusTargetMov.id, { status: newStatus as 'pendente' | 'pago' | 'cancelado', dataPagamento: null, comprovanteUrl: undefined }); // Limpa comprovante se não for pago
     }
     setStatusTargetMov(null);
@@ -1003,11 +1014,11 @@ const Financeiro: React.FC = () => {
           {/* Status (1 coluna) */}
           <MultiSelectStatus
             label="Status"
-            options={movStatusOptions.map(o => ({
+            options={filterStatusOptions.map(o => ({ // USANDO filterStatusOptions
                 key: o.key,
                 label: o.label,
                 // Mapeia a cor para o badge-color correspondente
-                color: o.key === 'pago' ? 'bg-emerald-600' : o.key === 'pendente' ? 'bg-amber-600' : 'bg-purple-600'
+                color: o.key === 'pago' ? 'bg-emerald-600' : o.key === 'vencido' ? 'bg-red-600' : o.key === 'pendente' ? 'bg-amber-600' : 'bg-purple-600'
             }))}
             selectedKeys={filterStatus}
             onChange={setFilterStatus}
@@ -1077,7 +1088,7 @@ const Financeiro: React.FC = () => {
         <StatusChangeModal
           isOpen={showStatusModal}
           currentStatus={statusTargetMov.status || 'pendente'}
-          statusOptions={movStatusOptions}
+          statusOptions={savableStatusOptions}
           entityName={statusTargetMov.descricao}
           onClose={() => setShowStatusModal(false)}
           onSelectStatus={handleChangeStatus}
