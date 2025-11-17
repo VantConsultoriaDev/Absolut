@@ -31,7 +31,7 @@ import MultiSelectStatus from '../components/MultiSelectStatus'
 import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetailModal'
 import ConfirmationModal from '../components/ConfirmationModal'
 import StandardCheckbox from '../components/StandardCheckbox'
-// REMOVIDO: import DateRangeFilter from '../components/DateRangeFilter' 
+import DateRangeFilter from '../components/DateRangeFilter' // IMPORTADO
 import CategoriesModal from '../components/financeiro/CategoriesModal' 
 import SearchableSelect, { SelectOption } from '../components/SearchableSelect' 
 import { showSuccess } from '../utils/toast' 
@@ -103,8 +103,7 @@ const Financeiro: React.FC = () => {
   const [filterVencStartDate, setFilterVencStartDate] = useState(defaultVencStartDate)
   const [filterVencEndDate, setFilterVencEndDate] = useState(defaultVencEndDate)
   
-  const [filterPayStartDate, setFilterPayStartDate] = useState('')
-  const [filterPayEndDate, setFilterPayEndDate] = useState('')
+  // REMOVIDO: filterPayStartDate, filterPayEndDate
   
   // Estado para o modal de status centralizado
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -270,8 +269,8 @@ const Financeiro: React.FC = () => {
       setFilterVencStartDate(defaultVencStartDate)
       setFilterVencEndDate(defaultVencEndDate)
       
-      setFilterPayStartDate('')
-      setFilterPayEndDate('')
+      // REMOVIDO: setFilterPayStartDate('')
+      // REMOVIDO: setFilterPayEndDate('')
 
       // Fechar calendários e dropdowns
       setShowStatusModal(false)
@@ -364,8 +363,9 @@ const Financeiro: React.FC = () => {
         }
       }
 
-      // Filtro por Pagamento (movimentacao.dataPagamento)
+      // Filtro por Pagamento (movimentacao.dataPagamento) - REMOVIDO
       let matchesPagamentoRange = true
+      /* REMOVIDO
       if (filterPayStartDate || filterPayEndDate) {
         if (!movimentacao.dataPagamento) {
           matchesPagamentoRange = false
@@ -385,6 +385,7 @@ const Financeiro: React.FC = () => {
           }
         }
       }
+      */
       
       return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange && matchCategory
     });
@@ -431,9 +432,9 @@ const Financeiro: React.FC = () => {
     }
 
     return sortedMovs;
-  }, [rawMovimentacoes, searchTerm, filterType, filterStatus, filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate, sortConfig, filterCategories])
+  }, [rawMovimentacoes, searchTerm, filterType, filterStatus, filterVencStartDate, filterVencEndDate, sortConfig, filterCategories])
 
-  // Stats calculation deve usar as movimentações filtradas pelo mês corrente
+  // Stats calculation must use filteredMovimentacoes
   const stats = useMemo(() => {
     // Para manter a consistência com o que o usuário vê, usaremos as movimentações FILTRADAS.
     const receitas = filteredMovimentacoes.filter(t => t.tipo === 'receita')
@@ -843,6 +844,19 @@ const Financeiro: React.FC = () => {
   };
   // --- FIM FUNÇÃO renderTableRow ---
 
+  // --- Configuração do Filtro de Data Unificado ---
+  const dateFilterOptions = useMemo(() => [
+    {
+      key: 'vencimento',
+      label: 'Período', // RENOMEADO
+      startState: filterVencStartDate,
+      endState: filterVencEndDate,
+      setStart: setFilterVencStartDate,
+      setEnd: setFilterVencEndDate,
+    },
+  ], [filterVencStartDate, filterVencEndDate]);
+
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -1001,49 +1015,16 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Vencimento (2 colunas) */}
-          <div className="md:col-span-2 lg:col-span-2 grid grid-cols-2 gap-4">
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento (De)</label>
-              <input
-                type="date"
-                value={filterVencStartDate}
-                onChange={(e) => setFilterVencStartDate(e.target.value)}
-                className="input-field h-11 text-sm"
-              />
-            </div>
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento (Até)</label>
-              <input
-                type="date"
-                value={filterVencEndDate}
-                onChange={(e) => setFilterVencEndDate(e.target.value)}
-                className="input-field h-11 text-sm"
-              />
-            </div>
+          {/* Filtro de Vencimento (3 colunas) - AGORA USANDO DateRangeFilter */}
+          <div className="md:col-span-3 lg:col-span-3">
+            <DateRangeFilter
+              options={dateFilterOptions}
+              className="w-full"
+            />
           </div>
           
-          {/* Filtro de Pagamento (2 colunas) */}
-          <div className="md:col-span-2 lg:col-span-2 grid grid-cols-2 gap-4">
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento (De)</label>
-              <input
-                type="date"
-                value={filterPayStartDate}
-                onChange={(e) => setFilterPayStartDate(e.target.value)}
-                className="input-field h-11 text-sm"
-              />
-            </div>
-            <div className="no-uppercase">
-              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento (Até)</label>
-              <input
-                type="date"
-                value={filterPayEndDate}
-                onChange={(e) => setFilterPayEndDate(e.target.value)}
-                className="input-field h-11 text-sm"
-              />
-            </div>
-          </div>
+          {/* Filtro de Pagamento (REMOVIDO) */}
+          {/* O espaço restante (1 coluna) fica vazio */}
         </div>
       </div>
 
