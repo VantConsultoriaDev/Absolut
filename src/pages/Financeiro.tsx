@@ -20,7 +20,6 @@ import {
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
-  FileText,
   ArrowUp,
   ArrowDown,
   List, // NOVO: Ícone para categoria
@@ -148,6 +147,11 @@ const Financeiro: React.FC = () => {
   
   // NOVO: Estado para o botão de sincronização de exibição
   const [isSyncingDisplay, setIsSyncingDisplay] = useState(false);
+
+  // FUNÇÃO PARA ATUALIZAR O ESTADO DO FORMULÁRIO (FIX para erros 2, 3, 4, 5)
+  const handleDataChange = (field: keyof typeof formData, value: any) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   useEffect(() => {
     try {
