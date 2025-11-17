@@ -26,8 +26,8 @@ const NotificationModal: React.FC = () => {
   const timeDisplay = notification.dueTime ? `às ${notification.dueTime}` : '';
   const dateDisplay = notification.dueDate ? format(notification.dueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Sem Data';
   
-  // CORREÇÃO TS2367: Usando a nova nomenclatura de urgência
-  const urgencyColor = notification.urgency === 'Urgente' ? 'text-red-600' : notification.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
+  // CORREÇÃO: Usa fuchsia-600 para Urgente
+  const urgencyColor = notification.urgency === 'Urgente' ? 'text-fuchsia-600' : notification.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">

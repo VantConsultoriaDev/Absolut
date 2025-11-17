@@ -155,7 +155,8 @@ const AgendaContent: React.FC = () => {
     };
     
     const renderEventItem = (item: AgendaItem) => {
-        const urgencyColor = item.urgency === 'Urgente' ? 'text-red-600' : item.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
+        // CORREÇÃO: Usa fuchsia-600 para Urgente
+        const urgencyColor = item.urgency === 'Urgente' ? 'text-fuchsia-600' : item.urgency === 'Normal' ? 'text-amber-600' : 'text-blue-600';
         
         return (
             <div 
