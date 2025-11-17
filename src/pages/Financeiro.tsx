@@ -180,13 +180,13 @@ const Financeiro: React.FC = () => {
     } catch {}
   }, [categories])
 
-  // ALTERADO: Adicionado 'vencido'
-  const statusConfig = {
+  // 3. Configuração de Status da Movimentação
+  const statusConfig = useMemo(() => ({
     pendente: { label: 'Pendente', color: 'bg-amber-600 text-white', icon: Clock },
     vencido: { label: 'Vencido', color: 'bg-red-600 text-white', icon: AlertTriangle }, // NOVO
     pago: { label: 'Pago', color: 'bg-emerald-600 text-white', icon: CheckCircle },
-    cancelado: { label: 'Urgente', color: 'bg-purple-600 text-white', icon: AlertTriangle } // ALTERADO: 'cancelado' para 'Urgente' e cor roxa
-  }
+    cancelado: { label: 'Urgente', color: 'bg-red-600 text-white', icon: AlertTriangle } // ALTERADO: 'cancelado' para 'Urgente' e cor vermelha
+  }), []);
   
   // Mapeamento de status para o modal (apenas savable statuses)
   const savableStatusOptions = useMemo(() => {
@@ -817,7 +817,7 @@ const Financeiro: React.FC = () => {
         </td>
         <td className="table-cell whitespace-nowrap">
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            isPago ? 'badge-success' : isVencido ? 'badge-danger' : isCancelado ? 'badge-warning' : 'badge-warning'
+            isPago ? 'badge-success' : isVencido ? 'badge-danger' : isCancelado ? 'badge-danger' : 'badge-warning'
           }`}>
             {statusCfg.label}
           </span>
@@ -1041,7 +1041,7 @@ const Financeiro: React.FC = () => {
                 key: o.key,
                 label: o.label,
                 // Mapeia a cor para o badge-color correspondente
-                color: o.key === 'pago' ? 'bg-emerald-600' : o.key === 'vencido' ? 'bg-red-600' : o.key === 'pendente' ? 'bg-amber-600' : 'bg-purple-600'
+                color: o.key === 'pago' ? 'bg-emerald-600' : (o.key === 'vencido' || o.key === 'cancelado') ? 'bg-red-600' : 'bg-amber-600'
             }))}
             selectedKeys={filterStatus}
             onChange={setFilterStatus}
