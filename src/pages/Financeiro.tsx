@@ -39,6 +39,29 @@ import { showSuccess } from '../utils/toast'
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
+// NOVO: Definição da estrutura de dados do formulário
+interface FinanceiroFormData {
+  descricao: string;
+  valor: string;
+  tipo: 'receita' | 'despesa';
+  categoria: string;
+  data: string;
+  status: 'pendente' | 'pago' | 'cancelado';
+  observacoes: string;
+  
+  // Recorrência
+  isRecurring: boolean;
+  // Garante que seja um dos literais de string, não undefined, no estado do formulário
+  recurrencePeriod: NonNullable<MovimentacaoFinanceira['recurrencePeriod']>; 
+  recurrenceEndDateStr: string;
+  
+  // NOVO: Parcelamento
+  isInstallment: boolean;
+  installmentCount: number;
+  installmentValueOption: 'total' | 'parcela';
+}
+
+
 const Financeiro: React.FC = () => {
   const location = useLocation()
   const { 
@@ -106,7 +129,7 @@ const Financeiro: React.FC = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusTargetMov, setStatusTargetMov] = useState<MovimentacaoFinanceira | null>(null);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FinanceiroFormData>({
     descricao: '',
     valor: '',
     tipo: 'despesa',
@@ -118,12 +141,12 @@ const Financeiro: React.FC = () => {
     // Recorrência
     isRecurring: false,
     recurrencePeriod: 'monthly', // Corrigido para o tipo correto
-    recurrenceEndDateStr: '' as string, // String for input type="date"
+    recurrenceEndDateStr: '', // String for input type="date"
     
     // NOVO: Parcelamento
     isInstallment: false,
     installmentCount: 2, // Quantidade de parcelas
-    installmentValueOption: 'total' as 'total' | 'parcela', // 'total' ou 'parcela'
+    installmentValueOption: 'total', // 'total' ou 'parcela'
   })
   // Categorias dinâmicas com persistência em localStorage
   const [categories, setCategories] = useState<{ receita: string[]; despesa: string[] }>(() => {
@@ -147,7 +170,7 @@ const Financeiro: React.FC = () => {
   const [isSyncingDisplay, setIsSyncingDisplay] = useState(false);
 
   // FUNÇÃO PARA ATUALIZAR O ESTADO DO FORMULÁRIO (FIX para erros 2, 3, 4, 5)
-  const handleDataChange = (field: keyof typeof formData, value: any) => {
+  const handleDataChange = (field: keyof FinanceiroFormData, value: any) => {
       setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -518,7 +541,7 @@ const Financeiro: React.FC = () => {
       
       // Recorrência
       isRecurring: formData.isRecurring,
-      recurrencePeriod: formData.isRecurring ? formData.recurrencePeriod : undefined,
+      recurrencePeriod: formData.isRecurring ? formData.recurrencePeriod : undefined, 
       recurrenceEndDate: formData.isRecurring && formData.recurrenceEndDateStr 
           ? createLocalDate(formData.recurrenceEndDateStr) 
           : null,
@@ -1215,7 +1238,7 @@ const Financeiro: React.FC = () => {
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Período de Recorrência *</label>
                       <select 
                         value={formData.recurrencePeriod} 
-                        onChange={(e) => setFormData({ ...formData, recurrencePeriod: e.target.value as MovimentacaoFinanceira['recurrencePeriod'] })} 
+                        onChange={(e) => setFormData({ ...formData, recurrencePeriod: e.target.value as NonNullable<MovimentacaoFinanceira['recurrencePeriod']> })} 
                         className="input-field" 
                         required
                       >
