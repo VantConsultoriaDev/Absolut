@@ -32,6 +32,9 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ options, className = 
   const [tempEnd, setTempEnd] = useState<Date | null>(null);
   
   const activeFilter = useMemo(() => options.find(o => o.key === activeFilterKey) || options[0], [options, activeFilterKey]);
+  
+  // NOVO: Determina se deve usar o layout de coluna única
+  const isSingleOption = options.length === 1;
 
   // --- Handlers do Calendário ---
   
@@ -99,24 +102,31 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ options, className = 
 
   return (
     <div className={`relative ${className}`}>
-      <div className="grid grid-cols-2 gap-4">
-        {/* 1. Seleção do Tipo de Filtro */}
-        <div className="no-uppercase">
-          <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Tipo de Data</label>
-          <select
-            value={activeFilterKey}
-            onChange={(e) => setActiveFilterKey(e.target.value)}
-            className="input-field h-11 text-sm"
-          >
-            {options.map(opt => (
-              <option key={opt.key} value={opt.key}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+      {/* ALTERADO: Layout condicional */}
+      <div className={isSingleOption ? 'grid grid-cols-1' : 'grid grid-cols-2 gap-4'}>
+        
+        {/* 1. Seleção do Tipo de Filtro (Apenas se houver mais de uma opção) */}
+        {!isSingleOption && (
+          <div className="no-uppercase">
+            <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Tipo de Data</label>
+            <select
+              value={activeFilterKey}
+              onChange={(e) => setActiveFilterKey(e.target.value)}
+              className="input-field h-11 text-sm"
+            >
+              {options.map(opt => (
+                <option key={opt.key} value={opt.key}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {/* 2. Botão de Abertura do Calendário */}
         <div className="no-uppercase">
-          <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Período</label>
+          {/* ALTERADO: Rótulo dinâmico */}
+          <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">
+            {isSingleOption ? activeFilter.label : 'Período'}
+          </label>
           <button
             type="button"
             onClick={handleOpenCalendar}
