@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { X, DollarSign, Calendar, Package, Truck, MapPin, FileText, Briefcase, User, AlertTriangle, CreditCard } from 'lucide-react';
 import { useModal } from '../../hooks/useModal';
 import { MovimentacaoFinanceira, Carga, Parceiro, Motorista, Veiculo } from '../../types';
-import { formatCurrency, formatPlaca, formatPixKey } from '../../utils/formatters';
+import { formatCurrency, formatPlaca, formatPixKey, getEffectiveMovStatus } from '../../utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 // Removido: import { STATUS_CONFIG } from '../../utils/cargasConstants';
@@ -51,14 +51,16 @@ const MovimentacaoDetailModal: React.FC<MovimentacaoDetailModalProps> = ({
   }, [trajeto, parceiros, motoristas, veiculos]);
   
   // 3. Configuração de Status da Movimentação
-  const movStatusConfig = {
+  const movStatusConfig = useMemo(() => ({
     pendente: { label: 'Pendente', color: 'bg-amber-100 text-amber-800' },
+    vencido: { label: 'Vencido', color: 'bg-red-100 text-red-800' }, // NOVO
     pago: { label: 'Pago', color: 'bg-emerald-100 text-emerald-800' },
-    cancelado: { label: 'Urgente', color: 'bg-red-100 text-red-800' },
-  };
+    cancelado: { label: 'Urgente', color: 'bg-purple-100 text-purple-800' }, // ALTERADO: Cor roxa
+  }), []);
   
   if (!isOpen || !movimentacao) return null;
 
+  const effectiveStatus = getEffectiveMovStatus(movimentacao); // NOVO: Status efetivo
   const isFrete = movimentacao.categoria === 'FRETE';
   const isLinkedToCarga = carga && trajeto;
   const isTrajetoLinked = trajeto && trajeto.parceiroId && trajeto.motoristaId && trajeto.veiculoId;
@@ -107,8 +109,8 @@ const MovimentacaoDetailModal: React.FC<MovimentacaoDetailModalProps> = ({
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Status</p>
-              <span className={`badge ${movStatusConfig[movimentacao.status as keyof typeof movStatusConfig].color}`}>
-                {movStatusConfig[movimentacao.status as keyof typeof movStatusConfig].label}
+              <span className={`badge ${movStatusConfig[effectiveStatus as keyof typeof movStatusConfig].color}`}>
+                {movStatusConfig[effectiveStatus as keyof typeof movStatusConfig].label}
               </span>
               {movimentacao.dataPagamento && (
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
@@ -134,7 +136,7 @@ const MovimentacaoDetailModal: React.FC<MovimentacaoDetailModalProps> = ({
           </div>
           
           {/* Seção 1.5: Informações PIX (Se for despesa, pendente e houver parceiro com PIX) */}
-          {isFrete && movimentacao.tipo === 'despesa' && movimentacao.status === 'pendente' && hasPixInfo && (
+          {isFrete && movimentacao.tipo === 'despesa' && effectiveStatus !== 'pago' && hasPixInfo && (
             <div className="mb-6 p-4 border border-blue-300 dark:border-blue-700 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                 <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-2 mb-3">
                     <CreditCard className="h-5 w-5" />

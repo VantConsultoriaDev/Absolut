@@ -4,7 +4,7 @@ import { useDatabase } from '../contexts/DatabaseContext'
 import { useModal } from '../hooks/useModal'
 import { format, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { formatCurrency, parseCurrency, createLocalDate } from '../utils/formatters'
+import { formatCurrency, parseCurrency, createLocalDate, getEffectiveMovStatus } from '../utils/formatters'
 import { 
   Plus, 
   Search, 
@@ -93,7 +93,7 @@ const Financeiro: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('')
-  // ALTERADO: Padrão para filtrar 'pago'
+  // ALTERADO: Padrão para filtrar 'pendente' e 'cancelado'
   const [filterStatus, setFilterStatus] = useState<string[]>(['pendente', 'cancelado'])
   // NOVO: Estado para filtro de categorias
   const [filterCategories, setFilterCategories] = useState<string[]>([])
@@ -101,8 +101,6 @@ const Financeiro: React.FC = () => {
   // Filtros de intervalo (mantidos)
   const [filterVencStartDate, setFilterVencStartDate] = useState(defaultVencStartDate)
   const [filterVencEndDate, setFilterVencEndDate] = useState(defaultVencEndDate)
-  
-  // REMOVIDO: filterPayStartDate, filterPayEndDate
   
   // Estado para o modal de status centralizado
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -119,7 +117,7 @@ const Financeiro: React.FC = () => {
     
     // Recorrência
     isRecurring: false,
-    recurrencePeriod: 'monthly' as MovimentacaoFinanceira['recurrencePeriod'], // Corrigido para o tipo correto
+    recurrencePeriod: 'monthly', // Corrigido para o tipo correto
     recurrenceEndDateStr: '' as string, // String for input type="date"
     
     // NOVO: Parcelamento
@@ -159,21 +157,28 @@ const Financeiro: React.FC = () => {
     } catch {}
   }, [categories])
 
+  // ALTERADO: Adicionado 'vencido'
   const statusConfig = {
     pendente: { label: 'Pendente', color: 'bg-amber-600 text-white', icon: Clock },
+    vencido: { label: 'Vencido', color: 'bg-red-600 text-white', icon: AlertTriangle }, // NOVO
     pago: { label: 'Pago', color: 'bg-emerald-600 text-white', icon: CheckCircle },
-    cancelado: { label: 'Urgente', color: 'bg-red-600 text-white', icon: AlertTriangle }
+    cancelado: { label: 'Urgente', color: 'bg-purple-600 text-white', icon: AlertTriangle } // ALTERADO: 'cancelado' para 'Urgente' e cor roxa
   }
   
   // Mapeamento de status para o modal e MultiSelect
   const movStatusOptions = useMemo(() => {
-    return Object.entries(statusConfig).map(([key, cfg]) => ({
-      key: key as string,
-      label: cfg.label,
-      icon: cfg.icon,
-      textColor: 'text-gray-500 dark:text-gray-400',
-      color: cfg.color,
-    }));
+    // O modal de alteração de status só deve permitir os status que podem ser SALVOS (pendente, pago, cancelado)
+    const savableStatuses = ['pendente', 'pago', 'cancelado'];
+    
+    return Object.entries(statusConfig)
+        .filter(([key]) => savableStatuses.includes(key))
+        .map(([key, cfg]) => ({
+            key: key as string,
+            label: cfg.label,
+            icon: cfg.icon,
+            textColor: 'text-gray-500 dark:text-gray-400',
+            color: cfg.color,
+        }));
   }, [statusConfig]);
   
   // Opções de categoria filtradas pelo tipo de movimentação
@@ -273,9 +278,6 @@ const Financeiro: React.FC = () => {
       setFilterVencStartDate(defaultVencStartDate)
       setFilterVencEndDate(defaultVencEndDate)
       
-      // REMOVIDO: setFilterPayStartDate('')
-      // REMOVIDO: setFilterPayEndDate('')
-
       // Fechar calendários e dropdowns
       setShowStatusModal(false)
       setStatusTargetMov(null)
@@ -327,22 +329,25 @@ const Financeiro: React.FC = () => {
     );
   };
 
-  // Define status priority for sorting (Urgente/cancelado first)
-  const getStatusPriority = (status: string) => {
-      if (status === 'cancelado') return 1; // Urgente
-      if (status === 'pendente') return 2;
-      return 3; // Pago or others
+  // Define status priority for sorting (Vencido/Urgente first)
+  const getStatusPriority = (status: MovimentacaoFinanceira['status']) => {
+      if (status === 'vencido') return 1; // Vencido (Novo topo)
+      if (status === 'cancelado') return 2; // Urgente
+      if (status === 'pendente') return 3;
+      return 4; // Pago or others
   };
   
   const filteredMovimentacoes = useMemo(() => {
     let sortedMovs = rawMovimentacoes.filter(movimentacao => {
+      const effectiveStatus = getEffectiveMovStatus(movimentacao); // Usa o status derivado
+      
       const matchSearch = movimentacao.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          movimentacao.categoria?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchType = !filterType || movimentacao.tipo === filterType
       
-      // Lógica de filtro de status
-      const matchStatus = filterStatus.length === 0 || filterStatus.includes(movimentacao.status || 'pendente')
+      // Lógica de filtro de status: Agora verifica o status EFETIVO
+      const matchStatus = filterStatus.length === 0 || filterStatus.includes(effectiveStatus)
       
       // NOVO: Lógica de filtro de categoria
       const matchCategory = filterCategories.length === 0 || (movimentacao.categoria && filterCategories.includes(movimentacao.categoria));
@@ -369,27 +374,6 @@ const Financeiro: React.FC = () => {
 
       // Filtro por Pagamento (movimentacao.dataPagamento) - REMOVIDO
       let matchesPagamentoRange = true
-      /* REMOVIDO
-      if (filterPayStartDate || filterPayEndDate) {
-        if (!movimentacao.dataPagamento) {
-          matchesPagamentoRange = false
-        } else {
-          const dp = createLocalDate(format(new Date(movimentacao.dataPagamento), 'yyyy-MM-dd'))
-          if (filterPayStartDate) {
-            const ps = createLocalDate(filterPayStartDate)
-            if (dp && ps) {
-                matchesPagamentoRange = matchesPagamentoRange && dp >= ps
-            }
-          }
-          if (filterPayEndDate) {
-            const pe = createLocalDate(filterPayEndDate)
-            if (dp && pe) {
-                matchesPagamentoRange = matchesPagamentoRange && dp <= pe
-            }
-          }
-        }
-      }
-      */
       
       return matchSearch && matchType && matchStatus && matchesVencimentoRange && matchesPagamentoRange && matchCategory
     });
@@ -397,12 +381,15 @@ const Financeiro: React.FC = () => {
     // 2. Ordenação
     if (sortConfig.key) {
       sortedMovs.sort((a, b) => {
-        // 1. Prioridade por Status (Urgente no topo)
-        const priorityA = getStatusPriority(a.status || 'pendente');
-        const priorityB = getStatusPriority(b.status || 'pendente');
+        // 1. Prioridade por Status EFETIVO (Vencido/Urgente no topo)
+        const effectiveStatusA = getEffectiveMovStatus(a);
+        const effectiveStatusB = getEffectiveMovStatus(b);
+        
+        const priorityA = getStatusPriority(effectiveStatusA);
+        const priorityB = getStatusPriority(effectiveStatusB);
 
         if (priorityA !== priorityB) {
-            return priorityA - priorityB; // Prioriza 1 (Urgente)
+            return priorityA - priorityB; // Prioriza 1 (Vencido)
         }
         
         // 2. Se as prioridades são iguais, aplica a ordenação definida pelo usuário
@@ -448,8 +435,9 @@ const Financeiro: React.FC = () => {
     const totalDespesas = despesas.reduce((sum, t) => sum + (t.valor || 0), 0)
     const saldo = totalReceitas - totalDespesas
     
-    const receitasPendentes = receitas.filter(t => t.status === 'pendente').reduce((sum, t) => sum + (t.valor || 0), 0)
-    const despesasPendentes = despesas.filter(t => t.status === 'pendente').reduce((sum, t) => sum + (t.valor || 0), 0)
+    // NOVO: Calcula pendentes usando o status DERIVADO
+    const receitasPendentes = receitas.filter(t => getEffectiveMovStatus(t) === 'pendente' || getEffectiveMovStatus(t) === 'vencido').reduce((sum, t) => sum + (t.valor || 0), 0)
+    const despesasPendentes = despesas.filter(t => getEffectiveMovStatus(t) === 'pendente' || getEffectiveMovStatus(t) === 'vencido').reduce((sum, t) => sum + (t.valor || 0), 0)
     
     return { totalReceitas, totalDespesas, saldo, receitasPendentes, despesasPendentes, totalTransacoes: filteredMovimentacoes.length }
   }, [filteredMovimentacoes])
@@ -513,7 +501,8 @@ const Financeiro: React.FC = () => {
       tipo: formData.tipo as 'receita' | 'despesa',
       categoria: formData.categoria,
       data: dataMovimentacao,
-      status: formData.status as 'pendente' | 'pago' | 'cancelado',
+      // O status 'vencido' nunca é salvo, apenas 'pendente', 'pago' ou 'cancelado'
+      status: formData.status as 'pendente' | 'pago' | 'cancelado', 
       observacoes: formData.observacoes,
       
       // Recorrência
@@ -657,6 +646,7 @@ const Financeiro: React.FC = () => {
       setShowPaymentModal(true);
     } else {
       // Se for Pendente -> Urgente ou Urgente -> Pendente (sem comprovante)
+      // O status 'vencido' nunca é salvo, ele reverte para 'pendente' ou 'cancelado'
       updateMovimentacao(statusTargetMov.id, { status: newStatus as 'pendente' | 'pago' | 'cancelado', dataPagamento: null, comprovanteUrl: undefined }); // Limpa comprovante se não for pago
     }
     setStatusTargetMov(null);
@@ -743,12 +733,14 @@ const Financeiro: React.FC = () => {
   // --- FUNÇÃO renderTableRow (CORREÇÃO) ---
   const renderTableRow = (mov: MovimentacaoFinanceira) => {
     const isReceita = mov.tipo === 'receita';
-    const isPago = mov.status === 'pago';
-    const isCancelado = mov.status === 'cancelado';
+    const effectiveStatus = getEffectiveMovStatus(mov); // Usa o status derivado
+    const isPago = effectiveStatus === 'pago';
+    const isVencido = effectiveStatus === 'vencido'; // NOVO
+    const isCancelado = effectiveStatus === 'cancelado';
     const isRecorrente = mov.isRecurring;
     const isParcelado = mov.isInstallment;
     
-    const statusCfg = statusConfig[mov.status as keyof typeof statusConfig] || statusConfig.pendente;
+    const statusCfg = statusConfig[effectiveStatus as keyof typeof statusConfig] || statusConfig.pendente;
     
     // Determina a cor do valor
     const valorColor = isReceita 
@@ -791,7 +783,7 @@ const Financeiro: React.FC = () => {
         </td>
         <td className="table-cell whitespace-nowrap">
           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            isPago ? 'badge-success' : isCancelado ? 'badge-danger' : 'badge-warning'
+            isPago ? 'badge-success' : isVencido ? 'badge-danger' : isCancelado ? 'badge-warning' : 'badge-warning'
           }`}>
             {statusCfg.label}
           </span>
@@ -1015,7 +1007,7 @@ const Financeiro: React.FC = () => {
                 key: o.key,
                 label: o.label,
                 // Mapeia a cor para o badge-color correspondente
-                color: o.key === 'pago' ? 'bg-emerald-600' : o.key === 'pendente' ? 'bg-amber-600' : 'bg-red-600'
+                color: o.key === 'pago' ? 'bg-emerald-600' : o.key === 'pendente' ? 'bg-amber-600' : 'bg-purple-600'
             }))}
             selectedKeys={filterStatus}
             onChange={setFilterStatus}

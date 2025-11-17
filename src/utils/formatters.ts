@@ -1,6 +1,6 @@
 // Utilitários de formatação automática
 
-import { isValid } from 'date-fns';
+import { isValid, isBefore, startOfDay } from 'date-fns'; // Importando isBefore e startOfDay
 
 // Função para criar um objeto Date a partir de uma string YYYY-MM-DD,
 // garantindo que o fuso horário local não desvie a data para o dia anterior.
@@ -24,6 +24,26 @@ export const createLocalDate = (dateString: string): Date | undefined => {
   
   return undefined; // Retorna undefined se a data for inválida
 };
+
+// NOVO: Função para verificar se uma data está estritamente antes do início do dia atual
+export const isBeforeToday = (date: Date | undefined): boolean => {
+    if (!date || !isValid(date)) return false;
+    // Compara a data com o início do dia atual (meia-noite)
+    return isBefore(date, startOfDay(new Date()));
+};
+
+// NOVO: Função para calcular o status efetivo de exibição da movimentação
+export const getEffectiveMovStatus = (mov: { status?: 'pendente' | 'pago' | 'cancelado' | 'vencido', data: Date }): 'pendente' | 'pago' | 'cancelado' | 'vencido' => {
+    const storedStatus = mov.status || 'pendente';
+    
+    if (storedStatus === 'pendente' && isBeforeToday(mov.data)) {
+        return 'vencido';
+    }
+    
+    // Retorna o status armazenado (que pode ser 'pago', 'cancelado' ou 'pendente')
+    return storedStatus;
+};
+
 
 // Formatação de CPF: 000.000.000-00
 export const formatCPF = (value: string): string => {

@@ -144,7 +144,7 @@ export interface MovimentacaoFinanceira {
   descricao: string
   categoria?: string
   data: Date
-  status?: 'pendente' | 'pago' | 'cancelado'
+  status?: 'pendente' | 'pago' | 'cancelado' | 'vencido' // ALTERADO: Adicionado 'vencido'
   dataPagamento?: Date | null // Changed to allow null
   parceiroId?: string
   cargaId?: string
