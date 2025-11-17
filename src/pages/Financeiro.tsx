@@ -1211,7 +1211,7 @@ const Financeiro: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input-field" required>
+                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as FinanceiroFormData['status'] })} className="input-field" required>
                   <option value="pendente">Pendente</option>
                   <option value="pago">Pago</option>
                   <option value="cancelado">Urgente</option>
