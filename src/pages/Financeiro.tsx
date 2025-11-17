@@ -1015,8 +1015,8 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Vencimento (3 colunas) - AGORA USANDO DateRangeFilter */}
-          <div className="md:col-span-3 lg:col-span-3">
+          {/* Filtro de Vencimento (2 colunas) - ALTERADO DE lg:col-span-3 PARA lg:col-span-2 */}
+          <div className="md:col-span-3 lg:col-span-2">
             <DateRangeFilter
               options={dateFilterOptions}
               className="w-full"
