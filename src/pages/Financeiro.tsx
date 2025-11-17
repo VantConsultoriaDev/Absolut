@@ -990,17 +990,19 @@ const Financeiro: React.FC = () => {
             <option value="despesa">Despesas</option>
           </select>
 
-          {/* NOVO: Filtro de Categoria (1 coluna) */}
-          <MultiSelectStatus
-            label="Categorias"
-            options={filteredCategoryOptions.map(o => ({
-                key: o.id,
-                label: o.name,
-                color: 'bg-gray-600' 
-            }))}
-            selectedKeys={filterCategories}
-            onChange={setFilterCategories}
-          />
+          {/* NOVO: Filtro de Categoria (2 colunas) */}
+          <div className="md:col-span-1 lg:col-span-2">
+            <MultiSelectStatus
+              label="Categorias"
+              options={filteredCategoryOptions.map(o => ({
+                  key: o.id,
+                  label: o.name,
+                  color: 'bg-gray-600' 
+              }))}
+              selectedKeys={filterCategories}
+              onChange={setFilterCategories}
+            />
+          </div>
 
           {/* Status (1 coluna) */}
           <MultiSelectStatus
@@ -1015,15 +1017,14 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Vencimento (2 colunas) - ALTERADO DE lg:col-span-3 PARA lg:col-span-2 */}
-          <div className="md:col-span-3 lg:col-span-2">
+          {/* Filtro de Vencimento (2 colunas) */}
+          <div className="md:col-span-2 lg:col-span-2">
             <DateRangeFilter
               options={dateFilterOptions}
               className="w-full"
             />
           </div>
           
-          {/* Filtro de Pagamento (REMOVIDO) */}
           {/* O espaço restante (1 coluna) fica vazio */}
         </div>
       </div>
