@@ -89,6 +89,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onOpenDetail }) => {
         : format(item.dueDate, 'dd MMM', { locale: ptBR })
       : 'Sem Data';
       
+    // CORREÇÃO: A cor da data é vermelha APENAS se estiver atrasada.
     const dateColor = isOverdue ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400';
     
     return (
@@ -110,7 +111,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onOpenDetail }) => {
                 ? 'bg-green-500 border-green-500 text-white' 
                 : `${config.border} text-transparent hover:bg-gray-200 dark:hover:bg-gray-600`
             }`}
-            title="Marcar como concluído"
+            title="Marcar/Desmarcar"
           >
             <Check className="h-4 w-4" />
           </button>
