@@ -734,6 +734,114 @@ const Financeiro: React.FC = () => {
         showSuccess('Dados de exibição sincronizados.');
     }, 500);
   };
+  
+  // --- FUNÇÃO renderTableRow (CORREÇÃO) ---
+  const renderTableRow = (mov: MovimentacaoFinanceira) => {
+    const isReceita = mov.tipo === 'receita';
+    const isPago = mov.status === 'pago';
+    const isCancelado = mov.status === 'cancelado';
+    const isRecorrente = mov.isRecurring;
+    const isParcelado = mov.isInstallment;
+    
+    const statusCfg = statusConfig[mov.status as keyof typeof statusConfig] || statusConfig.pendente;
+    
+    // Determina a cor do valor
+    const valorColor = isReceita 
+        ? 'text-emerald-600 dark:text-emerald-400' 
+        : 'text-red-600 dark:text-red-400';
+        
+    // Determina o prefixo da descrição
+    let descriptionPrefix = '';
+    if (isRecorrente) {
+        descriptionPrefix = `(Rec. ${mov.recurrenceIndex}/${mov.recurrencePeriod?.substring(0, 1).toUpperCase()}) `;
+    } else if (isParcelado) {
+        descriptionPrefix = `(Parc. ${mov.installmentIndex}/${mov.installmentCount}) `;
+    }
+
+    return (
+      <tr 
+        key={mov.id} 
+        className="table-card-row cursor-pointer"
+        onClick={() => handleOpenDetailModal(mov)}
+      >
+        <td className="table-cell whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+          {format(new Date(mov.data), 'dd/MM/yyyy', { locale: ptBR })}
+        </td>
+        <td className="table-cell text-sm font-medium text-gray-900 dark:text-white">
+          {descriptionPrefix}
+          {mov.descricao}
+        </td>
+        <td className="table-cell whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+          {mov.categoria || '-'}
+        </td>
+        <td className="table-cell whitespace-nowrap text-sm">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            isReceita ? 'badge-success' : 'badge-danger'
+          }`}>
+            {isReceita ? 'Receita' : 'Despesa'}
+          </span>
+        </td>
+        <td className={`table-cell whitespace-nowrap text-sm font-bold ${valorColor}`}>
+          {isReceita ? '+' : '-'} {formatCurrency(mov.valor)}
+        </td>
+        <td className="table-cell whitespace-nowrap">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            isPago ? 'badge-success' : isCancelado ? 'badge-danger' : 'badge-warning'
+          }`}>
+            {statusCfg.label}
+          </span>
+        </td>
+        <td className="table-cell whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+          {mov.dataPagamento ? format(new Date(mov.dataPagamento), 'dd/MM/yyyy', { locale: ptBR }) : '-'}
+        </td>
+        <td className="table-cell whitespace-nowrap text-sm font-medium">
+          <div className="flex space-x-2 items-center">
+            {/* Botão de Status */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenStatusModal(mov);
+              }}
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+              title="Alterar status"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            
+            {/* Botão de Edição (Apenas se não for recorrente/parcelado) */}
+            {!isRecorrente && !isParcelado && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(mov);
+                  }}
+                  className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                  title="Editar"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+            )}
+            
+            {/* Botão de Exclusão */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(mov.id);
+              }}
+              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              title="Excluir"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+  // --- FIM FUNÇÃO renderTableRow ---
 
   return (
     <div className="space-y-8 animate-fade-in">
