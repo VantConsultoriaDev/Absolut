@@ -19,7 +19,7 @@ const AgendaList: React.FC<AgendaListProps> = ({ onOpenDetail }) => {
   const urgencyOrder = useMemo(() => ({ Urgente: 1, Normal: 2, Leve: 3 }), []);
   
   const urgencyConfig = useMemo(() => ({
-    Urgente: { color: 'bg-red-600', text: 'text-red-600', border: 'border-red-600' },
+    Urgente: { color: 'bg-fuchsia-600', text: 'text-fuchsia-600', border: 'border-fuchsia-600' },
     Normal: { color: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-600' },
     Leve: { color: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-600' },
   }), []);

@@ -16,7 +16,7 @@ interface CalendarDayModalProps {
 }
 
 const urgencyConfig = {
-    Urgente: { color: 'text-red-600', border: 'border-red-600', bg: 'bg-red-100 dark:bg-red-900/50' },
+    Urgente: { color: 'text-fuchsia-600', border: 'border-fuchsia-600', bg: 'bg-fuchsia-100 dark:bg-fuchsia-900/50' },
     Normal: { color: 'text-amber-600', border: 'border-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20' },
     Leve: { color: 'text-blue-600', border: 'border-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
 };
