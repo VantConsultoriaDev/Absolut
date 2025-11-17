@@ -31,10 +31,10 @@ import MultiSelectStatus from '../components/MultiSelectStatus'
 import MovimentacaoDetailModal from '../components/financeiro/MovimentacaoDetailModal'
 import ConfirmationModal from '../components/ConfirmationModal'
 import StandardCheckbox from '../components/StandardCheckbox'
-import DateRangeFilter from '../components/DateRangeFilter' // NOVO: Importando o componente unificado
-import CategoriesModal from '../components/financeiro/CategoriesModal' // NOVO: Importando CategoriesModal
-import SearchableSelect, { SelectOption } from '../components/SearchableSelect' // NOVO: Importando SearchableSelect
-import { showSuccess } from '../utils/toast' // Import showSuccess
+// REMOVIDO: import DateRangeFilter from '../components/DateRangeFilter' 
+import CategoriesModal from '../components/financeiro/CategoriesModal' 
+import SearchableSelect, { SelectOption } from '../components/SearchableSelect' 
+import { showSuccess } from '../utils/toast' 
 
 // Tipagem para a configuração de ordenação
 type SortKey = 'data' | 'descricao' | 'categoria' | 'tipo' | 'valor' | 'status';
@@ -219,7 +219,7 @@ const Financeiro: React.FC = () => {
 
   // Modal de gerenciamento de categorias
   const [showCategoriesModal, setShowCategoriesModal] = useState(false)
-  // const [catType, setCatType] = useState<'receita' | 'despesa'>('receita') // REMOVIDO
+  // const [catType, setCatType] = useState<'receita' | 'despesa'>('despesa') // REMOVIDO
   // const [newCategory, setNewCategory] = useState('') // REMOVIDO
 
   // FUNÇÃO AUSENTE 1: addCategory
@@ -719,129 +719,6 @@ const Financeiro: React.FC = () => {
     }
   };
   
-  // --- Configuração do Filtro de Data Unificado ---
-  const dateFilterOptions = useMemo(() => [
-    {
-      key: 'vencimento',
-      label: 'Vencimento',
-      startState: filterVencStartDate,
-      endState: filterVencEndDate,
-      setStart: setFilterVencStartDate,
-      setEnd: setFilterVencEndDate,
-    },
-    {
-      key: 'pagamento',
-      label: 'Pagamento',
-      startState: filterPayStartDate,
-      endState: filterPayEndDate,
-      setStart: setFilterPayStartDate,
-      setEnd: setFilterPayEndDate,
-    },
-  ], [filterVencStartDate, filterVencEndDate, filterPayStartDate, filterPayEndDate]);
-  
-  // Componente de renderização da linha da tabela
-  const renderTableRow = (movimentacao: MovimentacaoFinanceira) => (
-    <tr 
-      key={movimentacao.id} 
-      className="table-card-row cursor-pointer"
-      onClick={() => handleOpenDetailModal(movimentacao)}
-    >
-      <td className="table-cell text-sm">
-        {format(new Date(movimentacao.data), 'dd/MM/yyyy', { locale: ptBR })}
-        {movimentacao.isRecurring && (
-            <span className="ml-2 badge badge-info">Rec.</span>
-        )}
-        {/* NOVO: Indicador de Parcelamento */}
-        {movimentacao.isInstallment && movimentacao.installmentIndex && movimentacao.installmentCount && (
-            <span className="ml-2 badge badge-info">
-                {movimentacao.installmentIndex}/{movimentacao.installmentCount}
-            </span>
-        )}
-      </td>
-      <td className="table-cell font-medium text-slate-900 dark:text-white">
-        {movimentacao.descricao}
-      </td>
-      <td className="table-cell text-slate-700 dark:text-slate-300 text-sm">
-        {movimentacao.categoria}
-      </td>
-      <td className="table-cell">
-        <span className={`badge ${movimentacao.tipo === 'receita' ? 'badge-success' : 'badge-danger'}`}>
-          {movimentacao.tipo === 'receita' ? 'Receita' : 'Despesa'}
-        </span>
-      </td>
-      <td className={`table-cell font-semibold ${movimentacao.tipo === 'receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-        {movimentacao.tipo === 'receita' ? '+' : '-'}{' '}
-        {formatCurrency(movimentacao.valor || 0)}
-      </td>
-      <td className="table-cell">
-        <span className={`badge ${statusConfig[movimentacao.status as keyof typeof statusConfig].color}`}>
-          {statusConfig[movimentacao.status as keyof typeof statusConfig].label}
-        </span>
-      </td>
-      <td className="table-cell text-sm">
-        {movimentacao.dataPagamento ? (
-          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-            {format(new Date(movimentacao.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}
-          </span>
-        ) : (
-          <span className="text-slate-400 dark:text-slate-500">-</span>
-        )}
-      </td>
-      <td className="table-cell">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEdit(movimentacao);
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-            title="Editar"
-            disabled={movimentacao.isRecurring || movimentacao.isInstallment}
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          
-          {/* Botão de Status */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpenStatusModal(movimentacao);
-            }}
-            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-            title="Alterar status"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          
-          {/* Botão de Comprovante */}
-          {movimentacao.comprovanteUrl && (
-            <a
-              href={movimentacao.comprovanteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-              title="Ver/Baixar Comprovante"
-            >
-              <FileText className="h-4 w-4" />
-            </a>
-          )}
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(movimentacao.id);
-            }}
-            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            title="Excluir"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-  
   // --- NOVO: Handler para sincronização de exibição ---
   const handleSyncDisplay = () => {
     if (isSyncingDisplay) return;
@@ -962,11 +839,11 @@ const Financeiro: React.FC = () => {
                 <RefreshCw className={`h-5 w-5 ${isSyncingDisplay ? 'animate-spin' : ''}`} />
             </button>
         </div>
-        {/* ALTERADO: Grid para 6 colunas em lg */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+        {/* ALTERADO: Grid para 8 colunas em lg */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 items-end">
           
-          {/* Busca (md: 2 colunas, lg: 1 coluna) */}
-          <div className="relative md:col-span-2 lg:col-span-1">
+          {/* Busca (md: 2 colunas, lg: 2 colunas) */}
+          <div className="relative md:col-span-2 lg:col-span-2">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
             <input
               type="text"
@@ -1016,11 +893,48 @@ const Financeiro: React.FC = () => {
             onChange={setFilterStatus}
           />
 
-          {/* Filtro de Data Unificado (2 colunas) */}
-          <div className="md:col-span-2 lg:col-span-2">
-            <DateRangeFilter
-              options={dateFilterOptions}
-            />
+          {/* Filtro de Vencimento (2 colunas) */}
+          <div className="md:col-span-2 lg:col-span-2 grid grid-cols-2 gap-4">
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento (De)</label>
+              <input
+                type="date"
+                value={filterVencStartDate}
+                onChange={(e) => setFilterVencStartDate(e.target.value)}
+                className="input-field h-11 text-sm"
+              />
+            </div>
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Vencimento (Até)</label>
+              <input
+                type="date"
+                value={filterVencEndDate}
+                onChange={(e) => setFilterVencEndDate(e.target.value)}
+                className="input-field h-11 text-sm"
+              />
+            </div>
+          </div>
+          
+          {/* Filtro de Pagamento (2 colunas) */}
+          <div className="md:col-span-2 lg:col-span-2 grid grid-cols-2 gap-4">
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento (De)</label>
+              <input
+                type="date"
+                value={filterPayStartDate}
+                onChange={(e) => setFilterPayStartDate(e.target.value)}
+                className="input-field h-11 text-sm"
+              />
+            </div>
+            <div className="no-uppercase">
+              <label className="block text-xs text-slate-600 dark:text-slate-300 mb-1">Pagamento (Até)</label>
+              <input
+                type="date"
+                value={filterPayEndDate}
+                onChange={(e) => setFilterPayEndDate(e.target.value)}
+                className="input-field h-11 text-sm"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -1189,12 +1103,12 @@ const Financeiro: React.FC = () => {
                 <StandardCheckbox
                   label="Movimentação Recorrente"
                   checked={formData.isRecurring}
-                  onChange={(checked) => setFormData(prev => ({ 
-                      ...prev, 
-                      isRecurring: checked, 
-                      recurrenceEndDateStr: checked ? prev.recurrenceEndDateStr : '',
-                      isInstallment: false, // Desabilita parcelamento
-                  }))}
+                  onChange={(checked) => {
+                    handleDataChange('isRecurring', checked);
+                    if (checked) {
+                        handleDataChange('isInstallment', false); // Desabilita parcelamento
+                    }
+                  }}
                   className="bg-white dark:bg-gray-800 p-0"
                 />
                 
@@ -1233,11 +1147,12 @@ const Financeiro: React.FC = () => {
                 <StandardCheckbox
                   label="Movimentação Parcelada"
                   checked={formData.isInstallment}
-                  onChange={(checked) => setFormData(prev => ({ 
-                      ...prev, 
-                      isInstallment: checked, 
-                      isRecurring: false, // Desabilita recorrência
-                  }))}
+                  onChange={(checked) => {
+                    handleDataChange('isInstallment', checked);
+                    if (checked) {
+                        handleDataChange('isRecurring', false); // Desabilita recorrência
+                    }
+                  }}
                   className="bg-white dark:bg-gray-800 p-0"
                 />
                 
