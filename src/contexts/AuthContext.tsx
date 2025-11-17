@@ -82,7 +82,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!supabase) {
       console.error('Supabase client is not initialized. Cannot log in.');
-      setLastAuthError('Serviço de autenticação indisponível. Verifique configuração do Supabase.');
+      // Define o erro para ser exibido na tela de login
+      setLastAuthError('Serviço de autenticação indisponível. Verifique a configuração do Supabase (VITE_SUPABASE_URL/ANON_KEY).');
       return false; 
     }
     
