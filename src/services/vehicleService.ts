@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // O token deve ser lido das variáveis de ambiente
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN || ""; // Garante que seja uma string
 
 // Interface para resposta da API de consulta de placa
 export interface PlacaResponse {
@@ -40,8 +40,8 @@ export class VehicleService {
 
       if (!API_TOKEN) {
         console.error('VehicleService: VITE_APIBRASIL_TOKEN não configurado.');
-        // Retorna null se o token não estiver configurado, permitindo o cadastro manual
-        return null;
+        // Lança o erro de autorização para ser capturado pelo componente
+        throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
       }
 
       const response = await axios.post(

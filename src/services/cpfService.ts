@@ -2,7 +2,7 @@ import axios from 'axios';
 import { formatContact, parseDocument } from '../utils/formatters';
 
 // O token deve ser lido das variáveis de ambiente
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN || ""; // Garante que seja uma string
 
 export interface CPFData {
   nome: string;

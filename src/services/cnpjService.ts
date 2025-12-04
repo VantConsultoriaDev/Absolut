@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // O token deve ser lido das variáveis de ambiente
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN;
+const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN || ""; // Garante que seja uma string
 
 interface CNPJData {
   razaoSocial: string;
