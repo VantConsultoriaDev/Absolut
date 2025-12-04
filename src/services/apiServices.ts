@@ -57,9 +57,7 @@ export class APIService {
   // Método para buscar dados do CNPJ
   static async fetchCNPJData(cnpj: string): Promise<CNPJData | null> {
     try {
-      if (!API_TOKEN) {
-        throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
-      }
+      // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
       
       // Remove formatação do CNPJ (pontos, barras, hífens)
       const cleanCNPJ = cnpj.replace(/[^\d]/g, '');
@@ -98,9 +96,7 @@ export class APIService {
   // Método para buscar dados do veículo
   static async fetchVehicleData(placa: string): Promise<VehicleData | null> {
     try {
-      if (!API_TOKEN) {
-        throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
-      }
+      // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
       
       // Remove formatação da placa
       const cleanPlaca = placa.replace(/[^A-Z0-9]/gi, '');
@@ -254,9 +250,7 @@ const API_URL_CNPJ = "https://gateway.apibrasil.io/api/v2/dados/cnpj/credits";
 
 export async function consultarCnpj(cnpj: string) {
   try {
-    if (!API_TOKEN) {
-      throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
-    }
+    // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
     
     const response = await axios.post(
       API_URL_CNPJ,
@@ -289,9 +283,7 @@ const API_URL_PLACA = "https://gateway.apibrasil.io/api/v2/vehicles/base/000/dad
 
 export async function buscarDadosPlaca(placa: string) {
   try {
-    if (!API_TOKEN) {
-      throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.');
-    }
+    // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
     
     const response = await axios.post(
       API_URL_PLACA,

@@ -16,7 +16,6 @@ export interface CPFData {
 
 export class CPFService {
   private static readonly API_URL = 'https://gateway.apibrasil.io/api/v2/consulta/cpf/credits';
-  // Mantemos a flag como false, mas a lógica de fallback será acionada se !API_TOKEN
   private static readonly USE_SIMULATED_DATA = false; 
 
   static async consultarCPF(cpf: string): Promise<CPFData | null> {
@@ -26,21 +25,7 @@ export class CPFService {
       throw new Error('CPF deve ter 11 dígitos');
     }
 
-    // --- NOVO: Lógica de Fallback se o token não estiver configurado ---
-    if (!API_TOKEN) {
-      console.warn('CPFService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
-      // Fallback de dados simulados
-      return {
-        nome: `Motorista Simulado ${cpfLimpo.slice(-4)}`,
-        dataNascimento: '1990-01-01',
-        rg: '12345678',
-        orgaoEmissor: 'SSP SP',
-        email: 'simulado@email.com',
-        telefone: '11987654321',
-        simulado: true,
-      };
-    }
-    // --- FIM NOVO FALLBACK ---
+    // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
 
     if (this.USE_SIMULATED_DATA) {
       // Fallback de dados simulados (se a flag for true)

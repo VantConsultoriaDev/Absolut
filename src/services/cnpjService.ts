@@ -43,29 +43,7 @@ export class CNPJService {
     // Formata o CNPJ para o padrão XX.XXX.XXX/XXXX-XX
     const cnpjFormatado = cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
     
-    // --- NOVO: Lógica de Fallback se o token não estiver configurado ---
-    if (!API_TOKEN) {
-      console.warn('CNPJService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
-      const dadosSimulados: CNPJData = {
-        razaoSocial: `Razão Social Desconhecida (Simulado)`,
-        nomeFantasia: `Fantasia (Simulado)`,
-        cnpj: cnpjFormatado,
-        situacao: 'Ativa',
-        endereco: 'Rua Exemplo',
-        numero: '123',
-        complemento: 'Sala 1',
-        bairro: 'Centro',
-        cidade: 'São Paulo',
-        uf: 'SP', // USANDO 'uf'
-        cep: '01000-000',
-        telefone: '(11) 99999-9999',
-        email: 'contato@empresa.com.br',
-        atividade: 'Atividades de consultoria em gestão empresarial',
-        simulado: true
-      };
-      return dadosSimulados;
-    }
-    // --- FIM NOVO FALLBACK ---
+    // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
 
     if (this.USE_SIMULATED_DATA) {
       throw new Error('Consulta de CNPJ desabilitada por configuração.');
@@ -105,7 +83,7 @@ export class CNPJService {
         console.error('CNPJService: Erro nos dados da API:', errorMessage);
         
         if (response.status === 401 || response.status === 403) {
-             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirado. Verifique a configuração.');
+             throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
         
         // Se o CNPJ não for encontrado, retorna null

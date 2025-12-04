@@ -38,24 +38,7 @@ export class VehicleService {
         throw new Error('Placa inválida');
       }
 
-      if (!API_TOKEN) {
-        console.warn('VehicleService: VITE_APIBRASIL_TOKEN não configurado. Usando dados simulados.');
-        // Retorna dados simulados em vez de lançar erro
-        return {
-            placa: placaLimpa,
-            marca: 'SIMULADO',
-            modelo: 'VEICULO TESTE',
-            ano: '2020',
-            anoModelo: '2020',
-            cor: 'BRANCA',
-            combustivel: 'DIESEL',
-            categoria: 'CAMINHAO',
-            chassi: 'SIMULADOCHASSI12345',
-            renavam: '00000000000',
-            municipio: 'SAO PAULO',
-            uf: 'SP'
-        };
-      }
+      // REMOVIDO: if (!API_TOKEN) { throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) não está configurado.'); }
 
       const response = await axios.post(
         this.API_URL,
@@ -80,7 +63,7 @@ export class VehicleService {
         
         // Se for erro de autorização, lança um erro específico para ser capturado
         if (response.status === 401 || response.status === 403) {
-             console.error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirado. Verifique a configuração.');
+             console.error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
         }
         
         // Se for erro de payload, retorna null
@@ -113,7 +96,7 @@ export class VehicleService {
       // Se o erro for do Axios e tiver uma resposta de status 401/403, loga o erro de autorização
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
           // Lança o erro de autorização para ser capturado pelo componente
-          throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirado. Verifique a configuração.');
+          throw new Error('ERRO DE AUTORIZAÇÃO: O token da API (VITE_APIBRASIL_TOKEN) é inválido ou expirou. Verifique a configuração.');
       }
       
       // Em caso de qualquer outro erro, retorna null para permitir o cadastro manual
