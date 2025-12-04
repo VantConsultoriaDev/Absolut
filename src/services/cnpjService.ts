@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { parseDocument } from '../utils/formatters';
 
 // O token não é mais necessário para a BrasilAPI
-const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN || ""; 
+// const API_TOKEN = import.meta.env.VITE_APIBRASIL_TOKEN || ""; // Removido
 
 interface CNPJData {
   razaoSocial: string;
